@@ -1,0 +1,54 @@
+/* All Sprints Page Styles */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  padding: 24px 0;
+}
+
+.headerContent {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.apiLink {
+  padding: 10px 20px;
+  background: var(--panel2);
+  color: var(--text);
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+  border: 1px solid var(--line);
+  transition: all 0.2s;
+}
+
+.apiLink:hover {
+  background: rgba(124, 92, 255, 0.1);
+  border-color: var(--accent1);
+}
+
+.content {
+  max-width: 100%;
+  padding: 32px 24px;
+}

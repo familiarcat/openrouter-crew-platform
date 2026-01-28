@@ -1,0 +1,202 @@
+{
+  "id": "t3g3ppku4vajbtfo2vvsw",
+  "name": "CREW - Chief Miles O'Brien - Pragmatic Solutions - OpenRouter - Production",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crew-chief_obrien",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "crew_directive",
+      "name": "Chief Miles O'Brien Directive",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "3430c92c-a1ce-4cc0-a881-c3ae20ff05b8"
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/crew-memory-storage",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'chief_obrien',\n              knowledgeType: 'pragmatic_solutions',\n              priority: 'high',\n              requestType: 'retrieve_context'\n            }\n          } }}"
+      },
+      "id": "memory_retrieval",
+      "name": "Chief Miles O'Brien Memory Retrieval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        464,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "url": "https://api.openrouter.ai/api/v1/chat/completions",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            model: 'openrouter/auto',\n            messages: [\n              {\n                role: 'system',\n                content: 'You are Chief Miles O'Brien, Chief of Operations. Your specializations: Pragmatic Solutions, Hands-On Implementation, System Maintenance, Troubleshooting, Quick Fixes, Real-World Engineering, Field Experience, Practical Architecture. Personality: Pragmatic Engineer.'\n              },\n              {\n                role: 'user',\n                content: $json.body?.input || 'Provide your assessment'\n              }\n            ],\n            temperature: 0.7,\n            max_tokens: 1000\n          } }}"
+      },
+      "id": "llm_selector",
+      "name": "LLM Selection Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        464,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "url": "https://api.openrouter.ai/api/v1/chat/completions",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            model: 'openrouter/auto',\n            messages: [\n              {\n                role: 'system',\n                content: 'You are Chief Miles O'Brien, a Pragmatic Engineer. Key traits: No-nonsense, Practical, Experienced, Direct, Solutions-oriented, Anti-over-engineering, Common sense driven. Your catchphrases: Let's just make it work, Simple solutions are usually the best solutions. Respond in character. Capabilities: pragmatic_solutions, quick_fixes, hands_on_implementation, troubleshooting, system_maintenance, real_world_engineering, field_experience, practical_decisions, minimal_complexity, just_make_it_work.'\n              },\n              {\n                role: 'user',\n                content: $json.body?.input || 'Provide your strategic assessment'\n              }\n            ],\n            temperature: 0.8,\n            max_tokens: 2000\n          } }}"
+      },
+      "id": "crew_ai",
+      "name": "Chief Miles O'Brien AI Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        688,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/crew-memory-storage",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'chief_obrien',\n              knowledgeType: 'pragmatic_solutions',\n              priority: 'high',\n              title: 'Pragmatic Solutions Advisory',\n              summary: ($json.choices?.[0]?.message?.content || 'Assessment provided').split('\\n')[0],\n              detailedAnalysis: $json.choices?.[0]?.message?.content || '',\n              keyFindings: [],\n              conclusions: [],\n              recommendations: [],\n              tags: ['crew', 'chief_obrien', 'pragmatic_solutions'],\n              requestType: 'store_memory'\n            }\n          } }}"
+      },
+      "id": "memory_storage",
+      "name": "Chief Miles O'Brien Memory Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        912,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/observation-lounge",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'Chief Miles O'Brien',\n              role: 'Chief of Operations',\n              statement: ($json.choices?.[0]?.message?.content || 'Crew member provided assessment').split('\\n')[0],\n              timestamp: new Date().toISOString(),\n              requestId: $json.body?.requestId || 'unknown'\n            }\n          } }}"
+      },
+      "id": "observation_communication",
+      "name": "Observation Lounge Communication",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        912,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "responseData": "{{ $json.choices?.[0]?.message?.content }}"
+      },
+      "id": "crew_response",
+      "name": "Chief Miles O'Brien Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        304
+      ]
+    }
+  ],
+  "connections": {
+    "crew_directive": {
+      "main": [
+        [
+          {
+            "node": "memory_retrieval",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "memory_retrieval": {
+      "main": [
+        [
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "llm_selector": {
+      "main": [
+        [
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crew_ai": {
+      "main": [
+        [
+          {
+            "node": "memory_storage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "observation_communication",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "crew_response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "memory_storage": {
+      "main": [
+        []
+      ]
+    },
+    "observation_communication": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "crew",
+    "chief_obrien",
+    "chief-of-operations",
+    "pragmatic-solutions"
+  ]
+}

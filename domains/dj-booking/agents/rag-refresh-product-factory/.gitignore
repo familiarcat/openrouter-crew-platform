@@ -1,0 +1,126 @@
+# --- OS / editor ---
+.DS_Store
+.idea/
+
+.press-logs/
+.trash/
+.next/
+node_modules/
+
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data and logs
+data/
+*.log
+
+# Project specific
+.rag-config.json
+
+
+# --- Node / Next ---
+node_modules/
+.next/
+out/
+dist/
+*.log
+
+# --- Secrets / local env ---
+.env
+.env.local
+.env.*.local
+.secrets/
+
+# --- Terraform state & plans (keep out of git) ---
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/terraform.tfstate
+infra/terraform.tfstate.*
+infra/tfplan
+infra/terraform.tfvars
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/tfplan
+
+# --- Milestones (keep folder, not artifacts) ---
+milestones/*.md
+
+# --- Misc ---
+coverage/
+supabase/.temp/
+# --- AlexAI build trash / caches ---
+.trash/
+.tmp/
+*.pid
+
+# VSCode: ignore workspace noise but keep sharable config
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# --- AlexAI / RAG Refresh Product Factory hygiene ---
+.env
+.env.*
+!.env.example
+.secrets/
+.alexai-secrets/
+.next/
+.turbo/
+out/
+dist/
+.press-logs/
+.press-pids/
+.trash/
+*.zip
+*.tgz
+*.tar.gz
+.DS_Store
+
+# AlexAI generated artifacts
+.press-logs/
+.trash/
+.next/
+*.zip
+
+.press-logs/
+.press-zips/
+.press-pids/
+.trash/
+.alexai-secrets/
+.next/
+node_modules/
+**/node_modules/

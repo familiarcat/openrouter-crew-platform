@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build output
+.next
+out
+
+# Development
+.env*.local
+.env.local
+.DS_Store
+*.log
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Terraform
+infra/.terraform
+infra/*.tfstate*
+infra/tfplan
+infra/.terraform.lock.hcl
+
+# Test
+coverage
+.nyc_output
+
+# Misc
+README.md
+docs/
+*.md
+
+# VSCode Extension (separate deployment domain - build locally only)
+vscode-extension/
+*.vsix
+
+# Backups
+*.backup
+**/2
+**/* 2
+
+
+
+
+

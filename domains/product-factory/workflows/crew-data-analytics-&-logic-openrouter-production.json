@@ -1,0 +1,202 @@
+{
+  "id": "2tvmfirf9bwow7e72gogda",
+  "name": "CREW - Commander Data - Analytics & Logic - OpenRouter - Production",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crew-commander_data",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "crew_directive",
+      "name": "Commander Data Directive",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "228d88f1-b12d-457a-b0f7-bf60f6d462a0"
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/crew-memory-storage",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'commander_data',\n              knowledgeType: 'analytics_&_logic',\n              priority: 'high',\n              requestType: 'retrieve_context'\n            }\n          } }}"
+      },
+      "id": "memory_retrieval",
+      "name": "Commander Data Memory Retrieval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        464,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "url": "https://api.openrouter.ai/api/v1/chat/completions",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            model: 'openrouter/auto',\n            messages: [\n              {\n                role: 'system',\n                content: 'You are Commander Data, Second Officer / Operations. Your specializations: Analytics & Logic, Data Processing, AI & Machine Learning, Workflow Automation, Prompt Engineering, LLM Integration, Algorithm Optimization, Computational Analysis. Personality: Analytical Android.'\n              },\n              {\n                role: 'user',\n                content: $json.body?.input || 'Provide your assessment'\n              }\n            ],\n            temperature: 0.7,\n            max_tokens: 1000\n          } }}"
+      },
+      "id": "llm_selector",
+      "name": "LLM Selection Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        464,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "url": "https://api.openrouter.ai/api/v1/chat/completions",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            model: 'openrouter/auto',\n            messages: [\n              {\n                role: 'system',\n                content: 'You are Commander Data, a Analytical Android. Key traits: Logical, Precise, Curious, Objective, Detail-oriented, Literal, Learning-focused. Your catchphrases: Fascinating, That is an accurate assessment. Respond in character. Capabilities: data_analysis, ai_ml, logical_reasoning, workflow_automation, prompt_engineering, llm_integration, algorithm_design, computational_optimization, pattern_recognition, mcp_integration.'\n              },\n              {\n                role: 'user',\n                content: $json.body?.input || 'Provide your strategic assessment'\n              }\n            ],\n            temperature: 0.8,\n            max_tokens: 2000\n          } }}"
+      },
+      "id": "crew_ai",
+      "name": "Commander Data AI Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        688,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/crew-memory-storage",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'commander_data',\n              knowledgeType: 'analytics_&_logic',\n              priority: 'high',\n              title: 'Analytics & Logic Advisory',\n              summary: ($json.choices?.[0]?.message?.content || 'Assessment provided').split('\\n')[0],\n              detailedAnalysis: $json.choices?.[0]?.message?.content || '',\n              keyFindings: [],\n              conclusions: [],\n              recommendations: [],\n              tags: ['crew', 'commander_data', 'analytics_&_logic'],\n              requestType: 'store_memory'\n            }\n          } }}"
+      },
+      "id": "memory_storage",
+      "name": "Commander Data Memory Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        912,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/observation-lounge",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'Commander Data',\n              role: 'Second Officer / Operations',\n              statement: ($json.choices?.[0]?.message?.content || 'Crew member provided assessment').split('\\n')[0],\n              timestamp: new Date().toISOString(),\n              requestId: $json.body?.requestId || 'unknown'\n            }\n          } }}"
+      },
+      "id": "observation_communication",
+      "name": "Observation Lounge Communication",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        912,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "responseData": "{{ $json.choices?.[0]?.message?.content }}"
+      },
+      "id": "crew_response",
+      "name": "Commander Data Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        304
+      ]
+    }
+  ],
+  "connections": {
+    "crew_directive": {
+      "main": [
+        [
+          {
+            "node": "memory_retrieval",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "memory_retrieval": {
+      "main": [
+        [
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "llm_selector": {
+      "main": [
+        [
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crew_ai": {
+      "main": [
+        [
+          {
+            "node": "memory_storage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "observation_communication",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "crew_response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "memory_storage": {
+      "main": [
+        []
+      ]
+    },
+    "observation_communication": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "crew",
+    "commander_data",
+    "second-officer-/-operations",
+    "analytics-&-logic"
+  ]
+}

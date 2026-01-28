@@ -1,0 +1,576 @@
+/* Horizontal Sprint Timeline Styles */
+
+.container {
+  background: var(--panel);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.header {
+  background: linear-gradient(135deg, var(--accent1), var(--accent2));
+  padding: 24px;
+  color: white;
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.headerTitle {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.headerSubtitle {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.metrics {
+  display: flex;
+  gap: 24px;
+}
+
+.metric {
+  text-align: right;
+}
+
+.metricValue {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.metricLabel {
+  font-size: 11px;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.progressBar {
+  margin-top: 16px;
+}
+
+.progressBarHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.progressBarTrack {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: white;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.goals {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.goalsHeader {
+  font-size: 11px;
+  font-weight: bold;
+  opacity: 0.8;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.goalsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.goalItem {
+  font-size: 14px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: start;
+}
+
+.timelineArea {
+  padding: 24px;
+  background: var(--panel2);
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.timeline {
+  display: inline-block;
+  min-width: 100%;
+}
+
+.timelineHeader {
+  display: flex;
+  position: sticky;
+  top: 0;
+  background: var(--panel2);
+  z-index: 10;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 16px;
+}
+
+.crewLabel {
+  width: 180px;
+  flex-shrink: 0;
+  font-weight: bold;
+  font-size: 14px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+}
+
+.dayColumn {
+  width: 120px;
+  flex-shrink: 0;
+  text-align: center;
+  border-left: 1px solid var(--line);
+  padding: 8px 4px;
+}
+
+.dayColumn.today {
+  background: rgba(124, 92, 255, 0.1);
+  border-left: 2px solid var(--accent1);
+  border-right: 2px solid var(--accent1);
+}
+
+.dayColumn.weekend {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.dayNumber {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text);
+}
+
+.dayColumn.today .dayNumber {
+  color: var(--accent1);
+}
+
+.dayDate {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.todayLabel {
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--accent1);
+  margin-top: 4px;
+}
+
+.swimlanes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.swimlane {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.swimlane:hover {
+  box-shadow: 0 4px 12px rgba(124, 92, 255, 0.2);
+}
+
+.crewInfo {
+  width: 180px;
+  flex-shrink: 0;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--panel), var(--panel2));
+  border-right: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.crewInfo:hover {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.1), var(--panel2));
+}
+
+.crewHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.crewAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid var(--line);
+  position: relative;
+}
+
+.crewAvatar :global(.avatarImage) {
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.crewDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.crewName {
+  font-weight: bold;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.crewSpecialty {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crewStats {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.crewPoints {
+  font-weight: bold;
+  color: var(--good);
+  font-size: 12px;
+}
+
+.overlapIndicator {
+  font-size: 10px;
+  color: var(--warn);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.overloadIndicator {
+  font-size: 10px;
+  color: var(--risk);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.timelineTrack {
+  flex: 1;
+  display: flex;
+  position: relative;
+  min-height: 120px;
+  overflow: visible;
+  transition: background 0.2s;
+}
+
+.timelineTrack.dropTarget {
+  background: rgba(124, 92, 255, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(124, 92, 255, 0.3);
+}
+
+.dayCell {
+  flex-shrink: 0;
+  border-left: 1px solid var(--line);
+}
+
+.dayCell.today {
+  background: rgba(124, 92, 255, 0.05);
+}
+
+.dayCell.weekend {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.storiesLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.storiesLayer > * {
+  pointer-events: auto;
+}
+
+.storyCard {
+  border: 2px solid;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.storyCard:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+}
+
+.storyCard:active {
+  cursor: grabbing;
+  opacity: 0.7;
+}
+
+.dayCell.dragOver {
+  background: rgba(124, 92, 255, 0.15);
+  border: 2px dashed var(--accent1);
+}
+
+.storyCard.status-planned {
+  background: rgba(90, 230, 255, 0.15);
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.storyCard.status-in_progress {
+  background: rgba(255, 209, 102, 0.15);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.storyCard.status-in_review {
+  background: rgba(124, 92, 255, 0.15);
+  border-color: var(--accent1);
+  color: var(--accent1);
+}
+
+.storyCard.status-completed,
+.storyCard.status-done {
+  background: rgba(40, 217, 154, 0.15);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.storyCard.status-blocked {
+  background: rgba(255, 92, 147, 0.15);
+  border-color: var(--risk);
+  color: var(--risk);
+}
+
+.storyPoints {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: var(--panel);
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.priorityStar {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  color: var(--risk);
+}
+
+.storyTitle {
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.storyType {
+  font-size: 10px;
+  opacity: 0.8;
+  text-transform: capitalize;
+}
+
+.criteriaProgress {
+  margin-top: 8px;
+}
+
+.criteriaHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.criteriaBar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.criteriaFill {
+  height: 100%;
+  background: currentColor;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.legend {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.legendColor {
+  width: 16px;
+  height: 16px;
+  border: 2px solid;
+  border-radius: 4px;
+}
+
+.loading,
+.error,
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: var(--panel);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
+.spinner {
+  border: 3px solid var(--line);
+  border-top-color: var(--accent1);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-right: 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorContent,
+.emptyContent {
+  text-align: center;
+}
+
+.errorIcon,
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.errorTitle,
+.emptyTitle {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.errorMessage {
+  color: var(--risk);
+  margin-bottom: 16px;
+}
+
+.errorButton {
+  padding: 10px 20px;
+  background: var(--risk);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: opacity 0.2s;
+}
+
+.errorButton:hover {
+  opacity: 0.9;
+}
+
+.emptyMessage {
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+.emptyButton {
+  padding: 12px 24px;
+  background: var(--accent1);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.emptyButton:hover {
+  background: var(--accent2);
+}

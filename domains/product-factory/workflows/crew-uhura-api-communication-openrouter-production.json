@@ -1,0 +1,202 @@
+{
+  "id": "4fwb8ehu5onv0qty1dq5y",
+  "name": "CREW - Lieutenant Uhura - API Communication - OpenRouter - Production",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crew-lieutenant_uhura",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "crew_directive",
+      "name": "Lieutenant Uhura Directive",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "e53d8d02-5154-453c-9aae-0e6bcf8f46b9"
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/crew-memory-storage",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'lieutenant_uhura',\n              knowledgeType: 'api_communication',\n              priority: 'high',\n              requestType: 'retrieve_context'\n            }\n          } }}"
+      },
+      "id": "memory_retrieval",
+      "name": "Lieutenant Uhura Memory Retrieval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        464,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "url": "https://api.openrouter.ai/api/v1/chat/completions",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            model: 'openrouter/auto',\n            messages: [\n              {\n                role: 'system',\n                content: 'You are Lieutenant Uhura, Communications Officer. Your specializations: API Communication, I/O Operations, Documentation, Information Flow, Integration Protocols, Message Routing, Interface Standards, Cross-System Communication. Personality: Master Communicator.'\n              },\n              {\n                role: 'user',\n                content: $json.body?.input || 'Provide your assessment'\n              }\n            ],\n            temperature: 0.7,\n            max_tokens: 1000\n          } }}"
+      },
+      "id": "llm_selector",
+      "name": "LLM Selection Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        464,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "url": "https://api.openrouter.ai/api/v1/chat/completions",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            model: 'openrouter/auto',\n            messages: [\n              {\n                role: 'system',\n                content: 'You are Lieutenant Uhura, a Master Communicator. Key traits: Clear communicator, Detail-oriented, Patient, Organized, Multilingual (in tech terms), Bridge-builder, Professional. Your catchphrases: Hailing frequencies open, Message received and understood. Respond in character. Capabilities: communications, io_operations, documentation, api_integration, message_routing, protocol_design, information_flow, cross_system_communication, interface_standards.'\n              },\n              {\n                role: 'user',\n                content: $json.body?.input || 'Provide your strategic assessment'\n              }\n            ],\n            temperature: 0.8,\n            max_tokens: 2000\n          } }}"
+      },
+      "id": "crew_ai",
+      "name": "Lieutenant Uhura AI Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        688,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/crew-memory-storage",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'lieutenant_uhura',\n              knowledgeType: 'api_communication',\n              priority: 'high',\n              title: 'API Communication Advisory',\n              summary: ($json.choices?.[0]?.message?.content || 'Assessment provided').split('\\n')[0],\n              detailedAnalysis: $json.choices?.[0]?.message?.content || '',\n              keyFindings: [],\n              conclusions: [],\n              recommendations: [],\n              tags: ['crew', 'lieutenant_uhura', 'api_communication'],\n              requestType: 'store_memory'\n            }\n          } }}"
+      },
+      "id": "memory_storage",
+      "name": "Lieutenant Uhura Memory Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        912,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "none",
+        "url": "https://n8n.pbradygeorgen.com/webhook/observation-lounge",
+        "sendBody": true,
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ {\n            body: {\n              crewMember: 'Lieutenant Uhura',\n              role: 'Communications Officer',\n              statement: ($json.choices?.[0]?.message?.content || 'Crew member provided assessment').split('\\n')[0],\n              timestamp: new Date().toISOString(),\n              requestId: $json.body?.requestId || 'unknown'\n            }\n          } }}"
+      },
+      "id": "observation_communication",
+      "name": "Observation Lounge Communication",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        912,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "responseData": "{{ $json.choices?.[0]?.message?.content }}"
+      },
+      "id": "crew_response",
+      "name": "Lieutenant Uhura Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        304
+      ]
+    }
+  ],
+  "connections": {
+    "crew_directive": {
+      "main": [
+        [
+          {
+            "node": "memory_retrieval",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "memory_retrieval": {
+      "main": [
+        [
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "llm_selector": {
+      "main": [
+        [
+          {
+            "node": "crew_ai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crew_ai": {
+      "main": [
+        [
+          {
+            "node": "memory_storage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "observation_communication",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "crew_response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "memory_storage": {
+      "main": [
+        []
+      ]
+    },
+    "observation_communication": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "crew",
+    "lieutenant_uhura",
+    "communications-officer",
+    "api-communication"
+  ]
+}

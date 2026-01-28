@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "rag-refresh-product-factory"
+version = "0.1.0"
+description = "RAG (Retrieval Augmented Generation) implementation for product information management"
+authors = ["Alex AI Crew <info@example.com>"]
+readme = "README.md"
+license = "MIT"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+langchain = "^0.1.0"
+faiss-cpu = "^1.7.4"
+fastapi = "^0.104.0"
+sentence-transformers = "^2.2.2"
+pyyaml = "^6.0.1"
+uvicorn = "^0.24.0"
+numpy = "^1.24.0"
+pillow = "^10.0.0"
+opencv-python = "^4.8.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+black = "^23.10.0"
+isort = "^5.12.0"
+mypy = "^1.5.0"
+pytest-cov = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(pnpm build:*)",
-      "Bash(pnpm --filter @openrouter-crew/unified-dashboard build:*)"
+      "Bash(pnpm --filter @openrouter-crew/unified-dashboard build:*)",
+      "Bash(chmod:*)"
     ]
   }
 }
