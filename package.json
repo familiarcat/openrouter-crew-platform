@@ -1,0 +1,56 @@
+{
+  "name": "openrouter-crew-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unified cost-optimized AI orchestration platform with n8n, Supabase, and crew-based intelligence",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/openrouter-crew-platform.git"
+  },
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:dashboard\" \"pnpm dev:supabase\"",
+    "dev:dashboard": "pnpm --filter unified-dashboard dev",
+    "dev:supabase": "supabase start",
+    "dev:all": "docker-compose up",
+    "build": "pnpm -r build",
+    "build:dashboard": "pnpm --filter unified-dashboard build",
+    "type-check": "pnpm -r type-check",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:integration": "pnpm --filter @openrouter-crew/integration-tests test",
+    "test:e2e": "pnpm --filter @openrouter-crew/e2e-tests test",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset",
+    "supabase:status": "supabase status",
+    "db:migrate": "supabase db push",
+    "db:seed": "supabase db seed",
+    "n8n:sync": "node scripts/n8n/sync-workflows.js",
+    "n8n:export": "node scripts/n8n/export-workflows.js",
+    "n8n:activate": "node scripts/n8n/activate-workflows.js",
+    "secrets:sync": "bash scripts/secrets/sync-from-zshrc.sh",
+    "secrets:validate": "node scripts/secrets/validate-env.js",
+    "deploy:local": "docker-compose up -d",
+    "deploy:aws": "bash scripts/deploy/deploy-aws.sh",
+    "deploy:vercel": "pnpm --filter unified-dashboard vercel",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v && docker system prune -f",
+    "milestone:create": "bash scripts/milestone/create-milestone.sh",
+    "milestone:push": "bash scripts/milestone/push-milestone.sh",
+    "clean": "pnpm -r clean && rm -rf node_modules",
+    "setup": "pnpm install && pnpm secrets:sync && pnpm supabase:start"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.9.3",
+    "turbo": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.12.3"
+}
