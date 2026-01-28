@@ -1,0 +1,20 @@
+{
+  "name": "07_usage_logger",
+  "description": "Emit usage to Supabase",
+  "tags": [
+    "openrouter",
+    "cost-optimized",
+    "milestone"
+  ],
+  "nodes": [
+    {
+      "type": "start",
+      "name": "Start"
+    },
+    {
+      "type": "set",
+      "name": "Purpose",
+      "notes": "Emit usage to Supabase"
+    }
+  ]
+}

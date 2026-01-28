@@ -1,0 +1,36 @@
+{
+  "name": "CREW___dr_crusher",
+  "description": "Crew workflow routed through OpenRouter cost-optimization pipeline",
+  "tags": [
+    "crew",
+    "openrouter",
+    "cost-optimized",
+    "milestone"
+  ],
+  "nodes": [
+    {
+      "type": "executeWorkflow",
+      "workflow": "01_token_cost_meter"
+    },
+    {
+      "type": "executeWorkflow",
+      "workflow": "02_context_compressor"
+    },
+    {
+      "type": "executeWorkflow",
+      "workflow": "03_hybrid_model_router"
+    },
+    {
+      "type": "executeWorkflow",
+      "workflow": "05_budget_enforcer"
+    },
+    {
+      "type": "executeWorkflow",
+      "workflow": "04_llm_executor_openrouter"
+    },
+    {
+      "type": "executeWorkflow",
+      "workflow": "07_usage_logger"
+    }
+  ]
+}

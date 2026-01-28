@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency, formatRelativeTime } from '@/lib/utils'
 import { BarChart3, DollarSign, FolderKanban, Sparkles } from 'lucide-react'
-import type { Database } from '@openrouter-crew/shared-schemas'
+import { ClientTypes } from '@openrouter-crew/shared-schemas'
 
-type Project = Database['public']['Tables']['projects']['Row']
-type LLMUsageEvent = Database['public']['Tables']['llm_usage_events']['Row']
+type Project = ClientTypes.Project
+type LLMUsageEvent = ClientTypes.LLMUsageEvent
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -27,7 +27,7 @@ export default function DashboardPage() {
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(6)
+        .limit(6) as { data: Project[] | null; error: any }
 
       if (projectsData) setProjects(projectsData)
 
@@ -36,7 +36,7 @@ export default function DashboardPage() {
         .from('llm_usage_events')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(10) as { data: LLMUsageEvent[] | null; error: any }
 
       if (usageData) {
         setRecentUsage(usageData)

@@ -10,11 +10,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@openrouter-crew/crew-core": "workspace:*",
-    "@openrouter-crew/cost-tracking": "workspace:*",
+    "@openrouter-crew/shared-crew-coordination": "workspace:*",
+    "@openrouter-crew/shared-cost-tracking": "workspace:*",
     "@openrouter-crew/shared-schemas": "workspace:*",
     "@supabase/supabase-js": "^2.39.7",
-    "next": "14.2.16",
+    "next": "^15.1.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "lucide-react": "^0.454.0",

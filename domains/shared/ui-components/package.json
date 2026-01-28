@@ -1,0 +1,19 @@
+{
+  "name": "@openrouter-crew/shared-ui-components",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "echo 'No build needed yet'",
+    "type-check": "echo 'No type check needed yet'"
+  },
+  "dependencies": {
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/react": "^18.2.48",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,128 @@
+version: '3.8'
+
+# ==============================================================================
+# N8N Workflow Automation for OpenRouter Crew Platform
+# ==============================================================================
+# This docker-compose file sets up N8N with all crew workflows
+# Usage: docker-compose -f docker-compose.n8n.yml up -d
+# ==============================================================================
+
+services:
+  # ==============================================================================
+  # N8N Service
+  # ==============================================================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: openrouter-crew-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Basic Auth
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+
+      # Host Configuration
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - WEBHOOK_URL=${N8N_BASE_URL:-http://localhost:5678}
+
+      # Database (SQLite for local, PostgreSQL for production)
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+
+      # Execution
+      - EXECUTIONS_MODE=regular
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+
+      # Timezone
+      - GENERIC_TIMEZONE=America/Los_Angeles
+      - TZ=America/Los_Angeles
+
+      # OpenRouter API Key (for LLM calls in workflows)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+
+      # Supabase Connection (for logging)
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+
+      # Optional: Direct Provider Keys
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+
+    volumes:
+      # Persistent data
+      - n8n-data:/home/node/.n8n
+
+      # Mount workflows (read-only for import)
+      - ./packages/n8n-workflows:/workflows:ro
+
+      # Mount custom nodes (if any)
+      - ./packages/n8n-workflows/custom-nodes:/home/node/.n8n/custom:ro
+
+    networks:
+      - openrouter-crew
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    labels:
+      - "com.openrouter-crew.service=n8n"
+      - "com.openrouter-crew.description=Workflow automation and crew orchestration"
+
+  # ==============================================================================
+  # N8N Workflow Importer (One-time job)
+  # ==============================================================================
+  n8n-importer:
+    image: node:20-alpine
+    container_name: openrouter-crew-n8n-importer
+    depends_on:
+      n8n:
+        condition: service_healthy
+    environment:
+      - N8N_BASE_URL=http://n8n:5678
+      - N8N_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+    volumes:
+      - ./packages/n8n-workflows:/workflows:ro
+      - ./scripts/n8n:/scripts:ro
+    working_dir: /scripts
+    command: >
+      sh -c "
+        echo 'Waiting for N8N to be ready...';
+        sleep 10;
+        echo 'Installing dependencies...';
+        npm install -g n8n-api-client;
+        echo 'Importing workflows...';
+        node import-workflows.js;
+        echo 'Workflows imported successfully!';
+      "
+    networks:
+      - openrouter-crew
+    restart: "no"
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  openrouter-crew:
+    driver: bridge
+    name: openrouter-crew-network
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  n8n-data:
+    name: openrouter-crew-n8n-data
+    driver: local

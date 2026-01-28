@@ -11,9 +11,9 @@ RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 # Copy workspace files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/unified-dashboard/package.json ./apps/unified-dashboard/
-COPY packages/crew-core/package.json ./packages/crew-core/
-COPY packages/cost-tracking/package.json ./packages/cost-tracking/
-COPY packages/shared-schemas/package.json ./packages/shared-schemas/
+COPY domains/shared/crew-coordination/package.json ./domains/shared/crew-coordination/
+COPY domains/shared/cost-tracking/package.json ./domains/shared/cost-tracking/
+COPY domains/shared/schemas/package.json ./domains/shared/schemas/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -33,8 +33,8 @@ COPY . .
 
 # Build packages first
 RUN pnpm --filter @openrouter-crew/shared-schemas build
-RUN pnpm --filter @openrouter-crew/crew-core build
-RUN pnpm --filter @openrouter-crew/cost-tracking build
+RUN pnpm --filter @openrouter-crew/shared-crew-coordination build
+RUN pnpm --filter @openrouter-crew/shared-cost-tracking build
 
 # Build dashboard
 ARG NEXT_PUBLIC_SUPABASE_URL

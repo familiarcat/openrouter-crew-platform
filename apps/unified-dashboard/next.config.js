@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: [
-    '@openrouter-crew/crew-core',
-    '@openrouter-crew/cost-tracking',
+    '@openrouter-crew/shared-crew-coordination',
+    '@openrouter-crew/shared-cost-tracking',
     '@openrouter-crew/shared-schemas'
   ],
   experimental: {
