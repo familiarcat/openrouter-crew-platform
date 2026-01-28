@@ -1,0 +1,20 @@
+{
+  "name": "03_hybrid_model_router",
+  "description": "Route to cheapest viable OpenRouter model",
+  "tags": [
+    "openrouter",
+    "cost-optimized",
+    "milestone"
+  ],
+  "nodes": [
+    {
+      "type": "start",
+      "name": "Start"
+    },
+    {
+      "type": "set",
+      "name": "Purpose",
+      "notes": "Route to cheapest viable OpenRouter model"
+    }
+  ]
+}

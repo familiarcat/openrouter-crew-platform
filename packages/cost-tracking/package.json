@@ -1,0 +1,20 @@
+{
+  "name": "@openrouter-crew/cost-tracking",
+  "version": "1.0.0",
+  "description": "OpenRouter cost optimization and tracking logic",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openrouter-crew/shared-schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^20.11.0"
+  }
+}

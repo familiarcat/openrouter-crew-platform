@@ -1,0 +1,10 @@
+{
+  "name": "@openrouter-crew/n8n-workflows",
+  "version": "1.0.0",
+  "description": "n8n workflow definitions for cost optimization and crew coordination",
+  "scripts": {
+    "sync": "node ../../scripts/n8n/sync-workflows.js --direction=to-n8n",
+    "export": "node ../../scripts/n8n/sync-workflows.js --direction=from-n8n",
+    "validate": "node scripts/validate-workflows.js"
+  }
+}
