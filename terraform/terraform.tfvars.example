@@ -1,0 +1,31 @@
+# Example Terraform variables file
+# Copy to terraform.tfvars and customize for your environment
+
+aws_region  = "us-east-2"
+environment = "staging"
+
+# EC2 Configuration
+instance_type = "t3.medium"  # 2 vCPU, 4GB RAM (~$30/month)
+volume_size   = 50           # 50GB storage
+
+# Network Configuration
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+
+# Security
+allowed_ssh_cidr  = []             # Empty = SSM-only (recommended)
+allowed_http_cidr = ["0.0.0.0/0"]  # Public access (restrict in production)
+
+# Optional ALB for HTTPS
+create_alb      = false
+domain_name     = ""  # e.g., "crew.yourdomain.com"
+certificate_arn = ""  # ACM certificate ARN
+
+# Monitoring
+enable_cloudwatch_logs = true
+
+# Additional tags
+tags = {
+  CostCenter = "engineering"
+  Owner      = "platform-team"
+}

@@ -1,0 +1,326 @@
+name: Deploy to AWS EC2
+
+on:
+  # Manual trigger only (cost protection - learned from rag-refresh & alex-ai)
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Deployment reason (for audit trail)'
+        required: true
+        default: 'Manual deployment'
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+env:
+  AWS_REGION: us-east-2
+  ECR_REPOSITORY: openrouter-crew-platform
+  EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # Pre-deployment validation (from alex-ai pattern)
+  pre-deployment:
+    name: Pre-Deployment Checks
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_decision: ${{ steps.validate.outputs.deploy }}
+      image_tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9.12.3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Validate AWS credentials
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          aws sts get-caller-identity --region ${{ env.AWS_REGION }}
+          echo "✅ AWS credentials validated"
+
+      - name: Generate image tag
+        id: tag
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          TAG="${SHORT_SHA}-$(date +%s)"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "🏷️  Image tag: $TAG"
+
+      - name: Deployment decision
+        id: validate
+        run: |
+          echo "deploy=true" >> $GITHUB_OUTPUT
+          echo "✅ Pre-deployment checks passed - ready to deploy"
+
+  # Build and push Docker image
+  build:
+    name: Build & Push to ECR
+    runs-on: ubuntu-latest
+    needs: pre-deployment
+    if: needs.pre-deployment.outputs.deploy_decision == 'true'
+    outputs:
+      image_uri: ${{ steps.push.outputs.image_uri }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Create ECR repository if not exists
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} || \
+          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }}
+          echo "✅ ECR repository ready"
+
+      - name: Build Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ needs.pre-deployment.outputs.image_tag }}
+        run: |
+          echo "🔨 Building unified dashboard image..."
+
+          docker build \
+            --platform linux/amd64 \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            --build-arg GIT_SHA=${{ github.sha }} \
+            --tag $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG \
+            --tag $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest \
+            -f apps/unified-dashboard/Dockerfile \
+            .
+
+          echo "✅ Image built successfully"
+
+      - name: Push image to ECR
+        id: push
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ needs.pre-deployment.outputs.image_tag }}
+        run: |
+          IMAGE_URI="$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG"
+
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "✅ Image pushed: $IMAGE_URI"
+
+      - name: Image scan
+        run: |
+          aws ecr start-image-scan \
+            --repository-name ${{ env.ECR_REPOSITORY }} \
+            --image-id imageTag=${{ needs.pre-deployment.outputs.image_tag }} \
+            --region ${{ env.AWS_REGION }} || echo "⚠️  Image scan initiated (results available async)"
+
+  # Deploy to EC2 via SSM (from rag-refresh pattern)
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: [pre-deployment, build]
+    environment:
+      name: ${{ github.event.inputs.environment }}
+      url: https://openrouter-crew-platform.yourdomain.com
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy via SSM
+        id: deploy
+        env:
+          ECR_REGISTRY: ${{ needs.build.outputs.image_uri }}
+          IMAGE_TAG: ${{ needs.pre-deployment.outputs.image_tag }}
+        run: |
+          echo "🚀 Deploying to EC2 instance: ${{ env.EC2_INSTANCE_ID }}"
+
+          # Construct deployment commands
+          DEPLOY_COMMANDS=$(cat <<'EOF'
+          # Stop and remove old containers
+          docker stop openrouter-dashboard openrouter-n8n openrouter-supabase || true
+          docker rm openrouter-dashboard openrouter-n8n openrouter-supabase || true
+
+          # ECR login
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+          # Pull latest images
+          docker pull $IMAGE_URI
+
+          # Start services via docker-compose
+          cd /home/ec2-user/openrouter-crew-platform
+
+          # Update environment variables
+          cat > .env.production <<ENVEOF
+          SUPABASE_URL=$SUPABASE_URL
+          SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+          NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+          OPENROUTER_API_KEY=$OPENROUTER_API_KEY
+          N8N_BASE_URL=$N8N_BASE_URL
+          N8N_API_KEY=$N8N_API_KEY
+          ENVEOF
+
+          # Start services
+          docker-compose -f docker-compose.prod.yml up -d
+
+          # Verify containers are running
+          docker ps | grep openrouter
+
+          echo "✅ Deployment complete"
+          EOF
+          )
+
+          # Execute via SSM
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[\"$DEPLOY_COMMANDS\"]" \
+            --region ${{ env.AWS_REGION }} \
+            --output text \
+            --query "Command.CommandId")
+
+          echo "📨 SSM Command ID: $COMMAND_ID"
+          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+
+          # Wait for command completion
+          echo "⏳ Waiting for deployment to complete..."
+          sleep 30
+
+          # Check command status
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id $COMMAND_ID \
+            --instance-id "${{ env.EC2_INSTANCE_ID }}" \
+            --region ${{ env.AWS_REGION }} \
+            --query "Status" \
+            --output text)
+
+          echo "📊 Deployment status: $STATUS"
+
+          if [ "$STATUS" == "Success" ]; then
+            echo "✅ Deployment successful!"
+
+            # Get output
+            aws ssm get-command-invocation \
+              --command-id $COMMAND_ID \
+              --instance-id "${{ env.EC2_INSTANCE_ID }}" \
+              --region ${{ env.AWS_REGION }} \
+              --query "StandardOutputContent" \
+              --output text
+            exit 0
+          else
+            echo "❌ Deployment failed!"
+
+            # Get error output
+            aws ssm get-command-invocation \
+              --command-id $COMMAND_ID \
+              --instance-id "${{ env.EC2_INSTANCE_ID }}" \
+              --region ${{ env.AWS_REGION }} \
+              --query "StandardErrorContent" \
+              --output text
+            exit 1
+          fi
+
+  # Post-deployment health checks
+  verify:
+    name: Post-Deployment Verification
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - name: Health check - Dashboard
+        run: |
+          echo "🏥 Checking dashboard health..."
+          curl -f https://openrouter-crew-platform.yourdomain.com/api/health || \
+          curl -f http://${{ secrets.EC2_PUBLIC_IP }}:3000/api/health
+          echo "✅ Dashboard is healthy"
+
+      - name: Health check - n8n
+        run: |
+          echo "🏥 Checking n8n health..."
+          curl -f http://${{ secrets.EC2_PUBLIC_IP }}:5678/healthz
+          echo "✅ n8n is healthy"
+
+      - name: Health check - Supabase
+        run: |
+          echo "🏥 Checking Supabase connectivity..."
+          curl -f ${{ secrets.SUPABASE_URL }}/rest/v1/ \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
+          echo "✅ Supabase is accessible"
+
+      - name: Deployment summary
+        run: |
+          echo "## 🎉 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Reason:** ${{ github.event.inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ needs.pre-deployment.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed By:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services" >> $GITHUB_STEP_SUMMARY
+          echo "- Dashboard: https://openrouter-crew-platform.yourdomain.com" >> $GITHUB_STEP_SUMMARY
+          echo "- n8n: http://${{ secrets.EC2_PUBLIC_IP }}:5678" >> $GITHUB_STEP_SUMMARY
+          echo "- Supabase Studio: http://${{ secrets.EC2_PUBLIC_IP }}:54323" >> $GITHUB_STEP_SUMMARY
+
+  # Notification (optional - from alex-ai pattern)
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy, verify]
+    if: always()
+
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [ "${{ needs.verify.result }}" == "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "emoji=❌" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify (placeholder)
+        run: |
+          echo "${{ steps.status.outputs.emoji }} Deployment ${{ steps.status.outputs.status }}"
+          echo "Add Slack/email notification here if needed"
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK }} -d "..."
