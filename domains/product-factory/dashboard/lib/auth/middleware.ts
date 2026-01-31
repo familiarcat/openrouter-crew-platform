@@ -1,4 +1,4 @@
-import { normalizeUserId } from "@/lib/auth/identity";
+import { normalizeUserId } from "@/lib/auth/user-id";
 /**
  * Authentication & Authorization Middleware for Alex AI
  *

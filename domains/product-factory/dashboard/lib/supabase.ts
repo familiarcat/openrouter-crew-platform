@@ -1,43 +1,51 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/supabase';
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from '@openrouter-crew/shared-schemas';
 
 // --- Server-side Supabase client (for API routes, server components) ---
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl) {
-  throw new Error('SUPABASE_URL is not set for the server-side client.');
+  throw new Error("SUPABASE_URL is not set for the server-side client.");
 }
 
 if (!supabaseServiceRoleKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set for the server-side client.');
+  throw new Error(
+    "SUPABASE_SERVICE_ROLE_KEY is not set for the server-side client."
+  );
 }
 
-export const supabaseServer: SupabaseClient<Database> = createClient<Database>(supabaseUrl, supabaseServiceRoleKey);
+export const supabaseServer: SupabaseClient<Database> = createClient<Database>(
+  supabaseUrl,
+  supabaseServiceRoleKey
+);
 
 // --- Client-side Supabase client (for browser) ---
 const publicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publicSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!publicSupabaseUrl) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set for the client-side client.');
+  throw new Error(
+    "NEXT_PUBLIC_SUPABASE_URL is not set for the client-side client."
+  );
 }
 
 if (!publicSupabaseAnonKey) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not set for the client-side client.');
+  throw new Error(
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY is not set for the client-side client."
+  );
 }
 
-export const supabaseBrowser: SupabaseClient<Database> = createClient<Database>(publicSupabaseUrl, publicSupabaseAnonKey);
+export const supabaseBrowser: SupabaseClient<Database> = createClient<Database>(
+  publicSupabaseUrl,
+  publicSupabaseAnonKey
+);
 
 // --- Canonical Exports ---
 // Default export for server-side usage, as was the legacy setup
 export const supabase: SupabaseClient<Database> = supabaseServer;
 
 // --- Utility Functions ---
-
-// The real implementations of these functions seem to be elsewhere.
-// I will provide simple placeholders here to avoid breaking imports,
-// but they should be properly implemented or imported from their correct location.
 
 export async function logAudit(event: any) {
   console.log("AUDIT LOG (placeholder):", event);

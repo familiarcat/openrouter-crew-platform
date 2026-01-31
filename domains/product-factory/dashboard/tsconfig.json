@@ -1,15 +1,41 @@
 {
   "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "jsx": "preserve",
+    "paths": {
+      "@/*": ["./*"],
+      "@openrouter-crew/crew-core": ["../../../packages/crew-core/src"],
+      "@openrouter-crew/crew-core/*": ["../../../packages/crew-core/src/*"],
+      "@openrouter-crew/shared-schemas": ["../../../packages/shared-schemas/src"],
+      "@openrouter-crew/shared-schemas/*": ["../../../packages/shared-schemas/src/*"],
+      "@openrouter-crew/cost-tracking": ["../../../packages/cost-tracking/src"],
+      "@openrouter-crew/cost-tracking/*": ["../../../packages/cost-tracking/src/*"]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "strict": true,
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "paths": {
-      "@/*": ["./*"]
-    }
+    "resolveJsonModule": true,
+    "isolatedModules": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../../../packages/crew-core/src/**/*",
+    "../../../packages/shared-schemas/src/**/*",
+    "../../../packages/cost-tracking/src/**/*"
+  ],
   "exclude": ["node_modules"]
 }

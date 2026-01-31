@@ -40,17 +40,22 @@
     "milestone:create": "bash scripts/milestone/create-milestone.sh",
     "milestone:push": "bash scripts/milestone/push-milestone.sh",
     "clean": "pnpm -r clean && rm -rf node_modules",
+    "reset": "bash scripts/reset-build.sh",
     "setup": "pnpm install && pnpm secrets:sync && pnpm supabase:start"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "concurrently": "^8.2.2",
-    "typescript": "^5.9.3",
-    "turbo": "^2.0.0"
+    "turbo": "^2.0.0",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@9.12.3"
+  "packageManager": "pnpm@9.12.3",
+  "dependencies": {
+    "supabase": "^2.72.9",
+    "tailwindcss": "^4.1.18"
+  }
 }
