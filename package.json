@@ -32,6 +32,7 @@
     "secrets:validate": "node scripts/secrets/validate-env.js",
     "deploy:local": "docker-compose up -d",
     "git:verify": "bash scripts/git/verify-git-status.sh",
+    "git:setup": "node scripts/git/setup-remote.js",
     "deploy:aws": "bash scripts/deploy/deploy-aws.sh",
     "deploy:vercel": "pnpm --filter unified-dashboard vercel",
     "docker:up": "docker-compose up -d",
