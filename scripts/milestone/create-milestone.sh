@@ -21,8 +21,15 @@ if [ -z "$1" ]; then
 fi
 
 FEATURE_NAME=$1
+
+# Generate git-safe name (lowercase, alphanumeric, hyphens)
+SAFE_NAME=$(echo "$FEATURE_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/[^a-z0-9-]//g')
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-BRANCH_NAME="milestone/${FEATURE_NAME}-${TIMESTAMP}"
+BRANCH_NAME="milestone/${SAFE_NAME}-${TIMESTAMP}"
+
+# Capture summary of changes before stashing
+CHANGES_STAT=$(git diff --stat 2>/dev/null || echo "")
+CHANGES_STATUS=$(git status --short 2>/dev/null || echo "")
 
 echo -e "${GREEN}🎯 Creating milestone branch...${NC}"
 
@@ -33,76 +40,42 @@ if [ ! -d .git ]; then
 fi
 
 # Check for uncommitted changes
+STASHED=0
 if [ -n "$(git status --porcelain)" ]; then
   echo -e "${YELLOW}⚠️  Uncommitted changes detected${NC}"
   echo -e "${YELLOW}   Stashing changes...${NC}"
   git stash push -m "Auto-stash before milestone: $FEATURE_NAME"
+  STASHED=1
 fi
 
 # Create and checkout new branch
 echo -e "${YELLOW}📝 Creating branch: $BRANCH_NAME${NC}"
 git checkout -b "$BRANCH_NAME"
 
+# Restore stashed changes if any
+if [ "$STASHED" -eq 1 ]; then
+  echo -e "${YELLOW}♻️  Restoring stashed changes to new branch...${NC}"
+  git stash pop --quiet || echo -e "${RED}⚠️  Conflict during stash pop. Please resolve manually.${NC}"
+fi
+
 # Create milestone marker file
 MILESTONE_DIR=".milestones"
 mkdir -p "$MILESTONE_DIR"
-MILESTONE_FILE="$MILESTONE_DIR/${FEATURE_NAME}-${TIMESTAMP}.md"
+MILESTONE_FILE="$MILESTONE_DIR/${SAFE_NAME}-${TIMESTAMP}.md"
 
-cat > "$MILESTONE_FILE" << EOF
-# Milestone: $FEATURE_NAME
+echo -e "${YELLOW}🤖 Consulting Crew (Commander Data) for documentation...${NC}"
 
-**Created:** $(date)
-**Branch:** $BRANCH_NAME
-**Status:** In Progress
+# Export variables for the crew generation script
+export FEATURE_NAME
+export BRANCH_NAME
+export CHANGES_STATUS
+export CHANGES_STAT
 
-## Description
-
-[Add description of what this milestone aims to achieve]
-
-## Tasks
-
-- [ ] Task 1
-- [ ] Task 2
-- [ ] Task 3
-
-## Notes
-
-[Add any relevant notes or context]
-
-## Integration Points
-
-### Affected Projects
-- [ ] unified-dashboard
-- [ ] dj-booking
-- [ ] product-factory
-- [ ] cli
-
-### Affected Packages
-- [ ] crew-core
-- [ ] cost-tracking
-- [ ] shared-schemas
-- [ ] n8n-workflows
-
-### Database Changes
-- [ ] Schema migration required
-- [ ] Seed data required
-
-### n8n Workflows
-- [ ] New workflows
-- [ ] Modified workflows
-
-## Completion Checklist
-
-- [ ] All tasks completed
-- [ ] Tests passing
-- [ ] Documentation updated
-- [ ] Schema migrations applied
-- [ ] n8n workflows synced
-- [ ] Ready to merge to main
-EOF
+# Generate content (uses n8n crew if available, falls back to template)
+node scripts/milestone/generate-milestone-content.js > "$MILESTONE_FILE"
 
 git add "$MILESTONE_FILE"
-git commit -m "milestone: create ${FEATURE_NAME} - ${TIMESTAMP}"
+git commit -m "milestone: create ${SAFE_NAME} - ${TIMESTAMP}"
 
 echo -e "\n${GREEN}✅ Milestone branch created successfully!${NC}"
 echo -e "${YELLOW}📋 Branch: $BRANCH_NAME${NC}"

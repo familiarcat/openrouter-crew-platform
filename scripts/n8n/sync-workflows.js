@@ -134,11 +134,19 @@ async function syncFromN8n() {
 
   try {
     const response = await n8nRequest('/api/v1/workflows');
-    const workflows = response.data || [];
+    const workflowSummaries = response.data || [];
 
-    console.log(`Found ${workflows.length} workflows in n8n\n`);
+    console.log(`Found ${workflowSummaries.length} workflows in n8n\n`);
 
-    for (const workflow of workflows) {
+    for (const summary of workflowSummaries) {
+      // Fetch full details to ensure completeness (API best practice)
+      let workflow = summary;
+      try {
+        workflow = await n8nRequest(`/api/v1/workflows/${summary.id}`);
+      } catch (e) {
+        console.warn(`    ⚠️ Could not fetch details for ${summary.name}, using list summary.`);
+      }
+
       const { name, nodes, connections, settings } = workflow;
 
       // Determine category based on name/tags
