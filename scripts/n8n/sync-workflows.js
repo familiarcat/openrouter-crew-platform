@@ -14,14 +14,15 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-// Configuration
-const N8N_BASE_URL = process.env.N8N_BASE_URL || 'http://localhost:5678';
-const N8N_API_KEY = process.env.N8N_API_KEY;
-const WORKFLOW_DIR = path.join(__dirname, '../../packages/n8n-workflows');
-
 // Parse command line arguments
 const args = process.argv.slice(2);
 const direction = args.find(arg => arg.startsWith('--direction='))?.split('=')[1] || 'to-n8n';
+const useProd = args.includes('--prod') || args.includes('--production');
+
+// Configuration
+const N8N_BASE_URL = process.env.N8N_BASE_URL || (useProd ? 'https://n8n.pbradygeorgen.com' : 'http://localhost:5678');
+const N8N_API_KEY = process.env.N8N_API_KEY;
+const WORKFLOW_DIR = path.join(__dirname, '../../packages/n8n-workflows');
 
 console.log('🔄 n8n Workflow Sync');
 console.log('================================================================================');
