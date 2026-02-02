@@ -5,7 +5,7 @@
   "description": "Unified cost-optimized AI orchestration platform with n8n, Supabase, and crew-based intelligence",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/openrouter-crew-platform.git"
+    "url": "https://github.com/bradygeorgen/openrouter-crew-platform.git"
   },
   "scripts": {
     "dev": "concurrently \"pnpm dev:dashboard\" \"pnpm dev:supabase\"",
@@ -31,6 +31,7 @@
     "secrets:sync": "bash scripts/secrets/sync-from-zshrc.sh",
     "secrets:validate": "node scripts/secrets/validate-env.js",
     "deploy:local": "docker-compose up -d",
+    "git:verify": "bash scripts/git/verify-git-status.sh",
     "deploy:aws": "bash scripts/deploy/deploy-aws.sh",
     "deploy:vercel": "pnpm --filter unified-dashboard vercel",
     "docker:up": "docker-compose up -d",
