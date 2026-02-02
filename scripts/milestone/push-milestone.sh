@@ -55,8 +55,18 @@ echo -e "${YELLOW}📤 Pushing $CURRENT_BRANCH to remote...${NC}"
 # Check if remote exists
 if ! git remote get-url origin >/dev/null 2>&1; then
   echo -e "${RED}❌ No remote repository configured${NC}"
-  echo -e "${YELLOW}   Add remote with: git remote add origin <repo-url>${NC}"
-  exit 1
+  echo -e "${YELLOW}   Would you like to configure the remote now? (y/n)${NC}"
+  read -r response
+  if [[ "$response" =~ ^[Yy]$ ]]; then
+    node scripts/git/setup-remote.js
+    if ! git remote get-url origin >/dev/null 2>&1; then
+      echo -e "${RED}❌ Remote configuration failed or cancelled.${NC}"
+      exit 1
+    fi
+  else
+    echo -e "${YELLOW}   Add remote with: git remote add origin <repo-url>${NC}"
+    exit 1
+  fi
 fi
 
 # Push with upstream tracking
