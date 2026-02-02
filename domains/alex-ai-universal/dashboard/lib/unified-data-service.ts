@@ -18,6 +18,8 @@
 
 const MCP_BASE_URL = process.env.NEXT_PUBLIC_MCP_URL || 'https://mcp.pbradygeorgen.com';
 const N8N_BASE_URL = process.env.NEXT_PUBLIC_N8N_URL || 'https://n8n.pbradygeorgen.com'; // Fallback only
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rpkkkbufdwxmjaerbhbn.supabase.co';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export interface DataServiceConfig {
   timeout?: number;
@@ -66,10 +68,15 @@ export class UnifiedDataService {
     crew_member?: string;
     query?: string;
   }): Promise<any> {
-    return this.callMCPEndpoint('knowledge/query', {
-      action: 'query',
-      ...params,
-    });
+    try {
+      return await this.callMCPEndpoint('knowledge/query', {
+        action: 'query',
+        ...params,
+      });
+    } catch (error) {
+      // No direct mock for knowledge query yet, return empty to prevent crash
+      return { results: [], fallback: true };
+    }
   }
 
   /**
@@ -82,10 +89,15 @@ export class UnifiedDataService {
     limit?: number;
     crew_member?: string;
   } = {}): Promise<any> {
-    return this.callMCPEndpoint('crew/stats', {
-      action: 'get_stats',
-      ...params,
-    });
+    try {
+      return await this.callMCPEndpoint('crew/stats', {
+        action: 'get_stats',
+        ...params,
+      });
+    } catch (error) {
+      const { mockDataSystem } = await import('./mock-data-system');
+      return mockDataSystem.getMockData('CrewMemoryVisualization');
+    }
   }
 
   /**
@@ -98,10 +110,15 @@ export class UnifiedDataService {
     limit?: number;
     dateRange?: string;
   } = {}): Promise<any> {
-    return this.callMCPEndpoint('learning/metrics', {
-      action: 'get_metrics',
-      ...params,
-    });
+    try {
+      return await this.callMCPEndpoint('learning/metrics', {
+        action: 'get_metrics',
+        ...params,
+      });
+    } catch (error) {
+      const { mockDataSystem } = await import('./mock-data-system');
+      return mockDataSystem.getMockData('LearningAnalyticsDashboard');
+    }
   }
 
   /**
@@ -114,10 +131,15 @@ export class UnifiedDataService {
     limit?: number;
     category?: string;
   } = {}): Promise<any> {
-    return this.callMCPEndpoint('project/recommendations', {
-      action: 'get_recommendations',
-      ...params,
-    });
+    try {
+      return await this.callMCPEndpoint('project/recommendations', {
+        action: 'get_recommendations',
+        ...params,
+      });
+    } catch (error) {
+      const { mockDataSystem } = await import('./mock-data-system');
+      return mockDataSystem.getMockData('RAGProjectRecommendations');
+    }
   }
 
   /**
@@ -270,7 +292,12 @@ export class UnifiedDataService {
     const lastFailure = this.lastFailureTime.get(endpointKey);
     if (lastFailure && Date.now() - lastFailure < this.FAILURE_COOLDOWN) {
       // Endpoint recently failed, skip retry and go straight to fallback
-      console.warn(`⚠️  Supabase endpoint ${endpoint} in cooldown, using n8n fallback immediately`);
+      console.warn(`⚠️  Supabase endpoint ${endpoint} in cooldown, using fallbacks immediately`);
+      
+      // Try Supabase Direct first
+      const directResult = await this.callSupabaseDirect(endpoint, payload);
+      if (directResult) return directResult;
+      
       return this.callN8NFallback(endpoint, payload, payload.operationId);
     }
     
@@ -384,13 +411,27 @@ export class UnifiedDataService {
             // Mark endpoint as failed and set cooldown
             this.failedEndpoints.add(endpointKey);
             this.lastFailureTime.set(endpointKey, Date.now());
-            this.reportProgress(operationId, this.config.retries, this.config.retries, `⚠️  Supabase failed, trying fallback: ${endpoint}`, 'loading');
+            this.reportProgress(operationId, this.config.retries, this.config.retries, `⚠️  Supabase API failed, trying fallbacks: ${endpoint}`, 'loading');
             if (!isTimeout) {
               // Only log non-timeout errors
-              console.warn(`⚠️  Supabase endpoint ${endpoint} failed after ${this.config.retries} attempts (requestId: ${requestId}), trying n8n fallback:`, error.message);
+              console.warn(`⚠️  Supabase endpoint ${endpoint} failed after ${this.config.retries} attempts (requestId: ${requestId}), trying fallbacks:`, error.message);
             }
+            
+            // Try Supabase Direct first
+            const directResult = await this.callSupabaseDirect(endpoint, payload);
+            if (directResult) {
+               this.reportProgress(operationId, this.config.retries, this.config.retries, `✅ Retrieved from Supabase Direct: ${endpoint}`, 'complete');
+               return directResult;
+            }
+
             // Fallback to n8n if MCP unavailable after all retries
-            return this.callN8NFallback(endpoint, payload, operationId);
+            const n8nResult = await this.callN8NFallback(endpoint, payload, operationId);
+            
+            // If n8n also failed, throw error to trigger mock data fallback in caller
+            if (n8nResult && n8nResult.n8nFailed) {
+              throw new Error(n8nResult.error || 'All data sources failed');
+            }
+            return n8nResult;
           }
           
           // Exponential backoff: 1s, 2s, 4s
@@ -409,7 +450,12 @@ export class UnifiedDataService {
       // Mark endpoint as failed and set cooldown
       this.failedEndpoints.add(endpointKey);
       this.lastFailureTime.set(endpointKey, Date.now());
-      return this.callN8NFallback(endpoint, payload, operationId);
+      const n8nResult = await this.callN8NFallback(endpoint, payload, operationId);
+      
+      if (n8nResult && n8nResult.n8nFailed) {
+        throw new Error(n8nResult.error || 'All data sources failed');
+      }
+      return n8nResult;
     } catch (error: any) {
       // Clean up on unexpected error
       this.activeOperations.delete(activeKey);
@@ -417,6 +463,61 @@ export class UnifiedDataService {
       this.failedEndpoints.add(endpointKey);
       this.lastFailureTime.set(endpointKey, Date.now());
       throw error;
+    }
+  }
+
+  /**
+   * Call Supabase directly via REST API (Client-side Fallback)
+   * Used when Next.js API routes are unavailable or failing
+   */
+  private async callSupabaseDirect(endpoint: string, payload: any): Promise<any> {
+    // Check for placeholder URL or key to avoid ERR_NAME_NOT_RESOLVED
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.includes('rpkkkbufdwxmjaerbhbn') || SUPABASE_ANON_KEY.includes('placeholder')) return null;
+
+    try {
+      const headers = {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'count=exact'
+      };
+
+      switch (endpoint) {
+        case 'crew/stats':
+          // Fetch crew members
+          const crewRes = await fetch(`${SUPABASE_URL}/rest/v1/crew_members?select=*`, { headers });
+          if (!crewRes.ok) return null;
+          return { 
+            data: await crewRes.json(), 
+            timestamp: new Date().toISOString(), 
+            source: 'supabase_direct' 
+          };
+
+        case 'cost/optimization':
+          // Fetch recent usage events
+          const costRes = await fetch(`${SUPABASE_URL}/rest/v1/llm_usage_events?select=*&order=created_at.desc&limit=20`, { headers });
+          if (!costRes.ok) return null;
+          return { 
+            recentEvents: await costRes.json(), 
+            summary: { total_cost: 0, savings: 0 }, 
+            timestamp: new Date().toISOString(), 
+            source: 'supabase_direct' 
+          };
+          
+        case 'knowledge/query':
+           const memRes = await fetch(`${SUPABASE_URL}/rest/v1/crew_memories?select=*&limit=10&order=created_at.desc`, { headers });
+           if (!memRes.ok) return null;
+           return { 
+             results: await memRes.json(), 
+             source: 'supabase_direct' 
+           };
+
+        default:
+          return null;
+      }
+    } catch (error) {
+      console.warn(`⚠️ Supabase direct fallback failed for ${endpoint}:`, error);
+      return null;
     }
   }
 
@@ -521,4 +622,3 @@ export function getUnifiedDataService(): UnifiedDataService {
 }
 
 export default UnifiedDataService;
-
