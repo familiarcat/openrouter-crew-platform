@@ -1,0 +1,147 @@
+{
+  "name": "@openrouter-crew/vscode-extension",
+  "displayName": "OpenRouter Crew Platform",
+  "description": "AI-powered development with real-time cost tracking and crew coordination",
+  "version": "0.1.0",
+  "publisher": "openrouter-crew",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "AI",
+    "Chat",
+    "Productivity"
+  ],
+  "keywords": [
+    "ai",
+    "crew",
+    "openrouter",
+    "llm",
+    "cost-tracking",
+    "assistant"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:openrouter-crew.activate"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "openrouter-crew.crew.roster",
+        "title": "Show Crew Roster",
+        "category": "Crew"
+      },
+      {
+        "command": "openrouter-crew.crew.consult",
+        "title": "Consult Crew Member",
+        "category": "Crew"
+      },
+      {
+        "command": "openrouter-crew.project.create",
+        "title": "Create Project",
+        "category": "Project"
+      },
+      {
+        "command": "openrouter-crew.project.feature",
+        "title": "Create Feature",
+        "category": "Project"
+      },
+      {
+        "command": "openrouter-crew.cost.report",
+        "title": "Show Cost Report",
+        "category": "Cost"
+      },
+      {
+        "command": "openrouter-crew.cost.optimize",
+        "title": "Optimize Costs",
+        "category": "Cost"
+      }
+    ],
+    "views": {
+      "openrouter-crew-sidebar": [
+        {
+          "id": "openrouter-crew.crew-view",
+          "name": "Crew Status",
+          "when": "true"
+        },
+        {
+          "id": "openrouter-crew.cost-view",
+          "name": "Cost Breakdown",
+          "when": "true"
+        },
+        {
+          "id": "openrouter-crew.project-view",
+          "name": "Projects",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "openrouter-crew-sidebar",
+          "title": "Crew Platform",
+          "icon": "media/crew-icon.svg"
+        }
+      ]
+    },
+    "statusBarItems": [
+      {
+        "id": "openrouter-crew.cost-meter",
+        "alignment": "left",
+        "priority": 100
+      }
+    ],
+    "configuration": {
+      "title": "OpenRouter Crew Platform",
+      "properties": {
+        "openrouter-crew.cliPath": {
+          "type": "string",
+          "default": "crew",
+          "description": "Path to the crew CLI executable"
+        },
+        "openrouter-crew.supabaseUrl": {
+          "type": "string",
+          "description": "Supabase project URL"
+        },
+        "openrouter-crew.n8nUrl": {
+          "type": "string",
+          "description": "n8n base URL"
+        },
+        "openrouter-crew.budgetLimit": {
+          "type": "number",
+          "default": 100,
+          "description": "Daily budget limit in USD"
+        },
+        "openrouter-crew.refreshInterval": {
+          "type": "number",
+          "default": 5000,
+          "description": "Status refresh interval in milliseconds"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "dev": "tsc -watch",
+    "build": "tsc",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "axios": "^1.6.5",
+    "@openrouter-crew/shared-crew-coordination": "workspace:*",
+    "@openrouter-crew/shared-cost-tracking": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2",
+    "vsce": "^2.15.0"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "@openrouter-crew/cli",
+  "version": "1.0.0",
+  "description": "OpenRouter Crew Platform CLI - The gravitational center for crew coordination",
+  "main": "dist/index.js",
+  "bin": {
+    "crew": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src"
+  },
+  "dependencies": {
+    "axios": "^1.6.5",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1",
+    "table": "^6.8.1",
+    "@openrouter-crew/shared-crew-coordination": "workspace:*",
+    "@openrouter-crew/shared-cost-tracking": "workspace:*",
+    "@openrouter-crew/shared-schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2",
+    "eslint": "^8.54.0",
+    "prettier": "^3.1.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

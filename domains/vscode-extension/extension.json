@@ -1,0 +1,169 @@
+{
+  "id": "openrouter-crew-vscode-extension",
+  "name": "OpenRouter Crew Platform - VSCode Extension",
+  "version": "1.0.0",
+  "description": "AI-powered code assistant hub with cost optimization, crew coordination, and natural language processing",
+  "role": "First-class domain providing IDE integration",
+  "domain": "vscode-extension",
+  "integrations": [
+    "alex-ai-universal (cost optimization & crew coordination)",
+    "product-factory (project management)",
+    "shared services (crew, cost tracking, schemas)"
+  ],
+  "capabilities": {
+    "commands": [
+      {
+        "name": "ask",
+        "description": "Ask AI assistant anything with file context",
+        "shortcut": "Cmd+K"
+      },
+      {
+        "name": "review",
+        "description": "Get AI code review of selected code",
+        "shortcut": "Cmd+Shift+R"
+      },
+      {
+        "name": "explain",
+        "description": "Get explanation of code",
+        "shortcut": "Cmd+Shift+E"
+      },
+      {
+        "name": "generate",
+        "description": "Generate code from description",
+        "shortcut": "Cmd+Shift+G"
+      },
+      {
+        "name": "refactor",
+        "description": "Refactor selected code",
+        "shortcut": "Cmd+Shift+F"
+      },
+      {
+        "name": "test",
+        "description": "Generate unit tests",
+        "shortcut": null
+      },
+      {
+        "name": "document",
+        "description": "Generate documentation",
+        "shortcut": null
+      },
+      {
+        "name": "debug",
+        "description": "Get debugging assistance",
+        "shortcut": null
+      },
+      {
+        "name": "optimize",
+        "description": "Suggest performance optimizations",
+        "shortcut": null
+      },
+      {
+        "name": "quickFix",
+        "description": "AI-powered quick fixes for errors",
+        "shortcut": null
+      }
+    ],
+    "views": [
+      {
+        "id": "crew-status",
+        "name": "Crew Status",
+        "icon": "person",
+        "description": "Show active crew members and availability"
+      },
+      {
+        "id": "cost-breakdown",
+        "name": "Cost Breakdown",
+        "icon": "chrome-minimize",
+        "description": "Real-time cost tracking and budget status"
+      },
+      {
+        "id": "projects",
+        "name": "Projects",
+        "icon": "folder",
+        "description": "View and manage projects from product-factory"
+      }
+    ],
+    "statusBar": [
+      {
+        "id": "cost-meter",
+        "description": "Real-time cost meter showing $X / $Budget (Y%)",
+        "position": "left"
+      }
+    ],
+    "features": {
+      "nlp": "Intent detection from natural language prompts",
+      "ocr": "Extract code from pasted images",
+      "ast": "Advanced code manipulation via AST parsing",
+      "costOptimization": "90% cheaper than Copilot",
+      "cachingLearning": "Response caching and learning from past queries",
+      "multiFile": "Refactoring across entire projects",
+      "integration": "Seamless integration with platform services"
+    }
+  },
+  "services": {
+    "llmRouter": {
+      "description": "Routes prompts to optimal LLM model",
+      "location": "src/services/llm-router.ts",
+      "integrates": "alex-ai-universal cost optimizer"
+    },
+    "nlpProcessor": {
+      "description": "Natural language processing for intent detection",
+      "location": "src/services/nlp-processor.ts",
+      "capabilities": ["intent detection", "entity extraction", "complexity analysis"]
+    },
+    "ocrEngine": {
+      "description": "Optical character recognition for images",
+      "location": "src/services/ocr-engine.ts",
+      "capabilities": ["text extraction", "code recognition", "handwriting recognition"]
+    },
+    "fileManager": {
+      "description": "Advanced file manipulation and refactoring",
+      "location": "src/services/file-manager.ts",
+      "capabilities": ["AST parsing", "multi-file refactoring", "code generation"]
+    },
+    "costTracker": {
+      "description": "Local cost tracking and budget enforcement",
+      "location": "src/services/cost-tracker.ts",
+      "capabilities": ["usage tracking", "budget enforcement", "analytics"]
+    }
+  },
+  "ui": {
+    "chatPanel": {
+      "description": "Main chat interface for AI assistance",
+      "location": "src/ui/chat-panel.ts",
+      "features": ["markdown support", "code syntax highlighting", "copy/apply buttons"]
+    },
+    "costMeter": {
+      "description": "Real-time cost display in status bar",
+      "location": "src/ui/cost-meter.ts",
+      "display": "💰 $X / $Budget (Y%)"
+    },
+    "treeViews": {
+      "description": "Sidebar tree views for crew, cost, projects",
+      "location": "src/ui/tree-views.ts"
+    }
+  },
+  "testCoverage": {
+    "target": "80%+",
+    "location": "tests/"
+  },
+  "dependencies": [
+    "@openrouter-crew/shared-crew-coordination",
+    "@openrouter-crew/shared-cost-tracking",
+    "@openrouter-crew/shared-schemas"
+  ],
+  "status": "Phase 8A - Domain Migration Complete",
+  "readyFor": [
+    "Phase 8B - LLM Router implementation",
+    "Phase 8C - NLP intent detection",
+    "Phase 8D - OCR processing",
+    "Phase 8E - File manipulation",
+    "Phase 8F - Command implementations",
+    "Phase 8G - Cost tracking",
+    "Phase 8H - Webview UI",
+    "Phase 8I - Testing & documentation",
+    "Phase 8J - Packaging & release"
+  ],
+  "createdAt": "2026-02-03T12:48:00Z",
+  "lastUpdated": "2026-02-03T12:48:00Z"
+}
