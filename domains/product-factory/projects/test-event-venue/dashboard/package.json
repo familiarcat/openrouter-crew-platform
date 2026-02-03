@@ -1,5 +1,5 @@
 {
-  "name": "@openrouter-crew/dj-booking-dashboard",
+  "name": "@openrouter-crew/test-event-venue-dashboard",
   "version": "1.0.0",
   "scripts": {
     "dev": "next dev",

@@ -6,7 +6,17 @@
       "Bash(chmod:*)",
       "Bash(xargs:*)",
       "Bash(pnpm install:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(pnpm turbo build:*)",
+      "Bash(pnpm --filter=\"@openrouter-crew/dj-booking-dashboard\" list:*)",
+      "Bash(ls:*)",
+      "Bash(./scripts/setup-project.sh:*)",
+      "Bash(./scripts/build.sh:*)",
+      "Bash(tree:*)",
+      "Bash(pnpm --filter \"@openrouter-crew/vscode-extension\" build:*)",
+      "Bash(pnpm --filter @openrouter-crew/vscode-extension build:*)",
+      "Bash(pnpm tsc:*)",
+      "Bash(find:*)"
     ]
   }
 }

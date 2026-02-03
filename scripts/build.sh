@@ -11,13 +11,16 @@
 #   ./scripts/build.sh <target>
 #
 # Targets:
-#   all         - Build all apps and domains in the monorepo (uses Turborepo).
-#   <domain>    - Build a specific domain's dashboard.
-#                 Valid domains: dj-booking, product-factory, alex-ai-universal
+#   all                - Build all apps and domains in the monorepo (uses Turborepo).
+#   <domain>           - Build a specific domain's dashboard.
+#                        Valid domains: product-factory, alex-ai-universal
+#   <domain>:<project> - Build a specific project within a domain.
+#                        Example: product-factory:dj-booking
 #
 # Examples:
 #   ./scripts/build.sh all
 #   ./scripts/build.sh product-factory
+#   ./scripts/build.sh product-factory:dj-booking
 # ==============================================================================
 
 set -e # Exit immediately if a command exits with a non-zero status.
@@ -26,7 +29,7 @@ TARGET=$1
 
 if [ -z "$TARGET" ]; then
   echo "Error: No target specified."
-  echo "Usage: $0 [all | dj-booking | product-factory | alex-ai-universal]"
+  echo "Usage: $0 [all | product-factory | alex-ai-universal | product-factory:dj-booking]"
   exit 1
 fi
 
@@ -39,7 +42,18 @@ if [ "$TARGET" == "all" ]; then
   echo "------------------------------------------------"
   echo "✅ Full platform build complete."
 
-elif [ "$TARGET" == "dj-booking" ] || [ "$TARGET" == "product-factory" ] || [ "$TARGET" == "alex-ai-universal" ]; then
+elif [[ "$TARGET" == *":"* ]]; then
+  # Handle domain:project format (e.g., product-factory:dj-booking)
+  DOMAIN=$(echo "$TARGET" | cut -d: -f1)
+  PROJECT=$(echo "$TARGET" | cut -d: -f2)
+  PACKAGE_NAME="@openrouter-crew/${PROJECT}-dashboard"
+  echo "🚀 Building project template: $PROJECT in domain $DOMAIN ($PACKAGE_NAME)..."
+  echo "------------------------------------------------"
+  pnpm --filter "$PACKAGE_NAME" build
+  echo "------------------------------------------------"
+  echo "✅ Project build for '$PROJECT' complete."
+
+elif [ "$TARGET" == "product-factory" ] || [ "$TARGET" == "alex-ai-universal" ]; then
   PACKAGE_NAME="@openrouter-crew/${TARGET}-dashboard"
   echo "🚀 Building individual domain: $TARGET ($PACKAGE_NAME)..."
   echo "------------------------------------------------"
@@ -49,7 +63,7 @@ elif [ "$TARGET" == "dj-booking" ] || [ "$TARGET" == "product-factory" ] || [ "$
 
 else
   echo "Error: Invalid target '$TARGET'."
-  echo "Usage: $0 [all | dj-booking | product-factory | alex-ai-universal]"
+  echo "Usage: $0 [all | product-factory | alex-ai-universal | product-factory:dj-booking]"
   exit 1
 fi
 

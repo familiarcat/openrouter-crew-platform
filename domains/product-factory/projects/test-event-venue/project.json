@@ -1,0 +1,23 @@
+{
+  "name": "test-event-venue",
+  "title": "Test-event-venue",
+  "description": "A new project based on dj-booking template",
+  "domain": "product-factory",
+  "template": "dj-booking",
+  "owner": "",
+  "version": "1.0.0",
+  "createdAt": "2026-02-03T18:42:50Z",
+  "environment": "development",
+  "budget": {
+    "initial_usd": 1000,
+    "current_usd": 0,
+    "remaining_usd": 1000
+  },
+  "status": "initialized",
+  "settings": {
+    "auto_scaling": true,
+    "cost_optimization": true,
+    "monitoring_enabled": true,
+    "alerts_enabled": true
+  }
+}

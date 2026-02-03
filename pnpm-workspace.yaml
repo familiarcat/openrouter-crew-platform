@@ -10,11 +10,17 @@ packages:
   - 'domains/shared/ui-components'
   - 'domains/shared/openrouter-client'
 
-  # DJ-Booking Domain
-  - 'domains/dj-booking/dashboard'
-
   # Product Factory Domain
   - 'domains/product-factory/dashboard'
 
+  # Product Factory - Project Templates
+  - 'domains/product-factory/project-templates/dj-booking/dashboard'
+
+  # Product Factory - Project Instances
+  - 'domains/product-factory/projects/*/dashboard'
+
   # Alex-AI-Universal Domain
   - 'domains/alex-ai-universal/dashboard'
+
+  # VSCode Extension Domain (AI Assistance Hub)
+  - 'domains/vscode-extension'
