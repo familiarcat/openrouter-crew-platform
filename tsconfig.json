@@ -14,5 +14,12 @@
     "composite": true,
     "incremental": true
   },
-  "exclude": ["node_modules", "dist", ".next", "out"]
+  "exclude": ["node_modules", "dist", ".next", "out"],
+  "references": [
+    { "path": "./apps/cli" },
+    { "path": "./domains/shared/crew-coordination" },
+    { "path": "./domains/shared/cost-tracking" },
+    { "path": "./domains/shared/schemas" },
+    { "path": "./domains/product-factory/dashboard" }
+  ]
 }

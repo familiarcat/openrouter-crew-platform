@@ -1,1 +1,5 @@
-// Deleted to prevent conflict with postcss.config.mjs
+module.exports = {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+};

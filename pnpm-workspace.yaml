@@ -2,9 +2,6 @@ packages:
   # Unified Dashboard (Entry Point)
   - 'apps/*'
 
-  # Legacy packages (to be deprecated after migration)
-  - 'packages/*'
-
   # Shared Domain (Core Infrastructure)
   - 'domains/shared/crew-coordination'
   - 'domains/shared/cost-tracking'

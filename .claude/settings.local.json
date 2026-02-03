@@ -3,7 +3,10 @@
     "allow": [
       "Bash(pnpm build:*)",
       "Bash(pnpm --filter @openrouter-crew/unified-dashboard build:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(xargs:*)",
+      "Bash(pnpm install:*)",
+      "Bash(grep:*)"
     ]
   }
 }

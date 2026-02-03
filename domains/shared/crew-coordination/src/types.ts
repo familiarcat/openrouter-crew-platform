@@ -50,6 +50,8 @@ export interface CrewRequest {
   context?: Record<string, any>;
   maxTokens?: number;
   temperature?: number;
+  userId?: string;
+  sessionId?: string;
 }
 
 export interface CrewResponse {
