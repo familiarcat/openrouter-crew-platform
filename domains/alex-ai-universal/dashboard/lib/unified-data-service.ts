@@ -609,6 +609,27 @@ export class UnifiedDataService {
       };
     }
   }
+
+  /**
+   * Execute a local system action (Universal Action)
+   * Only works when running in local development mode
+   */
+  async executeLocalAction(actionId: string, params: any = {}): Promise<any> {
+    try {
+      const response = await fetch('/api/local', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ actionId, params }),
+      });
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to execute local action:', error);
+      throw error;
+    }
+  }
 }
 
 // Singleton instance for easy import

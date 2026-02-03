@@ -42,11 +42,16 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "docker:clean": "docker-compose down -v && docker system prune -f",
-    "milestone:create": "bash scripts/milestone/create-milestone.sh",
-    "milestone:push": "bash scripts/milestone/push-milestone.sh",
+    "feature:create": "bash scripts/agile/create-feature.sh",
+    "feature:push": "bash scripts/agile/push-feature.sh",
+    "story:create": "bash scripts/agile/create-story.sh",
+    "story:push": "bash scripts/agile/push-story.sh",
     "clean": "pnpm -r clean && rm -rf node_modules",
+    "organize": "bash scripts/organize-workspace.sh",
     "reset": "bash scripts/reset-build.sh",
-    "setup": "pnpm install && pnpm secrets:sync && pnpm supabase:start"
+    "setup": "pnpm install && pnpm secrets:sync && pnpm supabase:start",
+    "domain:create": "bash scripts/domain/create-domain.sh",
+    "sync:all": "bash scripts/system/sync-all.sh"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
