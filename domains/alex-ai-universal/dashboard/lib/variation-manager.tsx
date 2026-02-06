@@ -43,7 +43,7 @@ export function useProjectVariations(projectId: string): {
   isFieldCustomized: (field: string) => boolean;
 } {
   const { projects } = useAppState();
-  const project = projects[projectId];
+  const project = (Array.isArray(projects) ? projects.find((p: any) => p.id === projectId) : (projects as any)[projectId]);
 
   const [state, setState] = useState<VariationState>({
     template: null,

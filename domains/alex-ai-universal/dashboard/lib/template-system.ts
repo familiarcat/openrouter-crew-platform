@@ -80,7 +80,7 @@ export function getMergedProjectData(
   }
 
   // Start with template baseline
-  const merged = {
+  const merged: { [key: string]: any } = {
     ...template.base_config,
     components: [...template.base_components],
   };
@@ -94,11 +94,11 @@ export function getMergedProjectData(
         merged.components = variationComponents;
       }
     } else {
-      merged[field] = project.variations[field];
+      merged[field] = (project.variations as any)[field];
     }
   });
 
-  return merged;
+  return merged as any;
 }
 
 /**
@@ -230,4 +230,3 @@ export async function getAllTemplates(
     return [];
   }
 }
-

@@ -51,7 +51,7 @@ export function useAsyncErrorHandler() {
   const ErrorDisplay = error ? (
     <DesignSystemErrorDisplay
       error={error.message}
-      errorInfo={error.error}
+      errorInfo={error.error as any}
       title="Operation Error"
       onDismiss={clearError}
       variant="compact"

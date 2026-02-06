@@ -58,7 +58,7 @@ export function useDynamicUI(options: UseDynamicUIOptions) {
   }, [data, structure, autoGenerateStructure]);
 
   // Build config
-  const config: DynamicUIConfig = useMemo(() => ({
+  const config: any = useMemo(() => ({
     data,
     componentStructure,
     navigationPath: navigationStack,
