@@ -82,7 +82,7 @@ export default function AnalyticsDashboard({ theme }: AnalyticsDashboardProps) {
       componentCounts.push(project.components?.length || 0);
 
       // Recent activity (simplified - using updatedAt)
-      const date = new Date(project.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const date = new Date(project.updatedAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const existing = recentActivity.find(a => a.date === date);
       if (existing) {
         existing.count++;

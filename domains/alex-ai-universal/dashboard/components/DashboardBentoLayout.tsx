@@ -34,7 +34,7 @@ import ProgressTracker from './ProgressTracker';
 import PriorityMatrix from './PriorityMatrix';
 import DynamicDataDrilldown from './DynamicDataDrilldown';
 import DynamicDataRenderer from './DynamicDataRenderer';
-import DynamicComponentRegistry, { ComponentGrid } from './DynamicComponentRegistry';
+import { DynamicComponentRegistry, ComponentGrid } from './DynamicComponentRegistry';
 import DebatePanel from './DebatePanel';
 import AgentMemoryDisplay from './AgentMemoryDisplay';
 import StatusRibbon from './StatusRibbon';
@@ -399,7 +399,7 @@ export default function DashboardBentoLayout() {
             gap: '20px'
           }}>
             <BentoCard title="Dynamic Data Renderer" icon="🔄" span={6} height="medium">
-              <DynamicDataRenderer data={{}} structure={{}} />
+              <DynamicDataRenderer data={{}} structure={{ id: 'default', type: 'container' }} />
             </BentoCard>
             <BentoCard title="Dynamic Data Drilldown" icon="🔍" span={6} height="medium">
               <DynamicDataDrilldown data={{}} title="Data Analysis" />
@@ -548,4 +548,3 @@ export default function DashboardBentoLayout() {
     </div>
   );
 }
-

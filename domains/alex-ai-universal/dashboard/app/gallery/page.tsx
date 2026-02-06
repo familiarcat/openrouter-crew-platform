@@ -13,7 +13,7 @@ export default function GalleryPage() {
   const [sortBy, setSortBy] = useState<SortKey>('name');
 
   const items = useMemo(() => {
-    const entries = Object.entries(projects).map(([id, c]) => ({ id, ...c }));
+    const entries = projects;
     const filtered = entries.filter((p) => {
       const hay = `${p.headline} ${p.subheadline} ${p.description} ${p.theme}`.toLowerCase();
       const matchQuery = hay.includes(query.toLowerCase());
@@ -22,13 +22,13 @@ export default function GalleryPage() {
     });
     const sorted = [...filtered].sort((a, b) => {
       if (sortBy === 'theme') return a.theme.localeCompare(b.theme);
-      if (sortBy === 'updated') return (b.updatedAt || 0) - (a.updatedAt || 0);
+      if (sortBy === 'updated') return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
       return a.headline.localeCompare(b.headline);
     });
     return sorted;
   }, [projects, query, sortBy, themeFilter]);
 
-  const themes = Array.from(new Set(Object.values(projects).map((p) => p.theme)));
+  const themes = Array.from(new Set(projects.map((p) => p.theme)));
 
   // Per-project thumbnail style map (mirrors project page styles)
   const themeStyles: Record<string, { background: string; textColor: string; accentColor: string }>= {
@@ -115,5 +115,3 @@ export default function GalleryPage() {
     </main>
   );
 }
-
-

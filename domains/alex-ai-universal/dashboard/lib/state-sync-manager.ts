@@ -161,17 +161,17 @@ export class StateSyncManager {
       switch (comparison.action) {
         case 'push':
           // Local is newer → push to server
-          result = await this.pushToServer(projectId, localState);
+          result = await this.pushToServer(projectId, localState!);
           break;
           
         case 'pull':
           // Server is newer → pull to local
-          result = await this.pullFromServer(projectId, serverState);
+          result = await this.pullFromServer(projectId, serverState!);
           break;
           
         case 'merge':
           // Conflict → merge states
-          result = await this.mergeStates(projectId, localState, serverState);
+          result = await this.mergeStates(projectId, localState!, serverState!);
           break;
           
         case 'no_action':
@@ -188,10 +188,10 @@ export class StateSyncManager {
         default:
           // No local state → pull from server
           if (!localState && serverState) {
-            result = await this.pullFromServer(projectId, serverState);
+            result = await this.pullFromServer(projectId, serverState!);
           } else if (localState && !serverState) {
             // No server state → push local
-            result = await this.pushToServer(projectId, localState);
+            result = await this.pushToServer(projectId, localState!);
           } else {
             throw new Error('Invalid sync state');
           }
@@ -276,7 +276,7 @@ export class StateSyncManager {
       const service = getUnifiedDataService();
       
       // Store via unified data service (goes through n8n)
-      const response = await service.callMCPEndpoint('project/content/store', {
+      const response = await (service as any).callMCPEndpoint('project/content/store', {
         action: 'store_project_state',
         projectId,
         state: {
@@ -453,7 +453,7 @@ export class StateSyncManager {
     try {
       const service = getUnifiedDataService();
       
-      const response = await service.callMCPEndpoint('project/content/retrieve', {
+      const response = await (service as any).callMCPEndpoint('project/content/retrieve', {
         action: 'retrieve_project_state',
         projectId,
         tier: this.determineTier(projectId),
@@ -556,4 +556,3 @@ export class StateSyncManager {
 export function createStateSyncManager(config?: Partial<SyncConfig>): StateSyncManager {
   return new StateSyncManager(config);
 }
-

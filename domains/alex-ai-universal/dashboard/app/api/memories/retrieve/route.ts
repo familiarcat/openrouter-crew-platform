@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // Try to fetch from Supabase
     if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+      const supabase = createClient(SUPABASE_URL || "", SUPABASE_SERVICE_KEY || "");
       
       let data = null;
       let error = null;

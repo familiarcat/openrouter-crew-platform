@@ -54,7 +54,12 @@ elif [[ "$TARGET" == *":"* ]]; then
   echo "✅ Project build for '$PROJECT' complete."
 
 elif [ "$TARGET" == "product-factory" ] || [ "$TARGET" == "alex-ai-universal" ]; then
-  PACKAGE_NAME="@openrouter-crew/${TARGET}-dashboard"
+  if [ "$TARGET" == "product-factory" ]; then
+    PACKAGE_NAME="unified-dashboard"
+  else
+    PACKAGE_NAME="@openrouter-crew/${TARGET}-dashboard"
+  fi
+
   echo "🚀 Building individual domain: $TARGET ($PACKAGE_NAME)..."
   echo "------------------------------------------------"
   pnpm --filter "$PACKAGE_NAME" build

@@ -32,7 +32,7 @@ export class MockDataSystem {
   /**
    * Generate mock learning metrics
    */
-  generateLearningMetrics(config: MockDataConfig = { componentName: 'LearningAnalyticsDashboard' }) {
+  generateLearningMetrics(config: MockDataConfig = { componentName: 'LearningAnalyticsDashboard', dataType: 'metrics' }) {
     const cacheKey = `learning-metrics-${config.count || 30}`;
     if (this.mockDataCache.has(cacheKey)) {
       return this.mockDataCache.get(cacheKey);
@@ -67,7 +67,7 @@ export class MockDataSystem {
   /**
    * Generate mock crew stats
    */
-  generateCrewStats(config: MockDataConfig = { componentName: 'CrewMemoryVisualization' }) {
+  generateCrewStats(config: MockDataConfig = { componentName: 'CrewMemoryVisualization', dataType: 'stats' }) {
     const cacheKey = 'crew-stats';
     if (this.mockDataCache.has(cacheKey)) {
       return this.mockDataCache.get(cacheKey);
@@ -105,7 +105,7 @@ export class MockDataSystem {
   /**
    * Generate mock project recommendations
    */
-  generateProjectRecommendations(config: MockDataConfig = { componentName: 'RAGProjectRecommendations' }) {
+  generateProjectRecommendations(config: MockDataConfig = { componentName: 'RAGProjectRecommendations', dataType: 'recommendations' }) {
     const cacheKey = `recommendations-${config.count || 5}`;
     if (this.mockDataCache.has(cacheKey)) {
       return this.mockDataCache.get(cacheKey);
@@ -138,7 +138,7 @@ export class MockDataSystem {
   /**
    * Generate mock security assessment
    */
-  generateSecurityData(config: MockDataConfig = { componentName: 'SecurityAssessmentDashboard' }) {
+  generateSecurityData(config: MockDataConfig = { componentName: 'SecurityAssessmentDashboard', dataType: 'security' }) {
     const cacheKey = 'security-data';
     if (this.mockDataCache.has(cacheKey)) {
       return this.mockDataCache.get(cacheKey);
@@ -166,7 +166,7 @@ export class MockDataSystem {
   /**
    * Generate mock cost optimization data
    */
-  generateCostData(config: MockDataConfig = { componentName: 'CostOptimizationMonitor' }) {
+  generateCostData(config: MockDataConfig = { componentName: 'CostOptimizationMonitor', dataType: 'cost' }) {
     const cacheKey = 'cost-data';
     if (this.mockDataCache.has(cacheKey)) {
       return this.mockDataCache.get(cacheKey);
@@ -192,7 +192,7 @@ export class MockDataSystem {
   /**
    * Generate mock UX analytics
    */
-  generateUXData(config: MockDataConfig = { componentName: 'UserExperienceAnalytics' }) {
+  generateUXData(config: MockDataConfig = { componentName: 'UserExperienceAnalytics', dataType: 'ux' }) {
     const cacheKey = 'ux-data';
     if (this.mockDataCache.has(cacheKey)) {
       return this.mockDataCache.get(cacheKey);
@@ -242,17 +242,17 @@ export class MockDataSystem {
   getMockData(componentName: string, dataType?: string): any {
     switch (componentName) {
       case 'LearningAnalyticsDashboard':
-        return this.generateLearningMetrics({ componentName });
+        return this.generateLearningMetrics({ componentName, dataType: dataType || 'metrics' });
       case 'CrewMemoryVisualization':
-        return this.generateCrewStats({ componentName });
+        return this.generateCrewStats({ componentName, dataType: dataType || 'stats' });
       case 'RAGProjectRecommendations':
-        return this.generateProjectRecommendations({ componentName });
+        return this.generateProjectRecommendations({ componentName, dataType: dataType || 'recommendations' });
       case 'SecurityAssessmentDashboard':
-        return this.generateSecurityData({ componentName });
+        return this.generateSecurityData({ componentName, dataType: dataType || 'security' });
       case 'CostOptimizationMonitor':
-        return this.generateCostData({ componentName });
+        return this.generateCostData({ componentName, dataType: dataType || 'cost' });
       case 'UserExperienceAnalytics':
-        return this.generateUXData({ componentName });
+        return this.generateUXData({ componentName, dataType: dataType || 'ux' });
       default:
         return { data: [], error: `No mock data generator for ${componentName}` };
     }
@@ -293,4 +293,3 @@ export class MockDataSystem {
 }
 
 export const mockDataSystem = MockDataSystem.getInstance();
-

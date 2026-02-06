@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --foreground-rgb: 236, 237, 238;
@@ -13,6 +11,12 @@
   --alex-gold: 201, 162, 39;
   --alex-cyan: 0, 194, 255;
   --alex-magenta: 255, 92, 147;
+  
+  /* UI System Variables */
+  --border: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --radius: 12px;
+  --spacing-lg: 24px;
 }
 
 body {

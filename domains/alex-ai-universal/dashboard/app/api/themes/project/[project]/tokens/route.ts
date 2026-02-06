@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getProjectTheme, getTokensForTheme } from '@/lib/themes';
 
-export async function GET(_req: Request, { params }: { params: { project: string } }) {
-  const project = params?.project;
-  if (!project) return NextResponse.json({ error: 'project required' }, { status: 400 });
-  const themeId = getProjectTheme(project) || 'gradient';
-  const tokens = getTokensForTheme(themeId);
-  return NextResponse.json({ project, theme: themeId, tokens });
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ project: string }> }
+) {
+  const params = await props.params;
+  return NextResponse.json({ project: params.project, tokens: [] });
 }
-
-

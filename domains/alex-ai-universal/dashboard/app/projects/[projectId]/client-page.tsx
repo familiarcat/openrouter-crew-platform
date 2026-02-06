@@ -33,7 +33,7 @@ export default function ClientProjectPage({ projectId, initialTheme, initialCont
   const [mounted, setMounted] = useState(false);
   
   // Priority: state-manager (live edits) > initialContent (SSR) > defaults
-  const project = projects[projectId] || initialContent;
+  const project = (Array.isArray(projects) ? projects.find((p: any) => p.id === projectId) : (projects as any)[projectId]) || initialContent;
   
   // Prevent hydration mismatch for components (they may differ server vs client)
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function ClientProjectPage({ projectId, initialTheme, initialCont
             gap: 24,
             marginBottom: 80
           }}>
-            {project.components.map(comp => (
+            {project.components?.map((comp: any) => (
               <div key={comp.id} style={{
                 padding: 30,
                 background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)',

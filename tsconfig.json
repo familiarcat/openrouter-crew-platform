@@ -1,10 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["ES2020"],
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "commonjs",
-    "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
+    "moduleResolution": "node16",
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
@@ -16,12 +15,14 @@
     "composite": true,
     "incremental": true
   },
+  "ignoreDeprecations": "6.0",
   "exclude": ["node_modules", "dist", ".next", "out"],
   "references": [
     { "path": "./apps/cli" },
     { "path": "./domains/shared/crew-coordination" },
     { "path": "./domains/shared/cost-tracking" },
     { "path": "./domains/shared/schemas" },
-    { "path": "./domains/product-factory/dashboard" }
+    { "path": "./domains/product-factory/dashboard" },
+    { "path": "./domains/alex-ai-universal/dashboard" }
   ]
 }

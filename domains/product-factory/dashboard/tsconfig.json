@@ -1,42 +1,15 @@
 {
-  "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
-    "paths": {
-      "@/*": ["./*", "./src/*"],
-      "@openrouter-crew/crew-core": ["../../../packages/crew-core/src"],
-      "@openrouter-crew/crew-core/*": ["../../../packages/crew-core/src/*"],
-      "@openrouter-crew/shared-schemas": ["../../../packages/shared-schemas/src"],
-      "@openrouter-crew/shared-schemas/*": ["../../../packages/shared-schemas/src/*"],
-      "@openrouter-crew/cost-tracking": ["../../../packages/cost-tracking/src"],
-      "@openrouter-crew/cost-tracking/*": ["../../../packages/cost-tracking/src/*"]
-    },
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "target": "ES2022",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": ".",
     "strict": true,
-    "target": "es2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true
+    "skipLibCheck": true,
+    "declaration": true,
+    "composite": true
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    "../../../packages/crew-core/src/**/*",
-    "../../../packages/shared-schemas/src/**/*",
-    "../../../packages/cost-tracking/src/**/*"
-  ],
-  "exclude": ["node_modules"]
+  "ignoreDeprecations": "6.0",
+  "include": ["src/**/*", "index.ts"]
 }

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const supabase = createClient(SUPABASE_URL || "", SUPABASE_SERVICE_KEY || "");
     
     // Test 1: Check if table exists
     const { data: tableCheck, error: tableError } = await supabase

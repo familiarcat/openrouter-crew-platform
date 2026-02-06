@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     // FALLBACK 2: Try Supabase direct
     if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
       try {
-        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+        const supabase = createClient(SUPABASE_URL || "", SUPABASE_SERVICE_KEY || "");
         let query = supabase
           .from('vector_embeddings')
           .select('*')

@@ -1,117 +1,92 @@
 'use client';
 
-/**
- * Theme-Aware CTA Component
- * 
- * Enhanced for DDD Visual Design System:
- * - CTA hierarchy (primary, secondary, tertiary)
- * - Responsive sizing with clamp()
- * - Proper word wrapping
- * - Theme-aware colors from crew analysis
- * - Navigation support for dedicated screens
- * - Icon support for visual clarity
- * 
- * Usage:
- *   <ThemeAwareCTA level="primary" href="/dashboard/analytics" icon="📊">
- *     View Full Analytics
- *   </ThemeAwareCTA>
- *   <ThemeAwareCTA level="secondary" onClick={handleAction}>
- *     Export Report
- *   </ThemeAwareCTA>
- * 
- * Leadership: Counselor Troi (UX) + Commander Riker (Tactical)
- */
-
 import React from 'react';
 import Link from 'next/link';
-import { getCTAStyle } from '@/lib/component-styles';
 
 interface ThemeAwareCTAProps {
-  level: 'primary' | 'secondary' | 'tertiary';
+  href: string;
   children: React.ReactNode;
-  onClick?: () => void;
-  href?: string;
-  target?: string; // For external links
+  variant?: 'primary' | 'secondary' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   className?: string;
-  icon?: string; // Icon emoji or text
-  iconPosition?: 'left' | 'right'; // Icon position relative to text
-  fullWidth?: boolean; // Make button full width of container
+  onClick?: (e: React.MouseEvent) => void;
+  icon?: React.ReactNode;
 }
 
 export default function ThemeAwareCTA({
-  level,
-  children,
-  onClick,
   href,
-  target,
+  children,
+  variant = 'primary',
+  size = 'md',
   disabled = false,
   className = '',
-  icon,
-  iconPosition = 'left',
-  fullWidth = false
+  onClick,
+  icon
 }: ThemeAwareCTAProps) {
-  const baseStyle = getCTAStyle(level);
-  const style = {
-    ...baseStyle,
-    opacity: disabled ? 0.5 : 1,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    pointerEvents: disabled ? 'none' : 'auto',
-    width: fullWidth ? '100%' : 'auto',
+  
+  const baseStyles: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: icon ? '8px' : '0'
+    gap: '8px',
+    borderRadius: '8px',
+    fontWeight: 600,
+    transition: 'all 0.2s ease',
+    textDecoration: 'none',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.6 : 1,
+    pointerEvents: disabled ? 'none' : 'auto',
   };
 
-  const content = (
-    <>
-      {icon && iconPosition === 'left' && <span>{icon}</span>}
-      {children}
-      {icon && iconPosition === 'right' && <span>{icon}</span>}
-    </>
-  );
+  const sizeStyles: Record<string, React.CSSProperties> = {
+    sm: { padding: '6px 12px', fontSize: '0.875rem' },
+    md: { padding: '10px 20px', fontSize: '1rem' },
+    lg: { padding: '14px 28px', fontSize: '1.125rem' },
+  };
 
-  // Use Next.js Link for internal navigation (better performance)
-  if (href && !target) {
+  const variantStyles: Record<string, React.CSSProperties> = {
+    primary: {
+      background: 'var(--alex-purple, #7c5cff)',
+      color: 'white',
+      border: 'none',
+    },
+    secondary: {
+      background: 'var(--alex-blue, #0077b6)',
+      color: 'white',
+      border: 'none',
+    },
+    outline: {
+      background: 'transparent',
+      color: 'var(--foreground)',
+      border: '1px solid var(--border)',
+    },
+  };
+
+  const combinedStyles: React.CSSProperties = {
+    ...baseStyles,
+    ...sizeStyles[size],
+    ...variantStyles[variant],
+  };
+
+  if (disabled) {
     return (
-      <Link
-        href={href}
-        style={style}
-        className={className}
-        onClick={disabled ? undefined : onClick}
-      >
-        {content}
-      </Link>
+      <span style={combinedStyles} className={className}>
+        {icon && <span>{icon}</span>}
+        {children}
+      </span>
     );
   }
 
-  // Use regular anchor for external links
-  if (href && target) {
-    return (
-      <a
-        href={href}
-        target={target}
-        rel={target === '_blank' ? 'noopener noreferrer' : undefined}
-        style={style}
-        className={className}
-        onClick={disabled ? undefined : onClick}
-      >
-        {content}
-      </a>
-    );
-  }
-
-  // Button for actions
   return (
-    <button
-      style={style}
+    <Link 
+      href={href} 
+      style={combinedStyles} 
       className={className}
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
+      onClick={onClick}
     >
-      {content}
-    </button>
+      {icon && <span>{icon}</span>}
+      {children}
+    </Link>
   );
 }
-

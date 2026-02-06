@@ -24,7 +24,7 @@ async function checkUserWhitelist(email: string): Promise<boolean> {
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const supabase = createClient(SUPABASE_URL || "", SUPABASE_SERVICE_KEY || "");
     
     // Check if user exists in authorized_users table (if it exists)
     const { data, error } = await supabase
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Authenticate with Supabase
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const supabase = createClient(SUPABASE_URL || "", SUPABASE_SERVICE_KEY || "");
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.toLowerCase(),

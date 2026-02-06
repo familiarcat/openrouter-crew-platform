@@ -11,7 +11,7 @@ interface WizardInlineProps {
 
 export default function WizardInline({ projectId, onApply }: WizardInlineProps) {
   const { projects } = useAppState();
-  const currentProjectTheme = projects[projectId]?.theme || 'gradient';
+  const currentProjectTheme = (Array.isArray(projects) ? projects.find((p: any) => p.id === projectId) : (projects as any)[projectId])?.theme || 'gradient';
   
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [headline, setHeadline] = useState('');

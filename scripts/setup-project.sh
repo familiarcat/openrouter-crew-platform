@@ -120,6 +120,19 @@ echo ""
 echo -e "${BLUE}📋 Step 2: Copying template files...${NC}"
 echo "──────────────────────────────────────────────────────────────────────────"
 
+# 2a. Copy shared resources (Recursive DDD: Base Layer)
+SHARED_PATH="domains/$DOMAIN/project-templates/shared"
+if [ -d "$SHARED_PATH" ]; then
+  echo "  ℹ️  Found shared resources at $SHARED_PATH"
+  # We exclude dashboard from shared copy to prevent overwriting core app scaffolding
+  for dir in agents workflows schema api; do
+    if [ -d "$SHARED_PATH/$dir" ]; then
+      cp -r "$SHARED_PATH/$dir" "$PROJECT_DIR/"
+      echo "  ✅ Copied shared base: $dir/"
+    fi
+  done
+fi
+
 # Copy core directories from template
 for dir in dashboard agents workflows schema api; do
   if [ -d "$TEMPLATE_PATH/$dir" ]; then

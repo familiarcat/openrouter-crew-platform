@@ -5,6 +5,9 @@
  * Enables multi-file refactoring, code generation, and analysis.
  */
 
+import * as vscode from 'vscode';
+import { TextEncoder } from 'util';
+
 /**
  * Represents a code node (function, class, variable, etc.)
  */
@@ -40,6 +43,16 @@ export interface RefactoringSuggestion {
   suggestion: string;
   priority: 'low' | 'medium' | 'high';
   confidence: number;
+}
+
+/**
+ * Patch operation for file modification
+ */
+export interface PatchOperation {
+  type: 'INSERT' | 'DELETE' | 'REPLACE';
+  line: number;
+  content?: string;
+  count?: number;
 }
 
 /**
@@ -396,5 +409,47 @@ export class FileManager {
     }
 
     return graph;
+  }
+
+  /**
+   * Write content to a file
+   */
+  async writeFile(path: string, content: string): Promise<void> {
+    const uri = vscode.Uri.file(path);
+    const encoder = new TextEncoder();
+    await vscode.workspace.fs.writeFile(uri, encoder.encode(content));
+  }
+
+  /**
+   * Apply patches to a file
+   */
+  async applyPatch(filePath: string, patches: PatchOperation[]): Promise<void> {
+    const uri = vscode.Uri.file(filePath);
+    const edit = new vscode.WorkspaceEdit();
+    
+    // Ensure document is open to apply edits
+    const document = await vscode.workspace.openTextDocument(uri);
+
+    for (const patch of patches) {
+      if (patch.type === 'REPLACE' && patch.content) {
+        const range = new vscode.Range(
+          new vscode.Position(patch.line - 1, 0),
+          new vscode.Position(patch.line - 1 + (patch.count || 1), 0)
+        );
+        edit.replace(uri, range, patch.content);
+      } else if (patch.type === 'INSERT' && patch.content) {
+        const position = new vscode.Position(patch.line - 1, 0);
+        edit.insert(uri, position, patch.content + '\n');
+      } else if (patch.type === 'DELETE') {
+        const range = new vscode.Range(
+          new vscode.Position(patch.line - 1, 0),
+          new vscode.Position(patch.line - 1 + (patch.count || 1), 0)
+        );
+        edit.delete(uri, range);
+      }
+    }
+
+    await vscode.workspace.applyEdit(edit);
+    await document.save();
   }
 }

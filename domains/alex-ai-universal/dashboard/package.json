@@ -16,14 +16,21 @@
     "@openrouter-crew/shared-crew-coordination": "workspace:*",
     "@openrouter-crew/shared-schemas": "workspace:*",
     "@openrouter-crew/shared-ui-components": "workspace:*",
+    "@sentry/nextjs": "^10.38.0",
+    "@supabase/supabase-js": "^2.93.2",
+    "@tailwindcss/postcss": "^4.1.18",
     "autoprefixer": "^10.4.23",
+    "mermaid": "^11.12.2",
     "next": "^15.1.4",
     "next-auth": "^4.24.13",
     "postcss": "^8.5.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "reactflow": "^11.11.4",
-    "tailwindcss": "^4.1.18"
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "tailwindcss": "^4.1.18",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

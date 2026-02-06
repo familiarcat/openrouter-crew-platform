@@ -474,7 +474,7 @@ export default function DomainDrivenBentoLayout() {
           <PriorityMatrix vectors={[]} />
         </BentoCard>
         <BentoCard title="Dynamic Data Renderer" icon="🔄" span={6} height="medium">
-          <DynamicDataRenderer data={{}} structure={{}} />
+          <DynamicDataRenderer data={{}} structure={{ id: 'root', type: 'container' }} />
         </BentoCard>
         <BentoCard title="Dynamic Data Drilldown" icon="🔍" span={6} height="medium">
           <DynamicDataDrilldown data={{}} title="Data Analysis" />

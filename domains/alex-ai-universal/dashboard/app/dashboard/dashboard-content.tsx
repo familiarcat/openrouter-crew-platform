@@ -57,8 +57,8 @@ export default function DashboardContent() {
   
   // Update iframe states for crossfade effect
   useEffect(() => {
-    Object.keys(projects).forEach(projectId => {
-      const content = debouncedProjects[projectId];
+    projects.forEach((project: any) => { const projectId = project.id;
+      const content = Array.isArray(debouncedProjects) ? debouncedProjects.find((p: any) => p.id === projectId) : (debouncedProjects as any)[projectId];
       if (!content) return;
       
       const newKey = `${projectId}-${content.theme}-${content.headline}-${content.subheadline}-${content.description}`;
@@ -270,7 +270,8 @@ export default function DashboardContent() {
         </div>
 
         {/* Projects */}
-        {Object.entries(projects).map(([projectId, content]) => {
+        {projects.map((content: any) => {
+          const projectId = content.id;
           const meta = getProjectMeta(projectId, content);
           
           return (
@@ -323,7 +324,7 @@ export default function DashboardContent() {
                     href={
                       content.projectType === 'creative' 
                         ? `/creative/${projectId}`
-                        : `/projects/${projectId}/?headline=${encodeURIComponent(content.headline)}&subheadline=${encodeURIComponent(content.subheadline)}&description=${encodeURIComponent(content.description)}&theme=${encodeURIComponent(content.theme)}`
+                        : `/projects/${projectId}/?headline=${encodeURIComponent(content.headline || '')}&subheadline=${encodeURIComponent(content.subheadline || '')}&description=${encodeURIComponent(content.description || '')}&theme=${encodeURIComponent(content.theme || 'gradient')}`
                     }
                     target="_blank"
                     style={{
@@ -556,8 +557,8 @@ export default function DashboardContent() {
         <DeleteProjectModal
           projectId={deleteModal.projectId}
           projectName={deleteModal.projectName}
-          componentCount={projects[deleteModal.projectId]?.components?.length || 0}
-          theme={projects[deleteModal.projectId]?.theme || 'unknown'}
+          componentCount={(projects.find((p: any) => p.id === deleteModal.projectId)?.components?.length) || 0}
+          theme={(projects.find((p: any) => p.id === deleteModal.projectId)?.theme) || 'unknown'}
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteModal(null)}
         />
@@ -577,4 +578,3 @@ export default function DashboardContent() {
  * immediately. The visual feedback loop reduces anxiety about 'did it work?'
  * Excellent UX implementation."
  */
-

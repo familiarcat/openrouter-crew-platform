@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "./auth";
-import { createNextJsRateLimiter } from "../../packages/rate-limiter/dist/index";
+import { createNextJsRateLimiter } from './rate-limiter';
 
 // Create global rate limiter instance
 const rateLimiter = createNextJsRateLimiter({

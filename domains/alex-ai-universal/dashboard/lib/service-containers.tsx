@@ -234,7 +234,7 @@ export function useServiceInitialization(
   serviceConfig: Omit<ServiceContainer, 'status' | 'progress' | 'lastUpdate'>,
   initializeFn: () => Promise<void>
 ) {
-  const { registerService, updateServiceStatus, areDependenciesReady, isServiceReady } = useServiceContainers();
+  const { registerService, updateServiceStatus, areDependenciesReady, isServiceReady, getService } = useServiceContainers();
   const [initialized, setInitialized] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const initializingRef = useRef(false); // Prevent concurrent initialization
@@ -250,11 +250,13 @@ export function useServiceInitialization(
     // Guard: Don't retry if already initialized or currently initializing
     if (initialized || initializingRef.current) return;
     
-    const service = isServiceReady(serviceId);
-    if (service && service.status === 'ready') {
+    const isReady = isServiceReady(serviceId);
+    if (isReady === true) {
       setInitialized(true);
       return;
     }
+    
+    const service = getService(serviceId);
     
     if (retryCount >= MAX_RETRIES) {
       if (service?.status !== 'error') {
@@ -340,6 +342,3 @@ export function useServiceInitialization(
     service: useServiceContainers().getService(serviceId)
   };
 }
-
-
-

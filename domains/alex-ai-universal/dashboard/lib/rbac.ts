@@ -229,9 +229,8 @@ export function canAccessTier(userRole: UserRole, tier: DashboardTier): boolean 
   
   // Main dashboard (Tier 1) requires admin
   if (tier === 'main') {
-    return userRole === 'admin';
+    return false;
   }
   
   return false;
 }
-

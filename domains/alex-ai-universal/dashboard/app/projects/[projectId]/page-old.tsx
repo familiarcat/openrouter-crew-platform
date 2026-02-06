@@ -17,7 +17,7 @@ export default function ProjectHomePage() {
   const { projects } = useAppState();
   
   const projectId = params.projectId as string;
-  const project = projects[projectId];
+  const project = (Array.isArray(projects) ? projects.find((p: any) => p.id === projectId) : (projects as any)[projectId]);
   
   // Get content from query params (for live preview) or from state
   // Query params take priority for live preview updates
@@ -138,7 +138,7 @@ export default function ProjectHomePage() {
             gap: 24,
             marginBottom: 80
           }}>
-            {project.components.map(comp => (
+            {project.components?.map((comp: any) => (
               <div key={comp.id} suppressHydrationWarning style={{
                 padding: 30,
                 background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)',

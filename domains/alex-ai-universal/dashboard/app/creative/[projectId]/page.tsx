@@ -53,7 +53,7 @@ export default function CreativeProjectPage({ params }: PageProps) {
     );
   }
 
-  const project = projects[projectId];
+  const project = Array.isArray(projects) ? projects.find((p: any) => p.id === projectId) : (projects as any)[projectId];
   
   if (!project) {
     return (

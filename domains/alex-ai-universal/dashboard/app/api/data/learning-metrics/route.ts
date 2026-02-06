@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // FALLBACK 2: Try Supabase direct
     if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
       try {
-        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+        const supabase = createClient(SUPABASE_URL || "", SUPABASE_SERVICE_KEY || "");
         const { data, error } = await supabase
           .from('alex_ai_learning_metrics')
           .select('*')

@@ -32,7 +32,7 @@ async function getAdminStatusHandler(request: NextRequest) {
     
     if (supabaseUrl && supabaseKey) {
       try {
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createClient(supabaseUrl || "", supabaseKey || "");
         const { data, error } = await supabase
           .from('knowledge_base')
           .select('id')

@@ -29,7 +29,7 @@ export default function CombinedWizard({ projectId, onCreated }: CombinedWizardP
   const { addComponents, updateTheme, projects } = useAppState();
   
   // Inherit current project theme as default
-  const currentProjectTheme = projects[projectId]?.theme || 'gradient';
+  const currentProjectTheme = (Array.isArray(projects) ? projects.find((p: any) => p.id === projectId) : (projects as any)[projectId])?.theme || 'gradient';
 
   const [step, setStep] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [businessType, setBusinessType] = useState<BusinessType>('ecommerce');

@@ -10,17 +10,8 @@
  */
 
 import { io, Socket } from 'socket.io-client';
+import React from 'react';
 import { getEnvironmentConfig, getTargetServerUrl, getCurrentServerUrl } from './environment-config';
-
-// Fix React import issue
-let React: any = null;
-if (typeof window !== 'undefined') {
-  try {
-    React = require('react');
-  } catch {
-    // React not available
-  }
-}
 
 const DASHBOARD_PORT = 3000;
 const LIVE_SERVER_PORT = 3001;
@@ -327,10 +318,6 @@ export function getEventDrivenSync(): EventDrivenSync {
  * React hook for event-driven sync
  */
 export function useEventDrivenSync(projectId: string) {
-  if (!React) {
-    throw new Error('React is required for useEventDrivenSync. Import React in your component file.');
-  }
-
   const [status, setStatus] = React.useState<SyncStatus>({
     connected: false,
     lastSync: null,
@@ -339,8 +326,9 @@ export function useEventDrivenSync(projectId: string) {
     connectionType: 'disconnected',
   });
 
+  const sync = getEventDrivenSync();
+
   React.useEffect(() => {
-    const sync = getEventDrivenSync();
     
     // Update status periodically
     const statusInterval = setInterval(() => {
@@ -374,4 +362,3 @@ export function useEventDrivenSync(projectId: string) {
 
 // For non-React usage
 export const eventDrivenSync = getEventDrivenSync();
-

@@ -339,18 +339,18 @@ export class LLMRouter {
    */
   private selectModel(intent: Intent | undefined, complexity: Complexity): ModelId {
     // Intent-based routing (highest priority)
-    if (intent === 'REVIEW') return 'GPT4_TURBO';  // Best at code review
-    if (intent === 'DEBUG') return 'CLAUDE_SONNET';  // Best reasoning for debugging
-    if (intent === 'REFACTOR') return 'CLAUDE_SONNET';  // Complex transformation
+    if (intent === 'REVIEW') return 'GEMINI_FLASH';  // Max cost savings
+    if (intent === 'DEBUG') return 'GEMINI_FLASH';   // Max cost savings
+    if (intent === 'REFACTOR') return 'GEMINI_FLASH';// Max cost savings
 
     // Complexity-based routing
     switch (complexity) {
       case 'LOW':
         return 'GEMINI_FLASH';  // 99% cheaper
       case 'MEDIUM':
-        return 'CLAUDE_SONNET';  // Good balance
+        return 'GEMINI_FLASH';  // Aggressive cost optimization
       case 'HIGH':
-        return 'CLAUDE_SONNET';  // Best quality
+        return 'GEMINI_FLASH';  // Max cost savings
     }
   }
 

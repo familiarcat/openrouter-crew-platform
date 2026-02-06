@@ -217,7 +217,7 @@ function SortableCard({
 
 export default function BentoEditor({ projectId }: { projectId: string }) {
   const { projects, updateComponent, reorderComponents } = useAppState();
-  const project = projects[projectId];
+  const project = (Array.isArray(projects) ? projects.find((p: any) => p.id === projectId) : (projects as any)[projectId]);
   const [components, setComponents] = useState(project?.components || []);
   const advisorOptions = React.useMemo(() => getAdvisorOptions(), []);
   const [advisorOverride, setAdvisorOverride] = useState<AdvisorCode | ''>('');
@@ -270,15 +270,15 @@ export default function BentoEditor({ projectId }: { projectId: string }) {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setComponents((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
+      setComponents((items: any) => {
+        const oldIndex = items.findIndex((item: any) => item.id === active.id);
+        const newIndex = items.findIndex((item: any) => item.id === over.id);
 
         const newItems = arrayMove(items, oldIndex, newIndex);
         
         // Update state manager with new order
         if (reorderComponents) {
-          reorderComponents(projectId, newItems.map(item => item.id));
+          reorderComponents(projectId, newItems.map((item: any) => item.id));
         }
 
         return newItems;
@@ -292,7 +292,7 @@ export default function BentoEditor({ projectId }: { projectId: string }) {
     setActiveId(null);
   };
 
-  const activeComponent = activeId ? components.find(c => c.id === activeId) : null;
+  const activeComponent = activeId ? components.find((c: any) => c.id === activeId) : null;
 
   return (
     <div>
@@ -304,7 +304,7 @@ export default function BentoEditor({ projectId }: { projectId: string }) {
         onDragCancel={handleDragCancel}
       >
         <SortableContext
-          items={components.map(c => c.id)}
+          items={components.map((c: any) => c.id)}
           strategy={rectSortingStrategy}
         >
           <div style={{
@@ -312,7 +312,7 @@ export default function BentoEditor({ projectId }: { projectId: string }) {
             gridTemplateColumns: gridTemplate as any,
             gap: 16
           }}>
-            {components.map((c) => (
+            {components.map((c: any) => (
               <SortableCard
                 key={c.id}
                 component={c}
@@ -353,7 +353,7 @@ export default function BentoEditor({ projectId }: { projectId: string }) {
                   readOnly
                   style={{ width: '70%', padding: 8, background: 'var(--card)', color: 'var(--text)', border: 'var(--border)', borderRadius: 8 }}
                 />
-                <select value={activeComponent.role} readOnly style={select as any}>
+                <select value={activeComponent.role} disabled style={select as any}>
                   {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
@@ -369,5 +369,3 @@ export default function BentoEditor({ projectId }: { projectId: string }) {
     </div>
   );
 }
-
-
