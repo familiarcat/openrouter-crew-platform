@@ -4,8 +4,8 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Project } from '@/types/project';
 
 const MOCK_PROJECTS: Project[] = [
-  { id: '1', name: 'Project Alpha', status: 'active', description: 'Mock project for testing', updatedAt: new Date(Date.now() - 86400000).toISOString(), headline: 'Project Alpha', subheadline: 'Alpha Sub', theme: 'gradient' },
-  { id: '2', name: 'Project Beta', status: 'draft', description: 'Another mock project', updatedAt: new Date().toISOString(), headline: 'Project Beta', subheadline: 'Beta Sub', theme: 'cyberpunk' }
+  { id: '1', name: 'Project Alpha', status: 'active', description: 'Mock project for testing', updatedAt: new Date(Date.now() - 86400000).toISOString(), headline: 'Project Alpha', subheadline: 'Alpha Sub', theme: 'gradient', components: [{id: 'c1', title: 'comp1', type: 'hero', status: 'active', body: 'comp body'}] },
+  { id: '2', name: 'Project Beta', status: 'draft', description: 'Another mock project', updatedAt: new Date().toISOString(), headline: 'Project Beta', subheadline: 'Beta Sub', theme: 'cyberpunk', components: [] }
 ];
 
 const initialState = {

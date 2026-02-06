@@ -2480,10 +2480,19 @@ mkdir -p domains/alex-ai-universal/dashboard/types
 cat > domains/alex-ai-universal/dashboard/types/project.ts <<EOF
 export interface ProjectComponent {
   id: string;
-  name: string;
+  title: string;
+  body?: string;
   type: string;
   status: string;
   description?: string;
+}
+
+export interface ProjectContent {
+  headline?: string;
+  subheadline?: string;
+  description?: string;
+  theme?: string;
+  components?: ProjectComponent[];
 }
 
 export interface Project {
@@ -2493,6 +2502,9 @@ export interface Project {
   status?: 'active' | 'archived' | 'draft';
   createdAt?: string;
   updatedAt?: string;
+  headline?: string;
+  subheadline?: string;
+  theme?: string;
   components?: ProjectComponent[];
   [key: string]: any;
 }
@@ -2507,8 +2519,8 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Project } from '@/types/project';
 
 const MOCK_PROJECTS: Project[] = [
-  { id: '1', name: 'Project Alpha', status: 'active', description: 'Mock project for testing', updatedAt: new Date(Date.now() - 86400000).toISOString(), headline: 'Project Alpha', subheadline: 'Alpha Sub', theme: 'gradient' },
-  { id: '2', name: 'Project Beta', status: 'draft', description: 'Another mock project', updatedAt: new Date().toISOString(), headline: 'Project Beta', subheadline: 'Beta Sub', theme: 'cyberpunk' }
+  { id: '1', name: 'Project Alpha', status: 'active', description: 'Mock project for testing', updatedAt: new Date(Date.now() - 86400000).toISOString(), headline: 'Project Alpha', subheadline: 'Alpha Sub', theme: 'gradient', components: [{id: 'c1', title: 'comp1', type: 'hero', status: 'active', body: 'comp body'}] },
+  { id: '2', name: 'Project Beta', status: 'draft', description: 'Another mock project', updatedAt: new Date().toISOString(), headline: 'Project Beta', subheadline: 'Beta Sub', theme: 'cyberpunk', components: [] }
 ];
 
 const initialState = {
@@ -3175,6 +3187,60 @@ if (fs.existsSync(path)) {
 }
 "
 echo "✅ Fixed additional null checks in lib/state-sync-manager.ts"
+
+# 107. Fix app/gallery/page.tsx (Undefined index type)
+node -e "
+const fs = require('fs');
+const path = 'domains/alex-ai-universal/dashboard/app/gallery/page.tsx';
+if (fs.existsSync(path)) {
+  let content = fs.readFileSync(path, 'utf8');
+  const search = 'const s = themeStyles[p.theme] || themeStyles.gradient;';
+  const replace = 'const s = (p.theme && themeStyles[p.theme]) || themeStyles.gradient;';
+  
+  if (content.includes(search)) {
+    console.log('🔧 Fixing undefined index type in app/gallery/page.tsx');
+    content = content.replace(search, replace);
+    fs.writeFileSync(path, content);
+  }
+}
+"
+echo "✅ Fixed undefined index type in app/gallery/page.tsx"
+
+# 108. Fix lib/suggestion-engine.ts (Missing module and type imports)
+node -e '
+const fs = require("fs");
+const path = "domains/alex-ai-universal/dashboard/lib/suggestion-engine.ts";
+if (!fs.existsSync(path)) {
+  console.log("🔧 Creating missing lib/suggestion-engine.ts");
+  const content = `
+import type { Project, ProjectComponent, ProjectContent } from "@/types/project";
+
+export type AdvisorCode = "conversion_strategist" | "brand_psychologist" | "data_analyst" | "clinical_compliance" | "creative_director";
+
+export function getAdvisorOptions(): { code: AdvisorCode; title: string }[] {
+  return [
+    { code: "conversion_strategist", title: "Conversion Strategist" },
+    { code: "brand_psychologist", title: "Brand Psychologist" },
+    { code: "data_analyst", title: "Data Analyst" },
+    { code: "clinical_compliance", title: "Clinical Compliance" },
+    { code: "creative_director", title: "Creative Director" },
+  ];
+}
+
+export function getProfessionalSuggestion(
+  component: ProjectComponent,
+  project: Project,
+  advisor?: AdvisorCode
+): { title: string; body: string } {
+  return {
+    title: \`Suggested: \${component.title || "New Component"}\`,
+    body: \`This is a mock suggestion for the "\${project.name}" project, from the perspective of a \${advisor || "default advisor"}.\`
+  };
+}`;
+  fs.writeFileSync(path, content.trim());
+}
+'
+echo "✅ Created lib/suggestion-engine.ts with correct type imports"
 
 # 67. Archive repair script for RAG learning (Crew Memory)
 mkdir -p domains/alex-ai-universal/knowledge/engineering

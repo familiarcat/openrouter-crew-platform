@@ -21,14 +21,14 @@ export default function GalleryPage() {
       return matchQuery && matchTheme;
     });
     const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === 'theme') return a.theme.localeCompare(b.theme);
+      if (sortBy === 'theme') return (a.theme || '').localeCompare(b.theme || '');
       if (sortBy === 'updated') return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
-      return a.headline.localeCompare(b.headline);
+      return (a.headline || '').localeCompare(b.headline || '');
     });
     return sorted;
   }, [projects, query, sortBy, themeFilter]);
 
-  const themes = Array.from(new Set(projects.map((p) => p.theme)));
+  const themes = Array.from(new Set(projects.map((p) => p.theme).filter(Boolean)));
 
   // Per-project thumbnail style map (mirrors project page styles)
   const themeStyles: Record<string, { background: string; textColor: string; accentColor: string }>= {
@@ -76,7 +76,7 @@ export default function GalleryPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
         {items.map((p) => {
-          const s = themeStyles[p.theme] || themeStyles.gradient;
+          const s = (p.theme && themeStyles[p.theme]) || themeStyles.gradient;
           return (
             <div key={p.id} className="card" style={{ border: 'var(--border)', borderRadius: 12, overflow: 'hidden' }}>
               {/* Thumbnail preview using project theme (isolated visuals) */}
