@@ -1,22 +1,29 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
+import './globals.css';
+import { ThemeProvider } from '@/lib/theme-context';
+import DashboardNavigation from '@/components/DashboardNavigation';
 
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata: Metadata = {
+export const metadata = {
   title: 'OpenRouter Crew Platform',
-  description: 'Unified project management and cost optimization platform',
-}
+  description: 'Unified Dashboard for all domains',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className="bg-[#0b0d11] text-white min-h-screen">
+        <ThemeProvider>
+          <div className="flex min-h-screen">
+            <DashboardNavigation />
+            <main className="flex-1 ml-64">
+              {children}
+            </main>
+          </div>
+        </ThemeProvider>
+      </body>
     </html>
-  )
+  );
 }

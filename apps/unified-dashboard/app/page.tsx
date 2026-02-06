@@ -1,271 +1,151 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { formatCurrency, formatRelativeTime } from '@/lib/utils'
-import { BarChart3, DollarSign, FolderKanban, Sparkles } from 'lucide-react'
-import { ClientTypes } from '@openrouter-crew/shared-schemas'
+import React from 'react';
+import { DOMAINS, MOCK_PROJECTS, MOCK_ACTIVITY, getDomainStats } from '@/lib/unified-mock-data';
+import Link from 'next/link';
 
-type Project = ClientTypes.Project
-type LLMUsageEvent = ClientTypes.LLMUsageEvent
-
-export default function DashboardPage() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [recentUsage, setRecentUsage] = useState<LLMUsageEvent[]>([])
-  const [totalCost, setTotalCost] = useState(0)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadDashboardData()
-    setupRealtimeSubscription()
-  }, [])
-
-  async function loadDashboardData() {
-    try {
-      // Load projects
-      const { data: projectsData } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(6) as { data: Project[] | null; error: any }
-
-      if (projectsData) setProjects(projectsData)
-
-      // Load recent usage events
-      const { data: usageData } = await supabase
-        .from('llm_usage_events')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10) as { data: LLMUsageEvent[] | null; error: any }
-
-      if (usageData) {
-        setRecentUsage(usageData)
-        const total = usageData.reduce((sum, event) => sum + (event.estimated_cost_usd || 0), 0)
-        setTotalCost(total)
-      }
-    } catch (error) {
-      console.error('Error loading dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function setupRealtimeSubscription() {
-    // Subscribe to new usage events
-    const channel = supabase
-      .channel('dashboard-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'llm_usage_events',
-        },
-        (payload) => {
-          const newEvent = payload.new as LLMUsageEvent
-          setRecentUsage((prev) => [newEvent, ...prev.slice(0, 9)])
-          setTotalCost((prev) => prev + (newEvent.estimated_cost_usd || 0))
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <Sparkles className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+export default function DashboardHome() {
+  const totalBudget = MOCK_PROJECTS.reduce((sum, p) => sum + p.budget.allocated, 0);
+  const totalSpent = MOCK_PROJECTS.reduce((sum, p) => sum + p.budget.spent, 0);
+  const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'active').length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      {/* Header */}
-      <header className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">OpenRouter Crew Platform</h1>
-              <p className="text-sm text-muted-foreground">Unified project management and cost optimization</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Total Spend</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalCost)}</p>
-              </div>
-            </div>
-          </div>
+    <div className="p-8 max-w-7xl mx-auto">
+      <header className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Platform Overview</h1>
+          <p className="text-gray-400">Real-time metrics across all domains</p>
         </div>
+        <Link 
+          href="/projects/new"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+        >
+          <span>+</span> New Project
+        </Link>
       </header>
 
-      <main className="container mx-auto px-6 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-card rounded-lg border border-border p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Total Projects</h3>
-              <FolderKanban className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <p className="text-3xl font-bold">{projects.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Active projects</p>
-          </div>
+      {/* High-level Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <MetricCard title="Total Projects" value={MOCK_PROJECTS.length} trend="+2 this week" />
+        <MetricCard title="Active Workstreams" value={activeProjects} trend="Stable" />
+        <MetricCard title="Budget Utilization" value={`${Math.round((totalSpent / totalBudget) * 100)}%`} trend={`$${totalSpent.toLocaleString()} spent`} />
+        <MetricCard title="System Health" value="99.8%" trend="All systems operational" color="text-green-400" />
+      </div>
 
-          <div className="bg-card rounded-lg border border-border p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-muted-foreground">API Calls</h3>
-              <BarChart3 className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <p className="text-3xl font-bold">{recentUsage.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">Recent requests</p>
-          </div>
-
-          <div className="bg-card rounded-lg border border-border p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Total Cost</h3>
-              <DollarSign className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <p className="text-3xl font-bold">{formatCurrency(totalCost)}</p>
-            <p className="text-xs text-muted-foreground mt-1">All-time spend</p>
-          </div>
-        </div>
-
-        {/* Projects Grid */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Recent Projects</h2>
-            <button className="text-sm text-primary hover:underline">View all →</button>
-          </div>
-
-          {projects.length === 0 ? (
-            <div className="bg-card rounded-lg border border-border p-12 text-center">
-              <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">No projects yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Get started by creating your first project
-              </p>
-              <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
-                Create Project
-              </button>
-            </div>
-          ) : (
-            <div className="grid-auto-fill">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="bg-card rounded-lg border border-border p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-lg">{project.name}</h3>
-                    <span className={`status-badge status-${project.status}`}>
-                      {project.status}
-                    </span>
+      {/* Domain Grid */}
+      <h2 className="text-xl font-semibold text-white mb-4">Domain Status</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {DOMAINS.map(domain => {
+          const stats = getDomainStats(domain.id);
+          return (
+            <div key={domain.id} className="bg-[#16181d] border border-white/10 rounded-xl p-6 hover:border-white/20 transition-colors">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${domain.color} flex items-center justify-center text-white font-bold`}>
+                    {domain.name.charAt(0)}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                    {project.description || 'No description'}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{project.type}</span>
-                    <span>{formatRelativeTime(project.created_at)}</span>
+                  <div>
+                    <h3 className="font-bold text-white">{domain.name}</h3>
+                    <div className="text-xs text-gray-500">Port {domain.port}</div>
                   </div>
-                  {project.budget_usd && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Budget</span>
-                        <span className="font-medium">{formatCurrency(project.budget_usd)}</span>
-                      </div>
-                      {project.total_cost_usd !== null && (
-                        <div className="flex justify-between text-sm mt-1">
-                          <span className="text-muted-foreground">Spent</span>
-                          <span className="font-medium text-primary">
-                            {formatCurrency(project.total_cost_usd)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
-              ))}
+                <div className="px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded-full border border-green-500/20">
+                  Healthy
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Active Projects</span>
+                  <span className="text-white font-mono">{stats.activeCount}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Budget Used</span>
+                  <span className="text-white font-mono">{Math.round(stats.budgetUtilization)}%</span>
+                </div>
+                <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div 
+                    className={`h-full bg-gradient-to-r ${domain.color}`} 
+                    style={{ width: `${stats.budgetUtilization}%` }}
+                  />
+                </div>
+              </div>
             </div>
-          )}
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Recent Projects */}
+        <div className="lg:col-span-2">
+          <h2 className="text-xl font-semibold text-white mb-4">Recent Projects</h2>
+          <div className="bg-[#16181d] border border-white/10 rounded-xl overflow-hidden">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-white/5 text-gray-400">
+                <tr>
+                  <th className="p-4 font-medium">Project Name</th>
+                  <th className="p-4 font-medium">Domain</th>
+                  <th className="p-4 font-medium">Status</th>
+                  <th className="p-4 font-medium text-right">Budget</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {MOCK_PROJECTS.map(project => (
+                  <tr key={project.id} className="hover:bg-white/5 transition-colors">
+                    <td className="p-4">
+                      <div className="font-medium text-white">{project.name}</div>
+                      <div className="text-xs text-gray-500">{project.description}</div>
+                    </td>
+                    <td className="p-4">
+                      <span className="px-2 py-1 bg-white/5 rounded text-xs text-gray-300 border border-white/10">
+                        {DOMAINS.find(d => d.id === project.domainId)?.name}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className={`capitalize ${project.status === 'active' ? 'text-green-400' : 'text-gray-400'}`}>
+                        {project.status}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right font-mono text-gray-300">
+                      ${project.budget.spent.toLocaleString()} / ${project.budget.allocated.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Recent Usage Events */}
+        {/* Activity Feed */}
         <div>
-          <h2 className="text-xl font-semibold mb-4">Recent API Usage</h2>
-          <div className="bg-card rounded-lg border border-border overflow-hidden">
-            {recentUsage.length === 0 ? (
-              <div className="p-12 text-center">
-                <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">No usage data</h3>
-                <p className="text-sm text-muted-foreground">
-                  API usage events will appear here
-                </p>
+          <h2 className="text-xl font-semibold text-white mb-4">Live Activity</h2>
+          <div className="bg-[#16181d] border border-white/10 rounded-xl p-4 space-y-4">
+            {MOCK_ACTIVITY.map(event => (
+              <div key={event.id} className="flex gap-3 items-start pb-4 border-b border-white/5 last:border-0 last:pb-0">
+                <div className={`w-2 h-2 mt-1.5 rounded-full ${event.type === 'alert' ? 'bg-red-500' : 'bg-blue-500'}`} />
+                <div>
+                  <div className="text-sm text-gray-300">{event.message}</div>
+                  <div className="text-xs text-gray-500 mt-1 flex gap-2">
+                    <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
+                    <span>•</span>
+                    <span className="uppercase">{event.domainId}</span>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Model
-                      </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Tokens
-                      </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Cost
-                      </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Time
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {recentUsage.map((event) => (
-                      <tr key={event.id} className="hover:bg-muted/30">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div>
-                              <div className="text-sm font-medium">{event.model}</div>
-                              <div className="text-xs text-muted-foreground">{event.provider}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {event.total_tokens?.toLocaleString() || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {formatCurrency(event.estimated_cost_usd || 0)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                          {formatRelativeTime(event.created_at)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            ))}
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border/40 mt-12">
-        <div className="container mx-auto px-6 py-6">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <p>© 2026 OpenRouter Crew Platform</p>
-            <p>Built with Next.js, Supabase, and n8n</p>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
-  )
+  );
+}
+
+function MetricCard({ title, value, trend, color = "text-white" }: { title: string, value: string | number, trend: string, color?: string }) {
+  return (
+    <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
+      <div className="text-gray-400 text-sm mb-2">{title}</div>
+      <div className={`text-3xl font-bold mb-1 ${color}`}>{value}</div>
+      <div className="text-xs text-gray-500">{trend}</div>
+    </div>
+  );
 }
