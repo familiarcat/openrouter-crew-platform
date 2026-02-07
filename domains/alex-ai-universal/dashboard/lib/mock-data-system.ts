@@ -216,6 +216,56 @@ export class MockDataSystem {
   }
 
   /**
+   * Generate unified platform data for investigation
+   */
+  generateUnifiedPlatformData(config: MockDataConfig = { componentName: 'UnifiedPlatform', dataType: 'platform' }) {
+    const cacheKey = 'unified-platform-data';
+    if (this.mockDataCache.has(cacheKey)) {
+      return this.mockDataCache.get(cacheKey);
+    }
+
+    const domains = [
+      { id: 'dj-booking', name: 'DJ-Booking', status: 'healthy', port: 3001 },
+      { id: 'product-factory', name: 'Product Factory', status: 'healthy', port: 3002 },
+      { id: 'alex-ai-universal', name: 'Alex-AI Universal', status: 'healthy', port: 3003 }
+    ];
+
+    const projects = [
+      { id: 'proj-001', domainId: 'dj-booking', name: 'Summer Festival', status: 'active', budget: 50000 },
+      { id: 'proj-002', domainId: 'product-factory', name: 'Sprint 42', status: 'active', budget: 15000 },
+      { id: 'proj-003', domainId: 'alex-ai-universal', name: 'CLI Tool', status: 'draft', budget: 5000 }
+    ];
+
+    const activity = [
+      { id: 'evt-1', type: 'deployment', message: 'Deployed Sprint 42', timestamp: new Date().toISOString() },
+      { id: 'evt-2', type: 'alert', message: 'High latency in API', timestamp: new Date(Date.now() - 3600000).toISOString() }
+    ];
+
+    const data = {
+      platform: {
+        overview: {
+          totalProjects: projects.length,
+          activeDomains: domains.length,
+          systemHealth: '98%'
+        },
+        domains: domains.map(d => ({
+          ...d,
+          projects: projects.filter(p => p.domainId === d.id)
+        })),
+        recentActivity: activity
+      },
+      meta: {
+        generatedAt: new Date().toISOString(),
+        environment: 'development',
+        source: 'MockDataSystem'
+      }
+    };
+
+    this.mockDataCache.set(cacheKey, data);
+    return data;
+  }
+
+  /**
    * Check if component should use mock data
    */
   shouldUseMockData(componentName: string, hasLiveData: boolean): boolean {
@@ -253,6 +303,8 @@ export class MockDataSystem {
         return this.generateCostData({ componentName, dataType: dataType || 'cost' });
       case 'UserExperienceAnalytics':
         return this.generateUXData({ componentName, dataType: dataType || 'ux' });
+      case 'UnifiedPlatform':
+        return this.generateUnifiedPlatformData({ componentName, dataType: dataType || 'platform' });
       default:
         return { data: [], error: `No mock data generator for ${componentName}` };
     }

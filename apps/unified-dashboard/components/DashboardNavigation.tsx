@@ -40,6 +40,14 @@ export default function DashboardNavigation() {
               All Projects
             </Link>
           </li>
+          <li>
+            <Link 
+              href="/design-system" 
+              className={`flex items-center px-4 py-2 text-sm rounded-lg transition-colors ${isActive('/design-system') ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+            >
+              Component Library
+            </Link>
+          </li>
         </ul>
 
         <div className="px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">

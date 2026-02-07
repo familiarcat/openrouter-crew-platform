@@ -166,6 +166,25 @@ export default function DashboardContent() {
           
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <Link
+              href="/design-system"
+              style={{
+                padding: '12px 24px',
+                background: 'var(--card-alt)',
+                color: 'var(--text)',
+                textDecoration: 'none',
+                borderRadius: 'var(--radius)',
+                fontWeight: 600,
+                fontSize: '15px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                border: '1px solid var(--border)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span style={{ fontSize: '18px' }}>🧩</span> Components
+            </Link>
+            <Link
               href="/dashboard/analytics"
               style={{
                 padding: '12px 24px',

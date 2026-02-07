@@ -278,6 +278,14 @@ export default function DashboardNavigation() {
               All Projects
             </Link>
           </li>
+          <li>
+            <Link 
+              href="/design-system" 
+              className={\`flex items-center px-4 py-2 text-sm rounded-lg transition-colors \${isActive('/design-system') ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}\`}
+            >
+              Component Library
+            </Link>
+          </li>
         </ul>
 
         <div className="px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -447,7 +455,7 @@ export default function DashboardHome() {
                 <div>
                   <div className="text-sm text-gray-300">{event.message}</div>
                   <div className="text-xs text-gray-500 mt-1 flex gap-2">
-                    <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
+                    <span suppressHydrationWarning>{new Date(event.timestamp).toLocaleTimeString()}</span>
                     <span>•</span>
                     <span className="uppercase">{event.domainId}</span>
                   </div>
@@ -507,6 +515,321 @@ export default function RootLayout({
   );
 }
 EOF
+
+# ------------------------------------------------------------------------------
+# 5.5 Create Globals CSS
+# ------------------------------------------------------------------------------
+echo "🎨 Creating Globals CSS..."
+cat > apps/unified-dashboard/app/globals.css <<EOF
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0b0d11;
+  --foreground: #ffffff;
+  --card-bg: #16181d;
+  --card: #16181d;
+  --border: rgba(255, 255, 255, 0.1);
+  --radius: 0.75rem;
+  --accent: #60a5fa;
+  --text-muted: #9ca3af;
+  --text: #ffffff;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+EOF
+
+# ------------------------------------------------------------------------------
+# 6. Create Design System Page (Component Portfolio)
+# ------------------------------------------------------------------------------
+echo "🎨 Creating Design System Page..."
+mkdir -p apps/unified-dashboard/app/design-system
+cat > apps/unified-dashboard/app/design-system/page.tsx <<'EOF'
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import ServiceStatusDisplay from '@/components/ServiceStatusDisplay';
+import CrossServerSyncPanel from '@/components/CrossServerSyncPanel';
+import LiveRefreshDashboard from '@/components/LiveRefreshDashboard';
+import MCPDashboardSection from '@/components/MCPDashboardSection';
+import LearningAnalyticsDashboard from '@/components/LearningAnalyticsDashboard';
+import CrewMemoryVisualization from '@/components/CrewMemoryVisualization';
+import RAGProjectRecommendations from '@/components/RAGProjectRecommendations';
+import N8NWorkflowBento from '@/components/N8NWorkflowBento';
+import RAGSelfDocumentation from '@/components/RAGSelfDocumentation';
+import SecurityAssessmentDashboard from '@/components/SecurityAssessmentDashboard';
+import CostOptimizationMonitor from '@/components/CostOptimizationMonitor';
+import UserExperienceAnalytics from '@/components/UserExperienceAnalytics';
+import AIImpactAssessment from '@/components/AIImpactAssessment';
+import ProcessDocumentationSystem from '@/components/ProcessDocumentationSystem';
+import DataSourceIntegrationPanel from '@/components/DataSourceIntegrationPanel';
+import ProjectGrid from '@/components/ProjectGrid';
+import ThemeTestingHarness from '@/components/ThemeTestingHarness';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
+import VectorBasedDashboard from '@/components/VectorBasedDashboard';
+import VectorPrioritySystem from '@/components/VectorPrioritySystem';
+import UIDesignComparison from '@/components/UIDesignComparison';
+import ProgressTracker from '@/components/ProgressTracker';
+import PriorityMatrix from '@/components/PriorityMatrix';
+import DynamicDataDrilldown from '@/components/DynamicDataDrilldown';
+import DynamicDataRenderer from '@/components/DynamicDataRenderer';
+import { ComponentGrid } from '@/components/DynamicComponentRegistry';
+import DebatePanel from '@/components/DebatePanel';
+import AgentMemoryDisplay from '@/components/AgentMemoryDisplay';
+import StatusRibbon from '@/components/StatusRibbon';
+import UniversalProgressBar from '@/components/UniversalProgressBar';
+import DesignSystemErrorDisplay from '@/components/DesignSystemErrorDisplay';
+
+function ComponentWrapper({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      position: 'relative',
+      background: 'var(--card-bg)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius)',
+      minHeight: '300px',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        background: 'rgba(124, 92, 255, 0.15)',
+        color: 'var(--accent)',
+        fontSize: '10px',
+        fontWeight: 600,
+        padding: '4px 10px',
+        borderBottomRightRadius: '8px',
+        borderRight: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)',
+        zIndex: 20,
+        backdropFilter: 'blur(4px)',
+        letterSpacing: '0.5px',
+        textTransform: 'uppercase'
+      }}>
+        {label}
+      </div>
+      <div style={{ flex: 1, padding: '24px', overflow: 'auto' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section style={{ marginBottom: '80px' }}>
+      <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
+        <h2 style={{
+          fontSize: '28px',
+          fontWeight: '700',
+          color: 'var(--foreground)',
+          marginBottom: '8px'
+        }}>
+          {title}
+        </h2>
+        {description && (
+          <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '800px', lineHeight: '1.6' }}>
+            {description}
+          </p>
+        )}
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))',
+        gap: '24px'
+      }}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+export default function ComponentLibraryPage() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--background)',
+      color: 'var(--foreground)',
+      padding: '40px 24px'
+    }}>
+      <div style={{ maxWidth: '1800px', margin: '0 auto' }}>
+        <header style={{ marginBottom: '64px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ maxWidth: '800px' }}>
+            <h1 style={{ fontSize: '36px', fontWeight: '800', color: 'var(--accent)', marginBottom: '12px' }}>
+              🧩 Component Library
+            </h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '18px', lineHeight: '1.6' }}>
+              Interactive showcase of all dashboard components in the Bento system.
+              Organized by Domain-Driven Design (DDD) contexts and RAG memory structures to reflect the architectural boundaries of the platform.
+            </p>
+          </div>
+          <Link
+            href="/dashboard"
+            style={{
+              padding: '12px 24px',
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              color: 'var(--text)',
+              textDecoration: 'none',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              marginTop: '8px'
+            }}
+          >
+            ← Back to Dashboard
+          </Link>
+        </header>
+
+        <Section title="System Observability & Core" description="Components responsible for real-time monitoring, server synchronization, and core infrastructure health.">
+          <ComponentWrapper label="Service Status"><ServiceStatusDisplay /></ComponentWrapper>
+          <ComponentWrapper label="Live Refresh"><LiveRefreshDashboard /></ComponentWrapper>
+          <ComponentWrapper label="Cross-Server Sync"><CrossServerSyncPanel /></ComponentWrapper>
+          <ComponentWrapper label="MCP System"><MCPDashboardSection /></ComponentWrapper>
+          <ComponentWrapper label="Security Assessment"><SecurityAssessmentDashboard /></ComponentWrapper>
+          <ComponentWrapper label="Cost Optimization"><CostOptimizationMonitor /></ComponentWrapper>
+        </Section>
+
+        <Section title="Intelligence & Memory (RAG)" description="Visualizations for AI agent memories, vector retrieval processes, and learning analytics.">
+          <ComponentWrapper label="Crew Memory"><CrewMemoryVisualization /></ComponentWrapper>
+          <ComponentWrapper label="Agent Memory"><AgentMemoryDisplay agentName="Demo Agent" limit={5} showStats={true} /></ComponentWrapper>
+          <ComponentWrapper label="RAG Recommendations"><RAGProjectRecommendations /></ComponentWrapper>
+          <ComponentWrapper label="Self Documentation"><RAGSelfDocumentation /></ComponentWrapper>
+          <ComponentWrapper label="Learning Analytics"><LearningAnalyticsDashboard /></ComponentWrapper>
+          <ComponentWrapper label="AI Impact"><AIImpactAssessment /></ComponentWrapper>
+        </Section>
+
+        <Section title="Workflow & Process Automation" description="Interfaces for managing n8n workflows, process documentation, and data source integrations.">
+          <ComponentWrapper label="n8n Workflows"><N8NWorkflowBento /></ComponentWrapper>
+          <ComponentWrapper label="Process Docs"><ProcessDocumentationSystem /></ComponentWrapper>
+          <ComponentWrapper label="Data Sources"><DataSourceIntegrationPanel /></ComponentWrapper>
+          <ComponentWrapper label="Debate Panel"><DebatePanel /></ComponentWrapper>
+        </Section>
+
+        <Section title="Project Management & Analytics" description="Tools for tracking project progress, prioritizing tasks via vector analysis, and general analytics.">
+          <ComponentWrapper label="Project Grid"><ProjectGrid /></ComponentWrapper>
+          <ComponentWrapper label="Analytics Dashboard"><AnalyticsDashboard /></ComponentWrapper>
+          <ComponentWrapper label="Vector Dashboard"><VectorBasedDashboard /></ComponentWrapper>
+          <ComponentWrapper label="Vector Priority"><VectorPrioritySystem /></ComponentWrapper>
+          <ComponentWrapper label="Priority Matrix"><PriorityMatrix vectors={[]} /></ComponentWrapper>
+          <ComponentWrapper label="Progress Tracker"><ProgressTracker taskId="demo-task" /></ComponentWrapper>
+        </Section>
+
+        <Section title="UX & Design System" description="Components for testing themes, comparing UI designs, and monitoring user experience metrics.">
+          <ComponentWrapper label="Theme Testing"><ThemeTestingHarness /></ComponentWrapper>
+          <ComponentWrapper label="UI Comparison"><UIDesignComparison /></ComponentWrapper>
+          <ComponentWrapper label="UX Analytics"><UserExperienceAnalytics /></ComponentWrapper>
+          <ComponentWrapper label="Status Ribbon"><StatusRibbon /></ComponentWrapper>
+          <ComponentWrapper label="Universal Progress"><UniversalProgressBar current={65} total={100} description="System Load" /></ComponentWrapper>
+          <ComponentWrapper label="Error Display"><DesignSystemErrorDisplay error="Sample error message" title="Demo Error" /></ComponentWrapper>
+        </Section>
+
+        <Section title="Dynamic Data & Registry" description="Low-level components for rendering dynamic data structures and component registries.">
+          <ComponentWrapper label="Data Drilldown"><DynamicDataDrilldown data={{ sample: 'data', nested: { value: 123 } }} title="Sample Drilldown" /></ComponentWrapper>
+          <ComponentWrapper label="Data Renderer"><DynamicDataRenderer data={{ key: 'value' }} structure={{ id: 'root', type: 'container' }} /></ComponentWrapper>
+          <ComponentWrapper label="Component Grid"><ComponentGrid componentIds={['comp-1', 'comp-2']} /></ComponentWrapper>
+        </Section>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# ------------------------------------------------------------------------------
+# 7. Generate Placeholder Components
+# ------------------------------------------------------------------------------
+echo "🧩 Generating Placeholder Components for Design System..."
+mkdir -p apps/unified-dashboard/components
+
+# List of components to generate
+COMPONENTS=(
+  "ServiceStatusDisplay"
+  "CrossServerSyncPanel"
+  "LiveRefreshDashboard"
+  "MCPDashboardSection"
+  "LearningAnalyticsDashboard"
+  "CrewMemoryVisualization"
+  "RAGProjectRecommendations"
+  "N8NWorkflowBento"
+  "RAGSelfDocumentation"
+  "SecurityAssessmentDashboard"
+  "CostOptimizationMonitor"
+  "UserExperienceAnalytics"
+  "AIImpactAssessment"
+  "ProcessDocumentationSystem"
+  "DataSourceIntegrationPanel"
+  "ProjectGrid"
+  "ThemeTestingHarness"
+  "AnalyticsDashboard"
+  "VectorBasedDashboard"
+  "VectorPrioritySystem"
+  "UIDesignComparison"
+  "ProgressTracker"
+  "PriorityMatrix"
+  "DynamicDataDrilldown"
+  "DynamicDataRenderer"
+  "DebatePanel"
+  "AgentMemoryDisplay"
+  "StatusRibbon"
+  "UniversalProgressBar"
+  "DesignSystemErrorDisplay"
+)
+
+for component in "${COMPONENTS[@]}"; do
+  if [ ! -f "apps/unified-dashboard/components/${component}.tsx" ]; then
+    cat > "apps/unified-dashboard/components/${component}.tsx" <<EOF
+'use client';
+import React from 'react';
+
+export default function ${component}(props: any) {
+  return (
+    <div className="p-4 border border-dashed border-white/20 rounded-lg min-h-[100px] flex items-center justify-center bg-white/5">
+      <div className="text-center">
+        <div className="font-bold text-gray-300">${component}</div>
+        <div className="text-xs text-gray-500">Component Placeholder</div>
+        <div className="text-[10px] text-gray-600 mt-1 font-mono">apps/unified-dashboard/components/${component}.tsx</div>
+      </div>
+    </div>
+  );
+}
+EOF
+    echo "  Created placeholder: ${component}"
+  fi
+done
+
+# Special handling for DynamicComponentRegistry which has named exports
+if [ ! -f "apps/unified-dashboard/components/DynamicComponentRegistry.tsx" ]; then
+  cat > "apps/unified-dashboard/components/DynamicComponentRegistry.tsx" <<EOF
+'use client';
+import React from 'react';
+
+export function ComponentGrid({ componentIds }: { componentIds: string[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      {componentIds.map(id => (
+        <div key={id} className="p-4 border border-white/10 rounded bg-white/5">
+          Component: {id}
+        </div>
+      ))}
+      <div className="p-4 border border-dashed border-white/20 rounded text-center text-gray-500">
+        Dynamic Component Grid Placeholder
+      </div>
+    </div>
+  );
+}
+
+export const DynamicComponentRegistry = {};
+EOF
+  echo "  Created placeholder: DynamicComponentRegistry"
+fi
 
 echo "✅ Unified Dashboard enhancements applied successfully."
 echo "👉 Run 'pnpm dev' to view the updated dashboard."

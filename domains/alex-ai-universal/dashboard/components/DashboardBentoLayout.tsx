@@ -8,7 +8,8 @@
  * Crew: Troi (UX Lead) + Riker (Layout) + Data (Organization) + La Forge (Implementation)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import ServiceStatusDisplay from './ServiceStatusDisplay';
 import CrossServerSyncPanel from './CrossServerSyncPanel';
 import LiveRefreshDashboard from './LiveRefreshDashboard';
@@ -42,6 +43,7 @@ import UniversalProgressBar from './UniversalProgressBar';
 import DesignSystemErrorDisplay from './DesignSystemErrorDisplay';
 import MCPStatusModal from './MCPStatusModal';
 import { useAppState } from '@/lib/state-manager';
+import { mockDataSystem } from '@/lib/mock-data-system';
 
 interface BentoCardProps {
   title: string;
@@ -108,7 +110,15 @@ function BentoCard({ title, description, icon, span = 1, height = 'medium', chil
 
 export default function DashboardBentoLayout() {
   const { globalTheme } = useAppState();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['core', 'analytics', 'workflows']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['core', 'analytics', 'workflows', 'dynamic']));
+  const [platformData, setPlatformData] = useState<any>(null);
+
+  useEffect(() => {
+    // Load unified platform data for drilldown investigation
+    // This allows users to investigate the testing data hydrated into the system
+    const data = mockDataSystem.getMockData('UnifiedPlatform');
+    setPlatformData(data);
+  }, []);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => {
@@ -402,7 +412,11 @@ export default function DashboardBentoLayout() {
               <DynamicDataRenderer data={{}} structure={{ id: 'default', type: 'container' }} />
             </BentoCard>
             <BentoCard title="Dynamic Data Drilldown" icon="🔍" span={6} height="medium">
-              <DynamicDataDrilldown data={{}} title="Data Analysis" />
+              <DynamicDataDrilldown 
+                data={platformData || {}} 
+                title="Platform Data Explorer" 
+                initialPath={[{ label: 'Root', path: '.' }]}
+              />
             </BentoCard>
             <BentoCard title="Component Registry" icon="📦" span={12} height="medium">
               <ComponentGrid componentIds={[]} />
@@ -541,6 +555,23 @@ export default function DashboardBentoLayout() {
             </BentoCard>
             <BentoCard title="Universal Progress Bar" icon="📊" span={6} height="short">
               <UniversalProgressBar current={75} total={100} description="System Health" />
+            </BentoCard>
+            <BentoCard title="Component Library" icon="🧩" span={6} height="short">
+              <div style={{ display: 'flex', alignItems: 'center', height: '100%', justifyContent: 'center' }}>
+                <Link 
+                  href="/design-system"
+                  style={{
+                    padding: '10px 20px',
+                    background: 'var(--accent)',
+                    color: 'var(--card-bg)',
+                    borderRadius: 'var(--radius)',
+                    textDecoration: 'none',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  View Library
+                </Link>
+              </div>
             </BentoCard>
           </div>
         )}
