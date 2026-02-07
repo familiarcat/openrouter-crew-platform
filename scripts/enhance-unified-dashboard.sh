@@ -749,6 +749,719 @@ EOF
 echo "🧩 Generating Placeholder Components for Design System..."
 mkdir -p apps/unified-dashboard/components
 
+# ------------------------------------------------------------------------------
+# 7.1 Generate Data-Aware Components (Specific Implementations)
+# ------------------------------------------------------------------------------
+
+echo "  ✨ Generating Data-Aware Components..."
+
+# ServiceStatusDisplay
+cat > apps/unified-dashboard/components/ServiceStatusDisplay.tsx <<EOF
+'use client';
+import React from 'react';
+import { DOMAINS } from '@/lib/unified-mock-data';
+
+export default function ServiceStatusDisplay() {
+  return (
+    <div className="space-y-4">
+      {DOMAINS.map(domain => (
+        <div key={domain.id} className="flex items-center justify-between p-3 bg-white/5 rounded border border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+            <div>
+              <div className="font-medium">{domain.name}</div>
+              <div className="text-xs text-gray-500">Port: {domain.port}</div>
+            </div>
+          </div>
+          <div className="text-xs font-mono text-green-400">OPERATIONAL</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+EOF
+
+# ProjectGrid
+cat > apps/unified-dashboard/components/ProjectGrid.tsx <<EOF
+'use client';
+import React from 'react';
+import { MOCK_PROJECTS, DOMAINS } from '@/lib/unified-mock-data';
+
+export default function ProjectGrid() {
+  return (
+    <div className="grid grid-cols-1 gap-4">
+      {MOCK_PROJECTS.map(project => {
+        const domain = DOMAINS.find(d => d.id === project.domainId);
+        return (
+          <div key={project.id} className="p-4 border border-white/10 rounded bg-white/5 hover:bg-white/10 transition-colors">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex items-center gap-2">
+                <div className={\`w-2 h-2 rounded-full bg-gradient-to-r \${domain?.color || 'from-gray-500 to-gray-600'}\`} />
+                <h3 className="font-bold">{project.name}</h3>
+              </div>
+              <span className={\`px-2 py-0.5 rounded text-[10px] uppercase border \${
+                project.status === 'active' ? 'border-green-500/30 text-green-400 bg-green-500/10' : 
+                'border-gray-500/30 text-gray-400 bg-gray-500/10'
+              }\`}>
+                {project.status}
+              </span>
+            </div>
+            <p className="text-sm text-gray-400 mb-3 line-clamp-2">{project.description}</p>
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex -space-x-2">
+                {project.team.leads.map((lead, i) => (
+                  <div key={i} className="w-6 h-6 rounded-full bg-gray-700 border border-[#16181d] flex items-center justify-center text-[10px] text-white">
+                    {lead.charAt(0)}
+                  </div>
+                ))}
+              </div>
+              <div className="font-mono">
+                \${project.budget.spent.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+EOF
+
+# CostOptimizationMonitor
+cat > apps/unified-dashboard/components/CostOptimizationMonitor.tsx <<EOF
+'use client';
+import React from 'react';
+import { MOCK_PROJECTS } from '@/lib/unified-mock-data';
+
+export default function CostOptimizationMonitor() {
+  const totalBudget = MOCK_PROJECTS.reduce((acc, p) => acc + p.budget.allocated, 0);
+  const totalSpent = MOCK_PROJECTS.reduce((acc, p) => acc + p.budget.spent, 0);
+  const utilization = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-end justify-between">
+        <div>
+          <div className="text-sm text-gray-400">Total Budget Utilization</div>
+          <div className="text-3xl font-bold text-white">{utilization.toFixed(1)}%</div>
+        </div>
+        <div className="text-right">
+          <div className="text-sm text-gray-400">Spent / Allocated</div>
+          <div className="text-lg font-mono text-white">
+            \${totalSpent.toLocaleString()} / \${totalBudget.toLocaleString()}
+          </div>
+        </div>
+      </div>
+      
+      <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+        <div 
+          className="bg-blue-500 h-full transition-all duration-500" 
+          style={{ width: \`\${utilization}%\` }}
+        />
+      </div>
+
+      <div className="space-y-2">
+        {MOCK_PROJECTS.map(p => (
+          <div key={p.id} className="flex justify-between text-sm">
+            <span className="text-gray-400">{p.name}</span>
+            <span className={p.budget.spent > p.budget.allocated * 0.9 ? 'text-red-400' : 'text-gray-300'}>
+              \${p.budget.spent.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+EOF
+
+# LiveRefreshDashboard
+cat > apps/unified-dashboard/components/LiveRefreshDashboard.tsx <<EOF
+'use client';
+import React from 'react';
+import { MOCK_ACTIVITY } from '@/lib/unified-mock-data';
+
+export default function LiveRefreshDashboard() {
+  return (
+    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+      {MOCK_ACTIVITY.map(event => (
+        <div key={event.id} className="flex gap-3 items-start p-3 bg-white/5 rounded border border-white/5">
+          <div className={\`w-2 h-2 mt-1.5 rounded-full \${event.type === 'alert' ? 'bg-red-500' : 'bg-blue-500'}\`} />
+          <div>
+            <div className="text-sm text-gray-200">{event.message}</div>
+            <div className="text-xs text-gray-500 mt-1 flex gap-2">
+              <span suppressHydrationWarning>{new Date(event.timestamp).toLocaleTimeString()}</span>
+              <span className="uppercase px-1.5 py-0.5 bg-white/10 rounded text-[10px]">{event.domainId}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+EOF
+
+# AnalyticsDashboard
+cat > apps/unified-dashboard/components/AnalyticsDashboard.tsx <<EOF
+'use client';
+import React from 'react';
+import { MOCK_PROJECTS } from '@/lib/unified-mock-data';
+
+export default function AnalyticsDashboard() {
+  const avgUptime = MOCK_PROJECTS.reduce((acc, p) => acc + p.metrics.uptime, 0) / MOCK_PROJECTS.length;
+  const totalReqs = MOCK_PROJECTS.reduce((acc, p) => acc + p.metrics.requestsPerMin, 0);
+  const avgError = MOCK_PROJECTS.reduce((acc, p) => acc + p.metrics.errorRate, 0) / MOCK_PROJECTS.length;
+
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      <div className="p-4 bg-white/5 rounded border border-white/10 text-center">
+        <div className="text-sm text-gray-400 mb-1">Avg Uptime</div>
+        <div className="text-2xl font-bold text-green-400">{avgUptime.toFixed(2)}%</div>
+      </div>
+      <div className="p-4 bg-white/5 rounded border border-white/10 text-center">
+        <div className="text-sm text-gray-400 mb-1">Total RPM</div>
+        <div className="text-2xl font-bold text-blue-400">{totalReqs}</div>
+      </div>
+      <div className="p-4 bg-white/5 rounded border border-white/10 text-center">
+        <div className="text-sm text-gray-400 mb-1">Avg Error Rate</div>
+        <div className="text-2xl font-bold text-yellow-400">{avgError.toFixed(2)}%</div>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# ------------------------------------------------------------------------------
+# 7.2 Generate Complex UX Components (Nested & Interactive)
+# ------------------------------------------------------------------------------
+echo "  ✨ Generating Complex UX Components..."
+
+# N8NWorkflowBento
+cat > apps/unified-dashboard/components/N8NWorkflowBento.tsx <<EOF
+'use client';
+import React, { useState } from 'react';
+
+type ViewState = 'list' | 'detail' | 'execution';
+
+export default function N8NWorkflowBento() {
+  const [view, setView] = useState<ViewState>('list');
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
+
+  const workflows = [
+    { id: 'wf-1', name: 'Data Ingestion Pipeline', status: 'active', lastRun: '2 mins ago' },
+    { id: 'wf-2', name: 'Daily Report Generator', status: 'paused', lastRun: '1 day ago' },
+    { id: 'wf-3', name: 'Alert Notification System', status: 'active', lastRun: '5 mins ago' },
+  ];
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-bold text-lg">n8n Workflows</h3>
+        {view !== 'list' && (
+          <button onClick={() => setView('list')} className="text-xs text-blue-400 hover:text-blue-300">
+            ← Back to List
+          </button>
+        )}
+      </div>
+
+      {view === 'list' && (
+        <div className="space-y-2 overflow-auto flex-1">
+          {workflows.map(wf => (
+            <div key={wf.id} className="p-3 bg-white/5 rounded border border-white/10 hover:bg-white/10 transition-colors flex justify-between items-center">
+              <div>
+                <div className="font-medium">{wf.name}</div>
+                <div className="text-xs text-gray-500">{wf.status} • Last run: {wf.lastRun}</div>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { setSelectedWorkflow(wf.id); setView('detail'); }}
+                  className="px-2 py-1 text-xs bg-blue-500/20 text-blue-300 rounded hover:bg-blue-500/30"
+                >
+                  Edit
+                </button>
+                <button 
+                  onClick={() => { setSelectedWorkflow(wf.id); setView('execution'); }}
+                  className="px-2 py-1 text-xs bg-green-500/20 text-green-300 rounded hover:bg-green-500/30"
+                >
+                  Run
+                </button>
+              </div>
+            </div>
+          ))}
+          <button className="w-full py-2 border border-dashed border-white/20 rounded text-gray-500 text-sm hover:border-white/40 hover:text-gray-300">
+            + Create New Workflow
+          </button>
+        </div>
+      )}
+
+      {view === 'execution' && (
+        <div className="flex-1 bg-black/20 rounded p-4 border border-white/5">
+          <div className="text-sm font-mono text-green-400 mb-2">> Initializing execution for {selectedWorkflow}...</div>
+          <div className="text-sm font-mono text-gray-400 mb-2">> Loading parameters...</div>
+          <div className="mt-4">
+            <label className="block text-xs text-gray-500 mb-1">Input Payload (JSON)</label>
+            <textarea className="w-full h-24 bg-black/40 border border-white/10 rounded p-2 text-xs font-mono text-gray-300" defaultValue="{}" />
+          </div>
+          <button className="mt-4 w-full py-2 bg-green-600 hover:bg-green-500 text-white rounded font-medium text-sm">
+            Execute Workflow
+          </button>
+        </div>
+      )}
+
+      {view === 'detail' && (
+        <div className="flex-1 flex items-center justify-center text-gray-500">
+          Workflow Canvas Placeholder for {selectedWorkflow}
+        </div>
+      )}
+    </div>
+  );
+}
+EOF
+
+# ProcessDocumentationSystem
+cat > apps/unified-dashboard/components/ProcessDocumentationSystem.tsx <<EOF
+'use client';
+import React, { useState } from 'react';
+
+export default function ProcessDocumentationSystem() {
+  const [activeDoc, setActiveDoc] = useState('overview');
+
+  const docs = [
+    { id: 'overview', title: 'System Overview' },
+    { id: 'deployment', title: 'Deployment Guide' },
+    { id: 'troubleshooting', title: 'Troubleshooting' },
+  ];
+
+  return (
+    <div className="flex h-full gap-4">
+      <div className="w-1/3 border-r border-white/10 pr-2">
+        <div className="text-xs font-bold text-gray-500 uppercase mb-2">Documentation</div>
+        <ul className="space-y-1">
+          {docs.map(doc => (
+            <li 
+              key={doc.id}
+              onClick={() => setActiveDoc(doc.id)}
+              className={\`px-2 py-1.5 rounded text-sm cursor-pointer \${activeDoc === doc.id ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}\`}
+            >
+              {doc.title}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <h3 className="text-xl font-bold mb-4">{docs.find(d => d.id === activeDoc)?.title}</h3>
+        <div className="prose prose-invert prose-sm">
+          <p className="text-gray-300">
+            This is the content for the {activeDoc} documentation. In a real implementation, this would be rendered from markdown files or a CMS.
+          </p>
+          <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <h4 className="text-blue-300 font-bold mb-1">Key Takeaway</h4>
+            <p className="text-sm text-blue-200/80">Always verify environment variables before deployment.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# DataSourceIntegrationPanel
+cat > apps/unified-dashboard/components/DataSourceIntegrationPanel.tsx <<EOF
+'use client';
+import React, { useState } from 'react';
+
+export default function DataSourceIntegrationPanel() {
+  const [isAdding, setIsAdding] = useState(false);
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-bold text-lg">Data Sources</h3>
+        <button 
+          onClick={() => setIsAdding(!isAdding)}
+          className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-sm transition-colors"
+        >
+          {isAdding ? 'Cancel' : '+ Add Source'}
+        </button>
+      </div>
+
+      {isAdding ? (
+        <div className="flex-1 bg-white/5 rounded p-4 border border-white/10">
+          <h4 className="font-bold mb-4">Connect New Source</h4>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="p-4 border border-white/10 rounded hover:border-blue-500 cursor-pointer bg-black/20">
+              <div className="font-bold">PostgreSQL</div>
+              <div className="text-xs text-gray-500">Relational DB</div>
+            </div>
+            <div className="p-4 border border-white/10 rounded hover:border-blue-500 cursor-pointer bg-black/20">
+              <div className="font-bold">REST API</div>
+              <div className="text-xs text-gray-500">External Service</div>
+            </div>
+          </div>
+          <button className="w-full py-2 bg-blue-600 rounded text-white font-medium">Continue Setup</button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-white/5 rounded border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              <div>
+                <div className="font-medium">Production DB</div>
+                <div className="text-xs text-gray-500">PostgreSQL • Synced 1m ago</div>
+              </div>
+            </div>
+            <button className="text-xs text-gray-400 hover:text-white">Configure</button>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-white/5 rounded border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+              <div>
+                <div className="font-medium">Analytics Stream</div>
+                <div className="text-xs text-gray-500">Kafka • Syncing...</div>
+              </div>
+            </div>
+            <button className="text-xs text-gray-400 hover:text-white">Configure</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+EOF
+
+# DebatePanel
+cat > apps/unified-dashboard/components/DebatePanel.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function DebatePanel() {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+        <div className="text-xs text-purple-300 uppercase font-bold">Current Topic</div>
+        <div className="font-medium text-white">Should we migrate the legacy auth system to Supabase Auth?</div>
+      </div>
+      
+      <div className="flex-1 overflow-auto space-y-4 pr-2">
+        <div className="flex gap-3">
+          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold">A1</div>
+          <div className="bg-white/5 p-3 rounded-r-lg rounded-bl-lg text-sm text-gray-300 flex-1">
+            <div className="text-xs text-blue-400 font-bold mb-1">Architect Agent</div>
+            Migrating would reduce maintenance overhead by 40% based on current metrics.
+          </div>
+        </div>
+        <div className="flex gap-3 flex-row-reverse">
+          <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-xs font-bold">S1</div>
+          <div className="bg-white/5 p-3 rounded-l-lg rounded-br-lg text-sm text-gray-300 flex-1 text-right">
+            <div className="text-xs text-red-400 font-bold mb-1">Security Agent</div>
+            We need to ensure the migration path handles existing session tokens without forcing a global logout.
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <input type="text" placeholder="Intervene in debate..." className="flex-1 bg-black/20 border border-white/10 rounded px-3 py-2 text-sm" />
+        <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded text-sm">Send</button>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# LearningAnalyticsDashboard
+cat > apps/unified-dashboard/components/LearningAnalyticsDashboard.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function LearningAnalyticsDashboard() {
+  return (
+    <div className="grid grid-cols-2 gap-4 h-full">
+      <div className="bg-white/5 rounded p-4 border border-white/10">
+        <h4 className="text-sm font-bold text-gray-400 mb-4">Knowledge Acquisition</h4>
+        <div className="flex items-end gap-2 h-32">
+          {[40, 65, 45, 80, 55, 90, 75].map((h, i) => (
+            <div key={i} className="flex-1 bg-blue-500/20 hover:bg-blue-500/40 transition-colors rounded-t relative group">
+              <div className="absolute bottom-0 w-full bg-blue-500" style={{ height: \`\${h}%\` }}></div>
+              <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-xs px-2 py-1 rounded border border-white/10">
+                {h}%
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white/5 rounded p-4 border border-white/10">
+        <h4 className="text-sm font-bold text-gray-400 mb-2">Top Insights</h4>
+        <ul className="space-y-2 text-sm">
+          <li className="flex items-center gap-2 text-green-300">
+            <span>↑</span> Deployment frequency correlates with lower error rates
+          </li>
+          <li className="flex items-center gap-2 text-yellow-300">
+            <span>→</span> API latency spikes during backup windows
+          </li>
+          <li className="flex items-center gap-2 text-blue-300">
+            <span>ℹ</span> New pattern detected in user onboarding
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# AIImpactAssessment
+cat > apps/unified-dashboard/components/AIImpactAssessment.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function AIImpactAssessment() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-3xl font-bold text-white">A+</div>
+          <div className="text-xs text-gray-400">Overall Impact Score</div>
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-bold text-green-400">Low Risk</div>
+          <div className="text-xs text-gray-500">Last assessed: Today</div>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-300">Ethical Compliance</span>
+          <span className="text-green-400">98%</span>
+        </div>
+        <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+          <div className="h-full bg-green-500 w-[98%]"></div>
+        </div>
+        
+        <div className="flex justify-between text-sm mt-2">
+          <span className="text-gray-300">Resource Efficiency</span>
+          <span className="text-blue-400">85%</span>
+        </div>
+        <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+          <div className="h-full bg-blue-500 w-[85%]"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# RAGProjectRecommendations
+cat > apps/unified-dashboard/components/RAGProjectRecommendations.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function RAGProjectRecommendations() {
+  return (
+    <div className="space-y-3">
+      <div className="p-3 bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/20 rounded-lg">
+        <div className="flex justify-between items-start mb-2">
+          <h4 className="font-bold text-sm text-purple-300">Optimization Opportunity</h4>
+          <span className="text-xs bg-purple-500/20 text-purple-200 px-2 py-0.5 rounded">High Confidence</span>
+        </div>
+        <p className="text-xs text-gray-300 mb-3">
+          Based on recent error logs, implementing a circuit breaker pattern for the Venue API could reduce downtime by 15%.
+        </p>
+        <button className="w-full py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded text-xs text-purple-200 transition-colors">
+          Apply Recommendation
+        </button>
+      </div>
+      
+      <div className="p-3 bg-white/5 border border-white/10 rounded-lg opacity-75">
+        <div className="flex justify-between items-start mb-2">
+          <h4 className="font-bold text-sm text-gray-300">Code Quality</h4>
+          <span className="text-xs bg-gray-500/20 text-gray-300 px-2 py-0.5 rounded">Medium</span>
+        </div>
+        <p className="text-xs text-gray-400">
+          Consider extracting the shared validation logic in the booking flow to a separate utility.
+        </p>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# RAGSelfDocumentation
+cat > apps/unified-dashboard/components/RAGSelfDocumentation.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function RAGSelfDocumentation() {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="relative mb-4">
+        <input 
+          type="text" 
+          placeholder="Search system documentation..." 
+          className="w-full bg-black/20 border border-white/10 rounded px-4 py-2 text-sm pl-9"
+        />
+        <span className="absolute left-3 top-2.5 text-gray-500 text-xs">🔍</span>
+      </div>
+      
+      <div className="flex-1 overflow-auto space-y-2">
+        <div className="p-3 bg-white/5 rounded border border-white/10 hover:border-blue-500/50 cursor-pointer transition-colors">
+          <div className="text-xs text-blue-400 mb-1">Auto-Generated • 2h ago</div>
+          <h4 className="font-bold text-sm mb-1">API Authentication Flow</h4>
+          <p className="text-xs text-gray-400 line-clamp-2">
+            The system uses JWT tokens signed with RS256. Tokens are refreshed every 15 minutes via the /auth/refresh endpoint.
+          </p>
+        </div>
+        <div className="p-3 bg-white/5 rounded border border-white/10 hover:border-blue-500/50 cursor-pointer transition-colors">
+          <div className="text-xs text-blue-400 mb-1">Auto-Generated • 1d ago</div>
+          <h4 className="font-bold text-sm mb-1">Database Schema: Projects</h4>
+          <p className="text-xs text-gray-400 line-clamp-2">
+            Projects table relates to Domains via domain_id foreign key. Cascade delete is enabled.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# AgentMemoryDisplay
+cat > apps/unified-dashboard/components/AgentMemoryDisplay.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function AgentMemoryDisplay({ agentName = 'Agent', limit = 5, showStats = false }: any) {
+  return (
+    <div className="h-full flex flex-col">
+      {showStats && (
+        <div className="flex gap-4 mb-4 text-xs text-gray-400 border-b border-white/10 pb-2">
+          <div><span className="text-white font-bold">1,240</span> Memories</div>
+          <div><span className="text-white font-bold">85%</span> Retrieval Rate</div>
+          <div><span className="text-white font-bold">4.2s</span> Avg Latency</div>
+        </div>
+      )}
+      <div className="space-y-2 flex-1 overflow-auto">
+        {[...Array(limit)].map((_, i) => (
+          <div key={i} className="flex gap-3 text-sm p-2 hover:bg-white/5 rounded transition-colors">
+            <div className="text-gray-500 font-mono text-xs w-12 shrink-0">10:4{i} AM</div>
+            <div className="text-gray-300">
+              <span className="text-blue-400 font-bold">@{agentName}:</span> Processed user request for project creation. Context retained.
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+EOF
+
+# SecurityAssessmentDashboard
+cat > apps/unified-dashboard/components/SecurityAssessmentDashboard.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function SecurityAssessmentDashboard() {
+  return (
+    <div className="grid grid-cols-2 gap-4 h-full">
+      <div className="flex flex-col items-center justify-center bg-white/5 rounded border border-white/10 p-4">
+        <div className="w-24 h-24 rounded-full border-4 border-green-500 flex items-center justify-center mb-2">
+          <span className="text-3xl font-bold text-white">94</span>
+        </div>
+        <div className="text-sm text-gray-400">Security Score</div>
+      </div>
+      <div className="space-y-2">
+        <div className="p-2 bg-red-500/10 border border-red-500/20 rounded">
+          <div className="text-xs text-red-400 font-bold">Critical</div>
+          <div className="text-xs text-gray-300">0 Issues Found</div>
+        </div>
+        <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded">
+          <div className="text-xs text-yellow-400 font-bold">Warning</div>
+          <div className="text-xs text-gray-300">2 Config Warnings</div>
+        </div>
+        <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded">
+          <div className="text-xs text-blue-400 font-bold">Info</div>
+          <div className="text-xs text-gray-300">5 Recommendations</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# MCPDashboardSection
+cat > apps/unified-dashboard/components/MCPDashboardSection.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function MCPDashboardSection() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="p-4 bg-white/5 rounded border border-white/10">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+          <h4 className="font-bold">Filesystem Server</h4>
+        </div>
+        <div className="text-xs text-gray-400">v1.2.0 • Local</div>
+        <div className="mt-3 flex gap-2">
+          <span className="px-2 py-1 bg-white/10 rounded text-xs">read_file</span>
+          <span className="px-2 py-1 bg-white/10 rounded text-xs">write_file</span>
+        </div>
+      </div>
+      <div className="p-4 bg-white/5 rounded border border-white/10">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+          <h4 className="font-bold">PostgreSQL Server</h4>
+        </div>
+        <div className="text-xs text-gray-400">v0.9.5 • Remote</div>
+        <div className="mt-3 flex gap-2">
+          <span className="px-2 py-1 bg-white/10 rounded text-xs">query</span>
+          <span className="px-2 py-1 bg-white/10 rounded text-xs">schema</span>
+        </div>
+      </div>
+      <div className="p-4 bg-white/5 rounded border border-white/10 flex items-center justify-center border-dashed">
+        <button className="text-sm text-gray-400 hover:text-white">+ Connect Server</button>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# CrossServerSyncPanel
+cat > apps/unified-dashboard/components/CrossServerSyncPanel.tsx <<EOF
+'use client';
+import React from 'react';
+
+export default function CrossServerSyncPanel() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <span className="font-bold text-sm">Sync Active</span>
+        </div>
+        <span className="text-xs text-gray-500">Last sync: Just now</span>
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between items-center text-sm p-2 bg-white/5 rounded">
+          <span className="text-gray-300">Product Factory</span>
+          <span className="text-green-400">Synced</span>
+        </div>
+        <div className="flex justify-between items-center text-sm p-2 bg-white/5 rounded">
+          <span className="text-gray-300">Alex AI Universal</span>
+          <span className="text-green-400">Synced</span>
+        </div>
+        <div className="flex justify-between items-center text-sm p-2 bg-white/5 rounded">
+          <span className="text-gray-300">DJ Booking</span>
+          <span className="text-yellow-400">Syncing (98%)</span>
+        </div>
+      </div>
+
+      <button className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-xs text-gray-300 transition-colors">
+        Force Full Resync
+      </button>
+    </div>
+  );
+}
+EOF
+
 # List of components to generate
 COMPONENTS=(
   "ServiceStatusDisplay"
