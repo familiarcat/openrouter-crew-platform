@@ -12,7 +12,6 @@
     "incremental": false,
     "module": "esnext",
     "esModuleInterop": true,
-    "ignoreDeprecations": "5.0",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -27,7 +26,8 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "composite": false
   },
   "include": [
     "next-env.d.ts",
@@ -40,5 +40,6 @@
     "node_modules",
     "src",
     "vscode-extension"
-  ]
+  ],
+  "ignoreDeprecations": "6.0"
 }

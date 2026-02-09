@@ -20,10 +20,10 @@ function parseJsonC(content) {
   return JSON.parse(json);
 }
 
-function fixTsConfig(filePath, isRoot = false) {
+function fixTsConfig(filePath, rootModuleResolution) {
   if (!fs.existsSync(filePath)) {
     console.warn(`⚠️ Config file not found: ${filePath}`);
-    return 0;
+    return { changed: false, isNextProject: false };
   }
 
   let content = fs.readFileSync(filePath, 'utf8');
@@ -32,7 +32,7 @@ function fixTsConfig(filePath, isRoot = false) {
     config = parseJsonC(content);
   } catch (e) {
     console.warn(`⚠️ Failed to parse ${filePath}: ${e.message}`);
-    return 0;
+    return { changed: false, isNextProject: false };
   }
 
   let changed = false;
@@ -56,23 +56,39 @@ function fixTsConfig(filePath, isRoot = false) {
     changed = true;
   }
 
-  // 3. Fix: Ensure composite is true (required for project references)
-  // We apply this to all referenced projects. Root usually has it too.
-  if (config.compilerOptions.composite !== true) {
-    console.log(`🔧 [Fix] Setting 'composite': true in ${path.relative(ROOT_DIR, filePath)}`);
-    config.compilerOptions.composite = true;
-    changed = true;
-  }
+  const projectDir = path.dirname(filePath);
+  const hasNextConfig = fs.existsSync(path.join(projectDir, 'next.config.js')) || 
+                        fs.existsSync(path.join(projectDir, 'next.config.mjs')) ||
+                        fs.existsSync(path.join(projectDir, 'next.config.ts'));
 
   // 4. Fix: Ensure Next.js projects have path aliases configured
-  // Detect Next.js by "next" plugin or "next-env.d.ts" in include
-  const isNextProject = (config.compilerOptions && config.compilerOptions.plugins && config.compilerOptions.plugins.some(p => p.name === 'next')) || 
+  // Detect Next.js by config file, "next" plugin, or "next-env.d.ts" in include
+  const isNextProject = hasNextConfig || 
+                        (config.compilerOptions && config.compilerOptions.plugins && config.compilerOptions.plugins.some(p => p.name === 'next')) || 
                         (config.include && config.include.some(i => i.includes('next-env.d.ts')));
 
+  // 3. Fix: Composite setting
   if (isNextProject) {
-    if (!config.compilerOptions.baseUrl) {
-       console.log(`🔧 [Fix] Setting 'baseUrl': "." in ${path.relative(ROOT_DIR, filePath)}`);
-       config.compilerOptions.baseUrl = ".";
+    // Next.js projects cannot be composite if they are noEmit: true
+    if (config.compilerOptions.composite === true) {
+      console.log(`🔧 [Fix] Setting 'composite': false for Next.js project in ${path.relative(ROOT_DIR, filePath)}`);
+      config.compilerOptions.composite = false;
+      changed = true;
+    }
+  } else {
+    // Non-Next.js projects (and Root) should be composite if they are part of the monorepo structure
+    if (config.compilerOptions.composite !== true) {
+      console.log(`🔧 [Fix] Setting 'composite': true in ${path.relative(ROOT_DIR, filePath)}`);
+      config.compilerOptions.composite = true;
+      changed = true;
+    }
+  }
+
+  if (isNextProject) {
+    // Remove deprecated baseUrl if it matches "." or "./"
+    if (config.compilerOptions.baseUrl === '.' || config.compilerOptions.baseUrl === './') {
+       console.log(`🔧 [Fix] Removing deprecated 'baseUrl' in ${path.relative(ROOT_DIR, filePath)}`);
+       delete config.compilerOptions.baseUrl;
        changed = true;
     }
     if (!config.compilerOptions.paths) {
@@ -83,13 +99,67 @@ function fixTsConfig(filePath, isRoot = false) {
        config.compilerOptions.paths["@/*"] = ["./*"];
        changed = true;
     }
+
+    // Next.js projects should not emit files via tsc; Next.js handles it.
+    if (config.compilerOptions.noEmit !== true) {
+      console.log(`🔧 [Fix] Setting 'noEmit': true for Next.js project in ${path.relative(ROOT_DIR, filePath)}`);
+      config.compilerOptions.noEmit = true;
+      changed = true;
+    }
+  }
+
+  // 5. Fix: Ensure module matches moduleResolution for Node16/NodeNext
+  if (config.compilerOptions && config.compilerOptions.moduleResolution) {
+    const mr = config.compilerOptions.moduleResolution.toLowerCase();
+    if (mr === 'node16' || mr === 'nodenext') {
+      const m = (config.compilerOptions.module || '').toLowerCase();
+      if (m !== mr) {
+         console.log(`🔧 [Fix] Setting 'module': "${config.compilerOptions.moduleResolution}" to match 'moduleResolution' in ${path.relative(ROOT_DIR, filePath)}`);
+         config.compilerOptions.module = config.compilerOptions.moduleResolution;
+         changed = true;
+      }
+    }
+  }
+
+  // 6. Fix: Ensure moduleResolution is compatible with module when extending from a "node16" root
+  if (rootModuleResolution && ['node16', 'nodenext'].includes(rootModuleResolution.toLowerCase())) {
+    if (config.compilerOptions?.module?.toLowerCase() === 'commonjs') {
+      // This config has module: commonjs but the root has an incompatible moduleResolution.
+      // This is only a problem if this config does NOT override moduleResolution itself.
+      if (!config.compilerOptions.moduleResolution) {
+        console.log(`🔧 [Fix] Setting 'moduleResolution': "node" to be compatible with "commonjs" in ${path.relative(ROOT_DIR, filePath)}`);
+        config.compilerOptions.moduleResolution = "node";
+        changed = true;
+      }
+    }
   }
 
   if (changed) {
     fs.writeFileSync(filePath, JSON.stringify(config, null, 2) + '\n');
-    return 1;
+    return { changed: true, isNextProject };
   }
-  return 0;
+  return { changed: false, isNextProject };
+}
+
+function findAllTsConfigs(dir, fileList = []) {
+  try {
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+      const filePath = path.join(dir, file);
+      const stat = fs.statSync(filePath);
+      if (stat.isDirectory()) {
+        if (file === 'node_modules' || file === '.next' || file === 'dist' || file === 'build' || file.startsWith('.')) continue;
+        findAllTsConfigs(filePath, fileList);
+      } else {
+        if (file === 'tsconfig.json') {
+          fileList.push(filePath);
+        }
+      }
+    }
+  } catch (e) {
+    // Ignore errors
+  }
+  return fileList;
 }
 
 function main() {
@@ -101,20 +171,50 @@ function main() {
   }
 
   let fixedCount = 0;
-
-  // 1. Fix Root Config
-  fixedCount += fixTsConfig(ROOT_TSCONFIG, true);
-
-  // 2. Fix Referenced Configs
+  const nextProjects = new Set();
   const rootConfigRaw = fs.readFileSync(ROOT_TSCONFIG, 'utf8');
-  const rootConfig = parseJsonC(rootConfigRaw);
+  const rootConfigParsed = parseJsonC(rootConfigRaw);
+  const rootModuleResolution = rootConfigParsed.compilerOptions?.moduleResolution;
+
+  // Find ALL tsconfig.json files to ensure comprehensive patching
+  const allTsConfigs = findAllTsConfigs(ROOT_DIR);
+  for (const configPath of allTsConfigs) {
+    const result = fixTsConfig(configPath, rootModuleResolution);
+    if (result.changed) fixedCount++;
+    if (result.isNextProject) {
+      // Store relative path from root to project dir
+      const rel = path.relative(ROOT_DIR, path.dirname(configPath));
+      nextProjects.add(rel);
+    }
+  }
+
+  // Fix Root References: Remove Next.js projects
+  // Next.js projects with noEmit: true cannot be referenced by a composite root
+  const rootContent = fs.readFileSync(ROOT_TSCONFIG, 'utf8');
+  let rootConfig = parseJsonC(rootContent);
+  let rootChanged = false;
 
   if (rootConfig.references && Array.isArray(rootConfig.references)) {
-    for (const ref of rootConfig.references) {
-      const refPath = path.resolve(ROOT_DIR, ref.path);
-      const refTsConfigPath = path.join(refPath, 'tsconfig.json');
-      fixedCount += fixTsConfig(refTsConfigPath);
+    const originalLength = rootConfig.references.length;
+    rootConfig.references = rootConfig.references.filter(ref => {
+      // Resolve the absolute path of the reference
+      const absoluteRefPath = path.resolve(ROOT_DIR, ref.path);
+      // Check if this path corresponds to any identified Next.js project
+      // We check if the set of Next.js project directories contains this reference path
+      if ([...nextProjects].some(nextProj => path.resolve(ROOT_DIR, nextProj) === absoluteRefPath)) {
+         console.log(`🔧 [Fix] Removing Next.js project from root references: ${ref.path}`);
+         return false;
+      }
+      return true;
+    });
+    if (rootConfig.references.length !== originalLength) {
+      rootChanged = true;
     }
+  }
+
+  if (rootChanged) {
+    fs.writeFileSync(ROOT_TSCONFIG, JSON.stringify(rootConfig, null, 2));
+    fixedCount++;
   }
 
   if (fixedCount > 0) {

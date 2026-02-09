@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 export default function MCPDashboardSection() {
   const [hydrating, setHydrating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  
+  const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const targetEnv = sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') ? 'Local' : 'Remote';
 
   const handleHydrate = async () => {
     setHydrating(true);
@@ -54,7 +57,7 @@ export default function MCPDashboardSection() {
         </button>
         {status && <div className="text-xs text-gray-400">{status}</div>}
         <div className="text-[10px] text-gray-500 text-center">
-          Push to Supabase & n8n
+          Push to {targetEnv} Supabase & n8n
         </div>
       </div>
     </div>

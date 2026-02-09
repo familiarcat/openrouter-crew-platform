@@ -18,7 +18,7 @@
         "./lib/mocks/mcp-n8n-controller.ts"
       ]
     },
-    "composite": true,
+    "composite": false,
     "allowJs": true,
     "noEmit": true,
     "isolatedModules": true,

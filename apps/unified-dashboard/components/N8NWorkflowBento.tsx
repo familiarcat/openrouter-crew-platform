@@ -1,22 +1,46 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { MOCK_WORKFLOWS, Workflow } from '@/lib/unified-mock-data';
 
 type ViewState = 'list' | 'detail' | 'execution';
 
 export default function N8NWorkflowBento() {
   const [view, setView] = useState<ViewState>('list');
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
+  const [workflows, setWorkflows] = useState<Workflow[]>(MOCK_WORKFLOWS);
+  const [isLive, setIsLive] = useState(false);
+  const [envLabel, setEnvLabel] = useState('Local');
 
-  const workflows = [
-    { id: 'wf-1', name: 'Data Ingestion Pipeline', status: 'active', lastRun: '2 mins ago' },
-    { id: 'wf-2', name: 'Daily Report Generator', status: 'paused', lastRun: '1 day ago' },
-    { id: 'wf-3', name: 'Alert Notification System', status: 'active', lastRun: '5 mins ago' },
-  ];
+  useEffect(() => {
+    const fetchWorkflows = async () => {
+      try {
+        const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        setEnvLabel(sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') ? 'Local' : 'Remote');
+
+        const supabase = createClient(sbUrl, sbKey);
+        const { data } = await supabase.from('workflows').select('*');
+        if (data && data.length > 0) {
+          setWorkflows(data as Workflow[]);
+          setIsLive(true);
+        }
+      } catch (e) {
+        console.warn('Using mock workflows');
+      }
+    };
+    fetchWorkflows();
+  }, []);
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-bold text-lg">n8n Workflows</h3>
+        {isLive ? (
+          <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-mono">LIVE ({envLabel.toUpperCase()})</span>
+        ) : (
+          <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded font-mono">MOCK DATA</span>
+        )}
         {view !== 'list' && (
           <button onClick={() => setView('list')} className="text-xs text-blue-400 hover:text-blue-300">
             ← Back to List

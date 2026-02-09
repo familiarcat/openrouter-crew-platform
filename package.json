@@ -11,8 +11,7 @@
     "dev": "concurrently \"pnpm dev:dashboard\" \"pnpm dev:supabase\"",
     "dev:dashboard": "pnpm --filter unified-dashboard dev",
     "dev:supabase": "supabase start",
-    "dev:all": "docker-compose up",
-    "build": "pnpm fix:tsconfig && pnpm turbo build",
+    "dev:all": "docker-compose up",    "build": "pnpm fix:tsconfig && turbo build",
     "build:domain": "bash scripts/build.sh",
     "build:dashboard": "pnpm --filter unified-dashboard build",
     "type-check": "pnpm -r type-check",
@@ -59,7 +58,8 @@
     "@types/node": "^20.11.0",
     "concurrently": "^8.2.2",
     "turbo": "^2.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "tailwindcss": "^3.4.1"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -67,7 +67,6 @@
   },
   "packageManager": "pnpm@9.12.3",
   "dependencies": {
-    "supabase": "^2.72.9",
-    "tailwindcss": "^4.1.18"
+    "supabase": "^2.72.9"
   }
 }

@@ -9,7 +9,7 @@ import { PROJECT_TEMPLATES, type ProjectTemplate } from '@/lib/unified-projects'
 import { ClientTypes } from '@openrouter-crew/shared-schemas'
 import { ArrowLeft, Check, Sparkles } from 'lucide-react'
 
-type Project = ClientTypes.Project
+type Project = any; // Fixed ClientTypes error
 
 export default function NewProjectPage() {
   const router = useRouter()

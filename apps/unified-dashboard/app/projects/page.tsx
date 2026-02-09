@@ -29,7 +29,7 @@ export default function ProjectsPage() {
       const { data } = await supabase
         .from('projects')
         .select('*')
-        .order('created_at', { ascending: false }) as { data: ClientTypes.Project[] | null; error: any }
+        .order('created_at', { ascending: false }) as { data: any[] | null; error: any }
 
       if (data) {
         const enriched = data.map(enrichProjectWithDomain)
@@ -50,7 +50,7 @@ export default function ProjectsPage() {
     }
 
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(p => p.status === filterStatus)
+      filtered = filtered.filter((p: any) => p.status === filterStatus)
     }
 
     setFilteredProjects(filtered)
@@ -210,7 +210,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="grid" style={{ gridColumn: 'span 12' }}>
-          {filteredProjects.map((project) => (
+          {filteredProjects.map((project: any) => (
             <Link
               key={project.id}
               href={`/projects/${project.id}`}

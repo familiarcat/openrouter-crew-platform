@@ -33,6 +33,13 @@ import AgentMemoryDisplay from '@/components/AgentMemoryDisplay';
 import StatusRibbon from '@/components/StatusRibbon';
 import UniversalProgressBar from '@/components/UniversalProgressBar';
 import DesignSystemErrorDisplay from '@/components/DesignSystemErrorDisplay';
+import ThemeSelector from '@/components/ThemeSelector';
+import QuizInline from '@/components/QuizInline';
+import WizardInline from '@/components/WizardInline';
+import TerminalWindow from '@/components/TerminalWindow';
+import SimpleChart from '@/components/SimpleChart';
+import StuckOperationWarning from '@/components/StuckOperationWarning';
+import ThemeAwareCTA from '@/components/ThemeAwareCTA';
 
 function ComponentWrapper({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -185,6 +192,69 @@ export default function ComponentLibraryPage() {
           <ComponentWrapper label="Data Drilldown"><DynamicDataDrilldown data={{ sample: 'data', nested: { value: 123 } }} title="Sample Drilldown" /></ComponentWrapper>
           <ComponentWrapper label="Data Renderer"><DynamicDataRenderer data={{ key: 'value' }} structure={{ id: 'root', type: 'container' }} /></ComponentWrapper>
           <ComponentWrapper label="Component Grid"><ComponentGrid componentIds={['comp-1', 'comp-2']} /></ComponentWrapper>
+        </Section>
+
+        <Section title="Interactive Wizards & Forms" description="Step-by-step guides and interactive forms for user input and configuration.">
+          <ComponentWrapper label="Project Wizard"><WizardInline projectId="demo-proj" onApply={(data: any) => console.log(data)} /></ComponentWrapper>
+          <ComponentWrapper label="Inline Quiz"><QuizInline projectId="demo-proj" /></ComponentWrapper>
+          <ComponentWrapper label="Theme Selector">
+            <div className="space-y-8">
+              <ThemeSelector value="midnight" onChange={() => {}} mode="gallery" label="Gallery Mode" />
+              <ThemeSelector value="midnight" onChange={() => {}} mode="dropdown" label="Dropdown Mode" />
+            </div>
+          </ComponentWrapper>
+        </Section>
+
+        <Section title="Operational Feedback & Visualization" description="Components for displaying system status, logs, and data trends.">
+          <ComponentWrapper label="Terminal Window">
+            <div className="relative h-[300px]">
+              <TerminalWindow title="System Logs" height="100%" />
+            </div>
+          </ComponentWrapper>
+          <ComponentWrapper label="Stuck Operation Warning">
+            <StuckOperationWarning operationName="Database Sync" retryCount={3} maxRetries={5} onCancel={() => {}} onRetry={() => {}} error={new Error("Connection timeout")} />
+          </ComponentWrapper>
+          <ComponentWrapper label="Simple Charts">
+            <div className="grid grid-cols-2 gap-4">
+              <SimpleChart data={[{label: 'A', value: 30}, {label: 'B', value: 50}, {label: 'C', value: 20}]} chartType="bar" title="Bar Chart" />
+              <SimpleChart data={[{label: 'X', value: 10}, {label: 'Y', value: 40}, {label: 'Z', value: 30}]} chartType="pie" title="Pie Chart" />
+            </div>
+          </ComponentWrapper>
+          <ComponentWrapper label="Theme Aware CTA">
+            <div className="flex gap-4 items-center justify-center h-full">
+              <ThemeAwareCTA href="#" variant="primary">Primary Action</ThemeAwareCTA>
+              <ThemeAwareCTA href="#" variant="secondary">Secondary</ThemeAwareCTA>
+              <ThemeAwareCTA href="#" variant="outline">Outline</ThemeAwareCTA>
+            </div>
+          </ComponentWrapper>
+        </Section>
+
+        <Section title="Composite Domain Layouts" description="Complex hierarchical combinations of components for specific domain tasks.">
+          <ComponentWrapper label="Project Initialization Flow">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+              <WizardInline projectId="new-project" onApply={() => {}} />
+              <div className="space-y-6">
+                <div className="p-4 bg-white/5 rounded border border-white/10">
+                  <h4 className="text-sm font-bold mb-4 text-gray-400">Aesthetic Alignment</h4>
+                  <QuizInline projectId="new-project" />
+                </div>
+                <StuckOperationWarning operationName="Template Hydration" retryCount={1} maxRetries={3} onCancel={() => {}} />
+              </div>
+            </div>
+          </ComponentWrapper>
+          <ComponentWrapper label="System Operations Console">
+            <div className="flex flex-col gap-4 h-[600px]">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <ServiceStatusDisplay />
+                <div className="col-span-2 bg-white/5 rounded border border-white/10 p-4">
+                   <SimpleChart data={[{label: 'CPU', value: 45}, {label: 'Mem', value: 60}, {label: 'Disk', value: 25}, {label: 'Net', value: 10}]} title="Resource Usage" height={150} />
+                </div>
+              </div>
+              <div className="flex-1 relative">
+                <TerminalWindow title="Deployment Logs" height="100%" />
+              </div>
+            </div>
+          </ComponentWrapper>
         </Section>
       </div>
     </div>

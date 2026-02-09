@@ -1,11 +1,60 @@
 'use client';
-import React from 'react';
-import { MOCK_PROJECTS, DOMAINS } from '@/lib/unified-mock-data';
+import React, { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { MOCK_PROJECTS, DOMAINS, Project } from '@/lib/unified-mock-data';
 
 export default function ProjectGrid() {
+  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
+  const [isLive, setIsLive] = useState(false);
+  const [envLabel, setEnvLabel] = useState('Local');
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        setEnvLabel(sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') ? 'Local' : 'Remote');
+
+        const supabase = createClient(sbUrl, sbKey);
+        const { data, error } = await supabase.from('projects').select('*');
+        
+        if (!error && data && data.length > 0) {
+          // Map DB schema (snake_case/jsonb) back to UI schema
+          const mapped = data.map((d: any) => ({
+            id: d.id,
+            domainId: d.metadata?.domainId || 'product-factory',
+            name: d.name,
+            description: d.description,
+            status: d.status,
+            budget: d.metadata?.budget || { allocated: 0, spent: 0, currency: 'USD' },
+            team: d.metadata?.team || { leads: [], size: 0 },
+            metrics: d.metadata?.metrics || { uptime: 0, requestsPerMin: 0, errorRate: 0 },
+            updatedAt: d.updated_at
+          }));
+          setProjects(mapped);
+          setIsLive(true);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch live projects, using mock data');
+      }
+    };
+    fetchProjects();
+  }, []);
+
   return (
     <div className="grid grid-cols-1 gap-4">
-      {MOCK_PROJECTS.map(project => {
+      <div className="col-span-1 flex justify-end">
+        {isLive ? (
+          <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded border border-green-500/30 font-mono">
+            ● LIVE ({envLabel.toUpperCase()})
+          </span>
+        ) : (
+          <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded border border-yellow-500/30 font-mono">
+            ○ MOCK DATA
+          </span>
+        )}
+      </div>
+      {projects.map(project => {
         const domain = DOMAINS.find(d => d.id === project.domainId);
         return (
           <div key={project.id} className="p-4 border border-white/10 rounded bg-white/5 hover:bg-white/10 transition-colors">

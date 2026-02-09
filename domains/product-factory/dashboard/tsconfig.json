@@ -8,8 +8,18 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "declaration": true,
-    "composite": true
+    "composite": false,
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "noEmit": true,
+    "moduleResolution": "node"
   },
   "ignoreDeprecations": "6.0",
-  "include": ["src/**/*", "index.ts"]
+  "include": [
+    "src/**/*",
+    "index.ts"
+  ]
 }

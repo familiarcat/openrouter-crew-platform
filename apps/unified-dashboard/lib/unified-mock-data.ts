@@ -57,6 +57,13 @@ export interface ActivityEvent {
   timestamp: string;
 }
 
+export interface Workflow {
+  id: string;
+  name: string;
+  status: 'active' | 'paused' | 'error';
+  lastRun: string;
+}
+
 // --- Mock Data Generation ---
 
 export const DOMAINS: DomainConfig[] = [
@@ -138,6 +145,12 @@ export const MOCK_ACTIVITY: ActivityEvent[] = [
   { id: 'evt-2', domainId: 'dj-booking', type: 'alert', message: 'High latency detected in Venue API', timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
   { id: 'evt-3', domainId: 'alex-ai-universal', type: 'creation', message: 'New project "CLI Tool v2.0" created', timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
   { id: 'evt-4', domainId: 'product-factory', type: 'update', message: 'Budget threshold reached (50%)', timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString() }
+];
+
+export const MOCK_WORKFLOWS: Workflow[] = [
+  { id: 'wf-1', name: 'Data Ingestion Pipeline', status: 'active', lastRun: '2 mins ago' },
+  { id: 'wf-2', name: 'Daily Report Generator', status: 'paused', lastRun: '1 day ago' },
+  { id: 'wf-3', name: 'Alert Notification System', status: 'active', lastRun: '5 mins ago' },
 ];
 
 export function getDomainStats(domainId: DomainId) {

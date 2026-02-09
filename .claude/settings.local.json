@@ -16,7 +16,8 @@
       "Bash(pnpm --filter \"@openrouter-crew/vscode-extension\" build:*)",
       "Bash(pnpm --filter @openrouter-crew/vscode-extension build:*)",
       "Bash(pnpm tsc:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(wc:*)"
     ]
   }
 }
