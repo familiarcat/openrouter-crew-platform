@@ -98,6 +98,42 @@ describe('budget commands', () => {
       });
   });
 
+  describe('budget alert', () => {
+    beforeEach(() => {
+      costService.setBudget('crew_alert', 100, 'monthly');
+      costService.updateBudget('crew_alert', 80);
+    });
+
+    test
+      .stdout()
+      .command(['budget', 'alert', '--crew', 'crew_alert', '--threshold', '80'])
+      .it('configures budget alert threshold', (ctx) => {
+        expect(ctx.stdout).to.contain('Alert configured');
+        expect(ctx.stdout).to.contain('80%');
+      });
+
+    test
+      .stdout()
+      .command(['budget', 'alert', '--crew', 'crew_alert', '--disable'])
+      .it('disables budget alert', (ctx) => {
+        expect(ctx.stdout).to.contain('Alert disabled');
+      });
+
+    test
+      .stdout()
+      .command(['budget', 'alert', '--crew', 'crew_alert'])
+      .it('shows alert status', (ctx) => {
+        expect(ctx.stdout).to.contain('Alert');
+      });
+
+    test
+      .stdout()
+      .command(['budget', 'alert', '--crew', 'crew_alert', '--threshold', '90', '--enable-notifications'])
+      .it('enables notifications with alert threshold', (ctx) => {
+        expect(ctx.stdout).to.contain('✅');
+      });
+  });
+
   describe('budget integration', () => {
     test
       .stdout()

@@ -109,4 +109,46 @@ describe('analytics commands', () => {
         expect(analytics.topTopics.length).to.be.greaterThan(0);
       });
   });
+
+  describe('analytics recommendations', () => {
+    test
+      .stdout()
+      .command(['analytics', 'recommendations', '--crew', 'crew_1'])
+      .it('displays recommendations with default limit', (ctx) => {
+        expect(ctx.stdout).to.contain('MEMORY RECOMMENDATIONS');
+      });
+
+    test
+      .stdout()
+      .command(['analytics', 'recommendations', '--crew', 'crew_1', '--limit', '5'])
+      .it('respects custom limit parameter', (ctx) => {
+        expect(ctx.stdout).to.contain('RECOMMENDATIONS');
+      });
+
+    test
+      .stdout()
+      .command(['analytics', 'recommendations', '--crew', 'crew_1', '--format', 'json'])
+      .it('outputs recommendations in JSON format', (ctx) => {
+        try {
+          JSON.parse(ctx.stdout);
+          expect(true).to.be.true;
+        } catch {
+          expect.fail('Invalid JSON output');
+        }
+      });
+
+    test
+      .stdout()
+      .command(['analytics', 'recommendations', '--crew', 'crew_1', '--format', 'list'])
+      .it('displays recommendations in list format', (ctx) => {
+        expect(ctx.stdout).to.contain('RECOMMENDATIONS');
+      });
+
+    test
+      .stdout()
+      .command(['analytics', 'recommendations', '--crew', 'crew_1', '--format', 'table'])
+      .it('displays recommendations in table format', (ctx) => {
+        expect(ctx.stdout).to.contain('Rank');
+      });
+  });
 });

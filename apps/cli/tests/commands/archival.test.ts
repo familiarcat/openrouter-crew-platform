@@ -127,6 +127,22 @@ describe('archival commands', () => {
       });
   });
 
+  describe('archive delete', () => {
+    test
+      .stdout()
+      .command(['archive', 'delete', '--crew', 'crew_1', '--id', 'arch_1'])
+      .it('deletes specific archived memory', (ctx) => {
+        expect(ctx.stdout).to.contain('Deleted');
+      });
+
+    test
+      .stdout()
+      .command(['archive', 'delete', '--crew', 'crew_1', '--older-than', '90', '--dry-run'])
+      .it('shows dry-run of deletion by age', (ctx) => {
+        expect(ctx.stdout).to.contain('dry-run');
+      });
+  });
+
   describe('archival integration', () => {
     test
       .stdout()
