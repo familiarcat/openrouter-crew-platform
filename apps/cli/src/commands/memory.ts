@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { createClient } from '@supabase/supabase-js';
-import { CrewAPIClient } from '@openrouter-crew/crew-api-client';
+import { CrewAPIClient, MemoryDecayService } from '@openrouter-crew/crew-api-client';
 import { formatTable, formatCost } from '../lib/formatters';
 
 const memory = new Command('memory').description('Manage crew memories');
@@ -21,9 +21,11 @@ function getClient() {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
   const client = new CrewAPIClient(supabase);
+  const decayService = new MemoryDecayService(supabase);
 
   return {
     client,
+    decayService,
     context: {
       user_id: userId,
       crew_id: crewId,
@@ -85,10 +87,11 @@ memory
   .description('List crew memories')
   .option('--filter <text>', 'filter by text content')
   .option('--limit <number>', 'max results (default: 20)', '20')
+  .option('--show-decay', 'include decay metrics in output')
   .option('--json', 'output as JSON')
   .action(async (options) => {
     try {
-      const { client, context } = getClient();
+      const { client, decayService, context } = getClient();
 
       console.log(chalk.cyan('\n📖 Fetching memories...\n'));
 
@@ -111,16 +114,40 @@ memory
         return;
       }
 
-      const headers = ['ID', 'Content', 'Type', 'Confidence', 'Created'];
-      const rows = response.memories.map((m) => [
-        chalk.dim(m.id.substring(0, 8)),
-        m.content.substring(0, 40) + (m.content.length > 40 ? '...' : ''),
-        m.type,
-        `${(m.confidence_level * 100).toFixed(0)}%`,
-        new Date(m.created_at).toLocaleDateString(),
-      ]);
+      if (options.showDecay) {
+        const headers = ['ID', 'Content', 'Type', 'Confidence', 'Days Remaining', 'Status', 'Created'];
+        const rows = response.memories.map((m) => {
+          const metrics = decayService.getDecayMetrics(m);
+          const status = metrics.isExpired
+            ? chalk.red('EXPIRED')
+            : metrics.daysUntilExpiration < 7
+              ? chalk.yellow('EXPIRING')
+              : chalk.green('ACTIVE');
+          return [
+            chalk.dim(m.id.substring(0, 8)),
+            m.content.substring(0, 30) + (m.content.length > 30 ? '...' : ''),
+            m.type,
+            `${(m.confidence_level * 100).toFixed(0)}%`,
+            `${Math.ceil(metrics.daysUntilExpiration)}d`,
+            status,
+            new Date(m.created_at).toLocaleDateString(),
+          ];
+        });
 
-      formatTable(headers, rows);
+        formatTable(headers, rows);
+      } else {
+        const headers = ['ID', 'Content', 'Type', 'Confidence', 'Created'];
+        const rows = response.memories.map((m) => [
+          chalk.dim(m.id.substring(0, 8)),
+          m.content.substring(0, 40) + (m.content.length > 40 ? '...' : ''),
+          m.type,
+          `${(m.confidence_level * 100).toFixed(0)}%`,
+          new Date(m.created_at).toLocaleDateString(),
+        ]);
+
+        formatTable(headers, rows);
+      }
+
       console.log(chalk.dim(`\nTotal: ${response.total} memories | Cost: ${formatCost(response.cost)}\n`));
     } catch (error) {
       console.error(chalk.red('✗ Failed to list memories:'), error instanceof Error ? error.message : String(error));
@@ -318,6 +345,103 @@ memory
       }
     } catch (error) {
       console.error(chalk.red('✗ Failed to export memories:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+/**
+ * memory decay-metrics <id> - Show decay metrics for a memory
+ */
+memory
+  .command('decay-metrics <id>')
+  .description('Show decay metrics for a specific memory')
+  .option('--json', 'output as JSON')
+  .action(async (id, options) => {
+    try {
+      const { client, decayService, context } = getClient();
+
+      console.log(chalk.cyan(`\n📉 Fetching decay metrics for ${id}...\n`));
+
+      // Fetch the memory
+      const response = await client.retrieve_memories(
+        {
+          crew_id: context.crew_id,
+          limit: 1000, // Fetch more to find the specific ID
+        },
+        context
+      );
+
+      const memory = response.memories.find((m) => m.id === id);
+      if (!memory) {
+        console.error(chalk.red('✗ Memory not found\n'));
+        process.exit(1);
+      }
+
+      // Get decay metrics
+      const metrics = decayService.getDecayMetrics(memory);
+
+      if (options.json) {
+        console.log(JSON.stringify(metrics, null, 2));
+        return;
+      }
+
+      console.log(chalk.bold('Decay Metrics'));
+      console.log(`${chalk.dim('Memory ID:')} ${metrics.id}`);
+      console.log(`${chalk.dim('Current Confidence:')} ${chalk.cyan(`${(metrics.currentConfidence * 100).toFixed(1)}%`)}`);
+      console.log(`${chalk.dim('Days Since Created:')} ${chalk.cyan(String(Math.floor(metrics.daysSinceCreated)))}`);
+      console.log(`${chalk.dim('Days Until Expiration:')} ${chalk.cyan(String(Math.ceil(metrics.daysUntilExpiration)))}`);
+      console.log(
+        `${chalk.dim('Status:')} ${
+          metrics.isExpired
+            ? chalk.red('✗ EXPIRED')
+            : chalk.green('✓ Active')
+        }`
+      );
+      if (metrics.expirationReason) {
+        console.log(`${chalk.dim('Reason:')} ${metrics.expirationReason}`);
+      }
+      console.log('');
+    } catch (error) {
+      console.error(chalk.red('✗ Failed to get decay metrics:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+/**
+ * memory decay-stats - Show retention statistics
+ */
+memory
+  .command('decay-stats')
+  .description('Show memory retention statistics for the crew')
+  .option('--json', 'output as JSON')
+  .action(async (options) => {
+    try {
+      const { decayService, context } = getClient();
+
+      console.log(chalk.cyan('\n📊 Fetching retention statistics...\n'));
+
+      const stats = await decayService.getRetentionStatistics(context.crew_id);
+
+      if (options.json) {
+        console.log(JSON.stringify(stats, null, 2));
+        return;
+      }
+
+      console.log(chalk.bold('Retention Statistics'));
+      console.log(`${chalk.dim('Total Memories:')} ${stats.totalMemories}`);
+      console.log(`${chalk.dim('Active Memories:')} ${chalk.green(String(stats.activeMemories))}`);
+      console.log(`${chalk.dim('Soft-Deleted Memories:')} ${chalk.yellow(String(stats.softDeletedMemories))}`);
+      console.log(`${chalk.dim('Expiring in 7 days:')} ${chalk.red(String(stats.expiringIn7Days))}`);
+      console.log(`${chalk.dim('Expiring in 30 days:')} ${chalk.yellow(String(stats.expiringIn30Days))}`);
+
+      console.log(chalk.bold('\nBy Retention Tier:'));
+      Object.entries(stats.memoryByTier).forEach(([tier, count]) => {
+        console.log(`${chalk.dim(`  ${tier}:`)} ${count}`);
+      });
+
+      console.log(`${chalk.dim('\nAverage Confidence:')} ${chalk.cyan(`${(stats.averageConfidence * 100).toFixed(1)}%`)}\n`);
+    } catch (error) {
+      console.error(chalk.red('✗ Failed to get retention statistics:'), error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });

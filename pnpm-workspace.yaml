@@ -3,6 +3,7 @@ packages:
   - 'apps/*'
 
   # Shared Domain (Core Infrastructure)
+  - 'domains/shared/crew-api-client'
   - 'domains/shared/crew-coordination'
   - 'domains/shared/cost-tracking'
   - 'domains/shared/schemas'
