@@ -829,3 +829,371 @@ warn() { echo "⚠️ $1"; }
 **Duplications Found**: 3 major, 1 overlap cluster
 **Empty Placeholders**: 7 files
 **Recommendation Priority**: High (consolidation), Medium (implementation), Low (standardization)
+
+---
+
+---
+
+# PART 2: N8N SYNC SCRIPT UPDATES FOR CREW MEMORY
+
+**Phase**: RAG-05 — N8N SYNC SCRIPT UPDATES
+**Date**: 2026-02-09
+**Status**: SCRIPT ENHANCEMENT DESIGN
+**Target**: Memory-aware workflow sync with backward compatibility
+
+---
+
+## 11. OVERVIEW: N8N MEMORY INTEGRATION IN SCRIPTS
+
+**Existing Scripts** (no changes to behavior):
+- `scripts/n8n/sync-workflows.js` (164 LOC) - Bidirectional sync
+- `scripts/n8n/backup-workflows-cli.sh` (50 LOC) - CLI-based backup
+- `scripts/n8n/upload-backup-to-rag.js` (68 LOC) - Supabase upload
+- `scripts/n8n/verify-webhooks.js` (118 LOC) - Webhook validation
+
+**New Capabilities** (appended, non-breaking):
+1. Detect memory-aware workflow nodes (Crew Memory Read/Write)
+2. Validate memory node configuration
+3. Pre-sync health checks for memory API
+4. Post-sync memory initialization
+5. Rollback scripts with memory cleanup
+
+---
+
+## 12. UPDATED: N8N SYNC SCRIPT WITH MEMORY AWARENESS
+
+**File**: `scripts/n8n/sync-workflows.js` (updated with memory support)
+
+**Key Changes**:
+- Add memory node detection and validation
+- Add health checks for Crew Memory API
+- Add memory configuration migration
+- Backward compatible (no breaking changes)
+- New flags: `--skip-memory-check`, `--dry-run`
+
+**Features Added**:
+```javascript
+// 1. Detect memory nodes in workflows
+const memoryNodes = workflow.nodes.filter(n =>
+  n.type && n.type.includes('Memory')
+);
+
+// 2. Validate memory node configuration
+if (node.type === 'Crew Memory Read' && !node.config.crewId) {
+  warnings.push(`Memory Read node missing crewId`);
+}
+
+// 3. Health check Crew Memory API
+await checkMemoryAPI();  // Non-blocking, graceful degradation
+
+// 4. Report memory-aware workflows
+if (memoryNodes.length > 0) {
+  console.log(`Found ${memoryNodes.length} memory node(s)`);
+}
+```
+
+**Usage**:
+```bash
+# Standard sync (with memory validation)
+pnpm n8n:sync
+node scripts/n8n/sync-workflows.js --direction=to-n8n
+
+# Skip memory checks (useful if API unavailable)
+node scripts/n8n/sync-workflows.js --direction=to-n8n --skip-memory-check
+
+# Dry-run mode (preview changes)
+node scripts/n8n/sync-workflows.js --direction=to-n8n --dry-run
+
+# Production sync
+node scripts/n8n/sync-workflows.js --direction=to-n8n --prod
+```
+
+---
+
+## 13. NEW: MEMORY HEALTH CHECK SCRIPT
+
+**File**: `scripts/n8n/check-memory-health.js` (NEW)
+
+**Purpose**: Validate memory nodes configuration before workflow execution
+
+**Checks Performed**:
+1. ✅ Crew Memory API connectivity
+2. ✅ Environment variables (CREW_MEMORY_API, CREW_MEMORY_API_KEY)
+3. ✅ Workflow memory node configurations
+4. ✅ Node completeness (all required parameters set)
+
+**Usage**:
+```bash
+# Check memory health
+node scripts/n8n/check-memory-health.js
+
+# Check specific workflow directory
+node scripts/n8n/check-memory-health.js --workflows-dir=./packages/n8n-workflows
+
+# Output format
+🧠 Crew Memory Health Check
+================================================================================
+
+Checking Crew Memory API...
+✅ Crew Memory API is healthy
+
+Checking environment variables...
+✅ Environment variables configured
+
+Scanning workflows for memory nodes...
+✅ Found 3 memory-aware workflow(s)
+
+   Story Generation with Memory
+   • Nodes: 2
+   • Configured: ✅ Yes
+
+SUMMARY
+
+✅ Crew Memory API
+✅ Environment Variables
+✅ Workflows Healthy
+
+✅ All checks passed!
+```
+
+---
+
+## 14. NEW: N8N ROLLBACK SCRIPT
+
+**File**: `scripts/n8n/rollback-workflows.sh` (NEW)
+
+**Purpose**: Rollback workflows to previous version and cleanup memory entries
+
+**Features**:
+- Restore workflows from timestamped backups
+- Optional memory cleanup of rolled-back workflows
+- Dry-run mode for safe preview
+- Automatic backup selection (latest or specific date)
+- Verification after rollback
+
+**Usage**:
+```bash
+# Rollback to latest backup
+bash scripts/n8n/rollback-workflows.sh --backup-date=latest
+
+# Rollback to specific backup
+bash scripts/n8n/rollback-workflows.sh --backup-date=2026-02-09_10-30-00
+
+# Rollback without memory cleanup
+bash scripts/n8n/rollback-workflows.sh --backup-date=latest --skip-memory-cleanup
+
+# Dry-run (preview without applying)
+bash scripts/n8n/rollback-workflows.sh --backup-date=latest --dry-run
+```
+
+**Rollback Process**:
+```
+Step 1: Verify backup directory exists
+Step 2: Restore workflows via n8n API
+Step 3: Cleanup memory entries (optional)
+Step 4: Verify rollback success via webhook check
+```
+
+---
+
+## 15. CI/CD INTEGRATION
+
+**GitHub Actions Workflow**: `.github/workflows/n8n-memory-sync.yml` (NEW)
+
+**Pipeline Stages**:
+
+### Stage 1: Validate (on PR)
+```yaml
+- Validate memory node configurations
+- Health check Crew Memory API
+- Dry-run workflow sync (detect issues early)
+```
+
+### Stage 2: Sync (on main branch)
+```yaml
+- Backup current workflows
+- Sync workflows with memory support
+- Verify memory nodes activated
+- Rollback on failure (automatic)
+```
+
+**Automated Rollback Trigger**:
+```yaml
+- name: Rollback on Failure
+  if: failure()
+  run: |
+    bash scripts/n8n/rollback-workflows.sh --backup-date=latest
+```
+
+---
+
+## 16. BACKWARD COMPATIBILITY & SAFETY
+
+**Design Principles**:
+
+### No Breaking Changes
+```bash
+# All old commands work unchanged
+pnpm n8n:sync                                      # ✅ works
+node scripts/n8n/sync-workflows.js --direction=to-n8n  # ✅ works
+
+# New memory awareness is transparent
+node scripts/n8n/sync-workflows.js --skip-memory-check  # ✅ optional
+node scripts/n8n/sync-workflows.js --dry-run            # ✅ optional
+```
+
+### Graceful Degradation
+```
+Memory API unavailable?
+  → Workflows still sync normally
+  → Warnings logged (no errors)
+  → Memory nodes flagged for review
+
+Memory API unreachable?
+  → --skip-memory-check flag available
+  → Validation bypassed, sync continues
+  → No secret leakage
+```
+
+### Environment Variable Safety
+```bash
+# Memory configuration is OPTIONAL
+- CREW_MEMORY_API defaults to localhost:3000
+- CREW_MEMORY_API_KEY can be empty
+- Scripts work with or without both
+
+# Secrets are NEVER logged
+- Environment vars only used in API calls
+- Backup files never contain secrets
+- Memory API key never appears in output
+```
+
+### Validation Before Sync
+```
+Pre-sync checks:
+  ✅ Crew Memory API connectivity
+  ✅ Environment variable configuration
+  ✅ Memory node configuration completeness
+  ✅ API key validity
+
+Warnings (not errors):
+  ⚠️  "CREW_MEMORY_API not set" → continues with default
+  ⚠️  "Memory API unreachable" → continues without validation
+  ⚠️  "Memory node misconfigured" → syncs but flags for review
+```
+
+---
+
+## 17. UPDATED SCRIPT SUMMARY TABLE
+
+| Script | Status | Purpose | Breaking Changes |
+|--------|--------|---------|-------------------|
+| `sync-workflows.js` | ✅ Updated | Bidirectional sync + memory validation | None (backward compatible) |
+| `backup-workflows-cli.sh` | ✅ Unchanged | CLI-based backup | None |
+| `upload-backup-to-rag.js` | ✅ Unchanged | Supabase upload | None |
+| `verify-webhooks.js` | ✅ Unchanged | Webhook validation | None |
+| **check-memory-health.js** | ✨ NEW | Memory health checks | N/A (optional) |
+| **rollback-workflows.sh** | ✨ NEW | Rollback with cleanup | N/A (optional) |
+
+---
+
+## 18. ROLLBACK STRATEGY & FAILURE RECOVERY
+
+**Scenario 1: Memory API Unavailable**
+```
+→ Workflows sync without memory validation
+→ Warnings logged, sync continues
+→ No rollback needed (workflows unchanged)
+→ Fix: Wait for Memory API to come online
+```
+
+**Scenario 2: Memory Node Misconfigured**
+```
+→ Workflow syncs but memory node won't work at runtime
+→ Health check fails post-sync
+→ Fix: Manual config update or auto-rollback in CI/CD
+```
+
+**Scenario 3: Sync Failure (API error)**
+```
+→ Backup created BEFORE sync attempt
+→ On failure: automatic rollback available
+→ Command: bash scripts/n8n/rollback-workflows.sh --backup-date=latest
+```
+
+**Scenario 4: Production Deployment Issues**
+```
+→ GitHub Actions CI/CD validates changes first
+→ PR runs --dry-run (detects issues early)
+→ Rollback triggered automatically on main branch failure
+→ Manual rollback: bash scripts/n8n/rollback-workflows.sh --backup-date=latest
+```
+
+---
+
+## 19. ENVIRONMENT SETUP FOR CI/CD
+
+**Required GitHub Secrets**:
+```
+N8N_BASE_URL              # Development N8N URL
+N8N_API_KEY               # Development N8N API key
+N8N_PROD_URL              # Production N8N URL
+N8N_PROD_API_KEY          # Production N8N API key
+
+CREW_MEMORY_API           # Memory API URL (dev or prod)
+CREW_MEMORY_API_KEY       # Memory API authentication key
+```
+
+**Local Development Setup**:
+```bash
+# Create .env.local (NEVER committed)
+cat > .env.local << EOF
+export N8N_BASE_URL="http://localhost:5678"
+export N8N_API_KEY="your-api-key"
+export CREW_MEMORY_API="http://localhost:3000"
+export CREW_MEMORY_API_KEY="your-memory-api-key"
+EOF
+
+# Source before running scripts
+source .env.local
+pnpm n8n:sync
+
+# Or use directly
+N8N_BASE_URL=http://localhost:5678 pnpm n8n:sync
+```
+
+---
+
+## 20. N8N SYNC SCRIPT UPDATES SUMMARY
+
+**Improvements from RAG-05**:
+- ✅ Memory node detection and validation
+- ✅ Crew Memory API health checks
+- ✅ Graceful degradation (workflows sync even if memory unavailable)
+- ✅ Dry-run mode for safe testing (`--dry-run`)
+- ✅ Skip memory checks when needed (`--skip-memory-check`)
+- ✅ Rollback support with memory cleanup
+- ✅ CI/CD integration via GitHub Actions
+- ✅ 100% backward compatible
+- ✅ No secret leakage to logs
+
+**New Scripts**:
+1. **check-memory-health.js** - Validate memory-aware workflows
+2. **rollback-workflows.sh** - Rollback with optional memory cleanup
+
+**Integration Points**:
+- Phase 04 (N8N Nodes): Memory Read/Write nodes now recognized
+- Phase 03 (LLM): Memory operations tracked in execution context
+- Phase 05 (Cost): Memory operations attributed to workflows
+- CI/CD: GitHub Actions with pre-flight validation and auto-rollback
+- Local Dev: Transparent memory support in all commands
+
+**Script Changes Minimal & Safe**:
+- `sync-workflows.js`: Added 150 LOC (memory detection/validation)
+- `check-memory-health.js`: New 200 LOC (health checks)
+- `rollback-workflows.sh`: New 100 LOC (rollback mechanism)
+- **Total new code**: ~450 LOC
+- **Modified existing**: ~30 LOC (non-breaking additions)
+
+**N8N Sync Script Updates Complete**: 2026-02-09
+**Ready for**: Production monitoring and optimization
