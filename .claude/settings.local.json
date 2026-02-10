@@ -17,7 +17,13 @@
       "Bash(pnpm --filter @openrouter-crew/vscode-extension build:*)",
       "Bash(pnpm tsc:*)",
       "Bash(find:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nPhase 1: Create Unified CrewAPIClient Package\n\nImplement foundational CrewAPIClient that serves as single source of truth\nfor all surfaces \\(IDE, CLI, Web, n8n\\). This is the critical blocker for\nachieving surface parity across the platform.\n\nCHANGES:\n- Create new package: domains/shared/crew-api-client/\n- Implement TypeScript types and interfaces for all operations\n- Implement authorization service with RBAC\n- Implement audit logging service \\(immutable trail\\)\n- Implement CrewAPIClient class with core operations:\n  * Memory operations: create, retrieve, update, delete, restore\n  * Crew operations: execute\n  * Audit operations: getAuditLog\n- All operations follow pattern: Intent → Auth → Execute → Log → Return\n- All operations enforce semantic/authorization/audit parity\n- All operations track cost transparently\n\nBENEFITS:\n✅ Single API for all surfaces \\(no bypasses\\)\n✅ Consistent authorization across all surfaces\n✅ Immutable audit trail for all operations\n✅ Transparent cost tracking\n✅ Foundation for Phase 2 \\(Memory Decay & Retention\\)\n\nPer DRY RUN analysis: CrewAPIClient was BLOCKER #1\nStatus after this commit: BLOCKER #1 RESOLVED\n\nNext: Add integration tests and surface-specific bindings \\(CLI, Web, VSCode, n8n\\)\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Semantic Parity Test Suite for CrewAPIClient\n\nImplement comprehensive tests validating surface parity requirements:\n\nTESTS:\n✅ Semantic consistency across surfaces \\(IDE, CLI, Web, n8n\\)\n✅ Authorization enforcement consistency\n✅ Cost tracking parity\n✅ Error handling consistency\n✅ Determinism \\(same input → same output\\)\n\nCOVERAGE:\n- Memory operations: create, retrieve, update, delete\n- Authorization checks: RBAC enforcement\n- Cost calculations: identical across surfaces\n- Error types: consistent across surfaces\n- Deterministic execution: reproducible results\n\nVALIDATION:\nPer Surface Parity Contract \\(ANALYSIS-12\\):\n- Semantics identical across surfaces ✅\n- Authorization identical across surfaces ✅\n- Cost identical across surfaces ✅\n- Audit trail ready for implementation ✅\n\nBlocked until: CrewAPIClient methods expanded with all operations from\ncatalog \\(search_memories, explain_retrieval, explain_cost, etc.\\)\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)"
     ]
   }
 }

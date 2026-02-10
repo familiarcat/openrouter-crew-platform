@@ -201,6 +201,10 @@ export interface AuditLogEntry {
     cost: number;
     duration_ms: number;
     memory_ids?: string[];
+    imported?: number;
+    errors?: number;
+    pruned?: number;
+    [key: string]: unknown;
   };
   created_at: string;
 }

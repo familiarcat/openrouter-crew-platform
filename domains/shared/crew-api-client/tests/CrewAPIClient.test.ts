@@ -11,12 +11,13 @@ import { CrewAPIClient, UnauthorizedError, OperationError } from '../src/index';
 class MockSupabaseClient {
   private memories: Map<string, any> = new Map();
   private auditLog: any[] = [];
+  private idCounter: number = 0;
 
   from(table: string) {
     return {
       insert: (data: any) => {
         if (table === 'crew_memory_vectors') {
-          const id = `mem_${Date.now()}`;
+          const id = `mem_${Date.now()}_${++this.idCounter}`;
           const record = { id, ...data };
           this.memories.set(id, record);
           return {
@@ -32,40 +33,68 @@ class MockSupabaseClient {
         };
       },
       select: (fields: string) => {
-        return {
-          eq: (field: string, value: any) => {
-            return {
-              ilike: (field: string, query: string) => {
-                return {
-                  order: (field: string, options: any) => {
-                    return {
-                      limit: (n: number) => {
-                        const results = Array.from(this.memories.values())
-                          .filter((m) => m.crew_id === value)
-                          .slice(0, n);
-                        return {
-                          then: (cb: any) => cb({ data: results, error: null, count: results.length }),
-                        };
-                      },
-                    };
-                  },
-                };
-              },
-              order: (field: string, options: any) => {
-                return {
-                  limit: (n: number) => {
-                    const results = Array.from(this.memories.values())
-                      .filter((m) => m.crew_id === value)
-                      .slice(0, n);
-                    return {
-                      then: (cb: any) => cb({ data: results, error: null, count: results.length }),
-                    };
-                  },
-                };
-              },
-            };
+        const queryState = {
+          filters: [] as Array<(m: any) => boolean>,
+          orderField: '',
+          orderAsc: true,
+          limitValue: 0,
+          eq: function(field: string, value: any) {
+            this.filters.push((m: any) => m[field] === value);
+            return this;
           },
+          gte: function(field: string, value: any) {
+            this.filters.push((m: any) => m[field] >= value);
+            return this;
+          },
+          lte: function(field: string, value: any) {
+            this.filters.push((m: any) => m[field] <= value);
+            return this;
+          },
+          lt: function(field: string, value: any) {
+            this.filters.push((m: any) => m[field] < value);
+            return this;
+          },
+          ilike: function(field: string, query: string) {
+            this.filters.push((m: any) => m[field]?.toLowerCase?.().includes(query.toLowerCase()));
+            return this;
+          },
+          order: function(field: string, options: any) {
+            this.orderField = field;
+            this.orderAsc = options?.ascending !== false;
+            return this;
+          },
+          limit: function(n: number) {
+            this.limitValue = n;
+            return this;
+          },
+          single: async function() {
+            let results = Array.from(this.memories.values());
+            this.filters.forEach((f: any) => {
+              results = results.filter(f);
+            });
+            return { data: results[0] || null, error: results.length === 0 ? { message: 'Not found' } : null };
+          },
+          then: (cb: any) => {
+            let results = Array.from(this.memories.values());
+            queryState.filters.forEach((f: any) => {
+              results = results.filter(f);
+            });
+            if (queryState.orderField) {
+              results.sort((a: any, b: any) => {
+                const aVal = a[queryState.orderField];
+                const bVal = b[queryState.orderField];
+                if (queryState.orderAsc) return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+                return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+              });
+            }
+            if (queryState.limitValue) {
+              results = results.slice(0, queryState.limitValue);
+            }
+            cb({ data: results, error: null, count: results.length });
+          },
+          memories: this.memories,
         };
+        return queryState as any;
       },
       update: (data: any) => {
         return {
@@ -352,6 +381,151 @@ describe('CrewAPIClient - Semantic Parity Tests', () => {
       expect(result2).toHaveProperty('id');
       expect(result1.id).not.toBe(result2.id); // Different memories (new IDs)
       expect(result1.content).toBe(result2.content); // Same content
+    });
+  });
+
+  describe('Query Operations - Semantic Consistency', () => {
+    test('search_memories produces consistent results across surfaces', async () => {
+      const createParams = {
+        content: 'Search test memory',
+        type: 'story' as const,
+      };
+
+      const context = {
+        user_id: 'user_123',
+        crew_id: 'crew_abc',
+        role: 'member' as const,
+        surface: 'cli' as const,
+      };
+
+      await client.create_memory(createParams, context);
+
+      const searchParams = {
+        query: 'Search test',
+        limit: 10,
+      };
+
+      const ideResult = await client.search_memories(searchParams, {
+        ...context,
+        surface: 'ide' as const,
+      });
+
+      const webResult = await client.search_memories(searchParams, {
+        ...context,
+        surface: 'web' as const,
+      });
+
+      // ASSERTION: Both surfaces find same memories
+      expect(ideResult.length).toBe(webResult.length);
+      expect(ideResult[0]?.content).toBe(webResult[0]?.content);
+    });
+
+    test('compliance_status accessible only to members and owners', async () => {
+      const context = {
+        user_id: 'user_123',
+        crew_id: 'crew_abc',
+        role: 'viewer' as const,
+        surface: 'cli' as const,
+      };
+
+      const params = { crew_id: 'crew_abc', period: '30d' };
+
+      // ASSERTION: Viewer cannot access compliance status
+      await expect(client.compliance_status(params, context)).rejects.toThrow(
+        UnauthorizedError
+      );
+
+      // ASSERTION: Member can access
+      const memberContext = { ...context, role: 'member' as const };
+      await expect(client.compliance_status(params, memberContext)).resolves.toBeDefined();
+    });
+
+    test('expiration_forecast produces consistent structure', async () => {
+      const context = {
+        user_id: 'user_123',
+        crew_id: 'crew_abc',
+        role: 'member' as const,
+        surface: 'cli' as const,
+      };
+
+      const params = { crew_id: 'crew_abc' };
+      const result = await client.expiration_forecast(params, context);
+
+      // ASSERTION: Result has required structure
+      expect(result).toHaveProperty('crew_id');
+      expect(result).toHaveProperty('expiring_soon');
+      expect(result).toHaveProperty('expiring_30days');
+      expect(result).toHaveProperty('expiring_90days');
+    });
+  });
+
+  describe('Admin Operations - Authorization', () => {
+    test('export_crew_data accessible only to owners', async () => {
+      const context = {
+        user_id: 'user_123',
+        crew_id: 'crew_abc',
+        role: 'member' as const,
+        surface: 'cli' as const,
+      };
+
+      const params = { crew_id: 'crew_abc', format: 'json' as const };
+
+      // ASSERTION: Member cannot export
+      await expect(client.export_crew_data(params, context)).rejects.toThrow(
+        UnauthorizedError
+      );
+
+      // ASSERTION: Owner can export
+      const ownerContext = { ...context, role: 'owner' as const };
+      await expect(client.export_crew_data(params, ownerContext)).resolves.toBeDefined();
+    });
+
+    test('prune_expired_memories accessible only to owners', async () => {
+      const context = {
+        user_id: 'user_123',
+        crew_id: 'crew_abc',
+        role: 'member' as const,
+        surface: 'cli' as const,
+      };
+
+      const params = { crew_id: 'crew_abc', dry_run: true };
+
+      // ASSERTION: Member cannot prune
+      await expect(
+        client.prune_expired_memories(params, context)
+      ).rejects.toThrow(UnauthorizedError);
+
+      // ASSERTION: Owner can prune
+      const ownerContext = { ...context, role: 'owner' as const };
+      await expect(
+        client.prune_expired_memories(params, ownerContext)
+      ).resolves.toBeDefined();
+    });
+
+    test('generate_audit_report accessible only to owners', async () => {
+      const context = {
+        user_id: 'user_123',
+        crew_id: 'crew_abc',
+        role: 'viewer' as const,
+        surface: 'cli' as const,
+      };
+
+      const params = {
+        crew_id: 'crew_abc',
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+      };
+
+      // ASSERTION: Viewer cannot generate report
+      await expect(
+        client.generate_audit_report(params, context)
+      ).rejects.toThrow(UnauthorizedError);
+
+      // ASSERTION: Owner can generate report
+      const ownerContext = { ...context, role: 'owner' as const };
+      await expect(
+        client.generate_audit_report(params, ownerContext)
+      ).resolves.toBeDefined();
     });
   });
 });

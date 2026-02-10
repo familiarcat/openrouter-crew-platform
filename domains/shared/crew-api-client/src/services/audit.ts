@@ -24,8 +24,10 @@ export class AuditService {
       duration_ms: number;
       memory_ids?: string[];
       error?: string;
+      [key: string]: unknown;
     }
   ): Promise<AuditLogEntry> {
+    const { cost, duration_ms, memory_ids, error: metadataError, ...extraMetadata } = metadata;
     const entry: AuditLogEntry = {
       id: uuidv4(),
       user_id: context.user_id,
@@ -34,11 +36,12 @@ export class AuditService {
       intent,
       action,
       result,
-      error: metadata.error,
+      error: metadataError as string | undefined,
       metadata: {
-        cost: metadata.cost,
-        duration_ms: metadata.duration_ms,
-        memory_ids: metadata.memory_ids,
+        cost,
+        duration_ms,
+        memory_ids,
+        ...extraMetadata,
       },
       created_at: new Date().toISOString(),
     };

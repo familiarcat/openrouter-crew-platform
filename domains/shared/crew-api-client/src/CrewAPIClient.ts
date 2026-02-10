@@ -30,15 +30,22 @@ import {
   GenerateAuditReportParams,
   OperationError,
   Memory,
+  UnauthorizedError,
 } from './types';
 import { validateAuthorization } from './services/authorization';
 import { AuditService } from './services/audit';
+import { MemoryService } from './services/memory';
+import { AdminService } from './services/admin';
 
 export class CrewAPIClient {
   private auditService: AuditService;
+  private memoryService: MemoryService;
+  private adminService: AdminService;
 
   constructor(private supabase: SupabaseClient) {
     this.auditService = new AuditService(supabase);
+    this.memoryService = new MemoryService(supabase);
+    this.adminService = new AdminService(supabase);
   }
 
   /**
@@ -177,7 +184,7 @@ export class CrewAPIClient {
       await this.auditService.logOperation(context, intent, 'RETRIEVE_MEMORY', 'success', {
         cost,
         duration_ms: duration,
-        memory_ids: data?.map((m) => m.id) || [],
+        memory_ids: data?.map((m: Memory) => m.id) || [],
       });
 
       // 5. Return response
@@ -488,6 +495,510 @@ export class CrewAPIClient {
   }
 
   /**
+   * QUERY OPERATIONS (via MemoryService)
+   */
+
+  /**
+   * Search memories with filtering
+   */
+  async search_memories(
+    params: SearchMemoriesParams,
+    context: AuthContext
+  ): Promise<Memory[]> {
+    const startTime = Date.now();
+
+    try {
+      // 1. Extract intent
+      const intent: Intent = {
+        action: 'SEARCH_MEMORIES',
+        crew_id: context.crew_id,
+        metadata: { query: params.query },
+      };
+
+      // 2. Validate authorization (viewers can search)
+      await validateAuthorization(intent, context);
+
+      // 3. Search memories via service
+      const results = await this.memoryService.searchMemories(params, context);
+      const duration = Date.now() - startTime;
+      const cost = this.calculateCost('search_memories', results.length);
+
+      // 4. Log operation
+      await this.auditService.logOperation(context, intent, 'SEARCH_MEMORIES', 'success', {
+        cost,
+        duration_ms: duration,
+        memory_ids: results.map((m) => m.id),
+      });
+
+      // 5. Return results
+      return results;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      await this.auditService.logOperation(
+        context,
+        { action: 'SEARCH_MEMORIES', crew_id: context.crew_id },
+        'SEARCH_MEMORIES',
+        'failure',
+        {
+          cost: 0,
+          duration_ms: duration,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Explain why a memory was retrieved
+   */
+  async explain_retrieval(
+    memory_id: string,
+    query: string,
+    context: AuthContext
+  ): Promise<{
+    memory_id: string;
+    relevance_score: number;
+    match_reason: string;
+    confidence: number;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // 1. Extract intent
+      const intent: Intent = {
+        action: 'EXPLAIN_RETRIEVAL',
+        crew_id: context.crew_id,
+        resource: memory_id,
+      };
+
+      // 2. Validate authorization (viewers can read)
+      await validateAuthorization(intent, context);
+
+      // 3. Explain retrieval via service
+      const explanation = await this.memoryService.explainRetrieval(
+        memory_id,
+        query,
+        context
+      );
+      const duration = Date.now() - startTime;
+      const cost = this.calculateCost('explain_retrieval', 1);
+
+      // 4. Log operation
+      await this.auditService.logOperation(
+        context,
+        intent,
+        'EXPLAIN_RETRIEVAL',
+        'success',
+        {
+          cost,
+          duration_ms: duration,
+          memory_ids: [memory_id],
+        }
+      );
+
+      // 5. Return explanation
+      return explanation;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      await this.auditService.logOperation(
+        context,
+        { action: 'EXPLAIN_RETRIEVAL', crew_id: context.crew_id, resource: memory_id },
+        'EXPLAIN_RETRIEVAL',
+        'failure',
+        {
+          cost: 0,
+          duration_ms: duration,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get compliance status for a crew
+   */
+  async compliance_status(
+    params: ComplianceStatusParams,
+    context: AuthContext
+  ): Promise<{
+    crew_id: string;
+    period: string;
+    total_memories: number;
+    deleted_memories: number;
+    recovery_window_days: number;
+    gdpr_compliant: boolean;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // 1. Extract intent
+      const intent: Intent = {
+        action: 'COMPLIANCE_STATUS',
+        crew_id: context.crew_id,
+        metadata: { period: params.period },
+      };
+
+      // 2. Validate authorization (only owners and members)
+      await validateAuthorization(intent, context);
+
+      // 3. Get compliance status via service
+      const status = await this.memoryService.getComplianceStatus(params, context);
+      const duration = Date.now() - startTime;
+      const cost = this.calculateCost('compliance_status', 1);
+
+      // 4. Log operation
+      await this.auditService.logOperation(
+        context,
+        intent,
+        'COMPLIANCE_STATUS',
+        'success',
+        {
+          cost,
+          duration_ms: duration,
+        }
+      );
+
+      // 5. Return status
+      return status;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      await this.auditService.logOperation(
+        context,
+        { action: 'COMPLIANCE_STATUS', crew_id: context.crew_id },
+        'COMPLIANCE_STATUS',
+        'failure',
+        {
+          cost: 0,
+          duration_ms: duration,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get memory expiration forecast
+   */
+  async expiration_forecast(
+    params: ExpirationForecastParams,
+    context: AuthContext
+  ): Promise<{
+    crew_id: string;
+    expiring_soon: number;
+    expiring_30days: number;
+    expiring_90days: number;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // 1. Extract intent
+      const intent: Intent = {
+        action: 'EXPIRATION_FORECAST',
+        crew_id: context.crew_id,
+      };
+
+      // 2. Validate authorization (only owners and members)
+      await validateAuthorization(intent, context);
+
+      // 3. Get forecast via service
+      const forecast = await this.memoryService.getExpirationForecast(params, context);
+      const duration = Date.now() - startTime;
+      const cost = this.calculateCost('expiration_forecast', 1);
+
+      // 4. Log operation
+      await this.auditService.logOperation(
+        context,
+        intent,
+        'EXPIRATION_FORECAST',
+        'success',
+        {
+          cost,
+          duration_ms: duration,
+        }
+      );
+
+      // 5. Return forecast
+      return forecast;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      await this.auditService.logOperation(
+        context,
+        { action: 'EXPIRATION_FORECAST', crew_id: context.crew_id },
+        'EXPIRATION_FORECAST',
+        'failure',
+        {
+          cost: 0,
+          duration_ms: duration,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * ADMIN OPERATIONS (via AdminService)
+   */
+
+  /**
+   * Export crew data
+   */
+  async export_crew_data(
+    params: ExportCrewDataParams,
+    context: AuthContext
+  ): Promise<string> {
+    const startTime = Date.now();
+
+    try {
+      // 1. Extract intent
+      const intent: Intent = {
+        action: 'EXPORT_CREW_DATA',
+        crew_id: context.crew_id,
+        metadata: { format: params.format },
+      };
+
+      // 2. Validate authorization (only owners)
+      await validateAuthorization(intent, context);
+
+      // 3. Export data via service
+      const exportData = await this.adminService.exportCrewData(
+        context.crew_id,
+        params.format || 'json',
+        context
+      );
+      const duration = Date.now() - startTime;
+      const cost = this.calculateCost('export_crew_data', exportData.length);
+
+      // 4. Log operation
+      await this.auditService.logOperation(
+        context,
+        intent,
+        'EXPORT_CREW_DATA',
+        'success',
+        {
+          cost,
+          duration_ms: duration,
+        }
+      );
+
+      // 5. Return exported data
+      return exportData;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      await this.auditService.logOperation(
+        context,
+        { action: 'EXPORT_CREW_DATA', crew_id: context.crew_id },
+        'EXPORT_CREW_DATA',
+        'failure',
+        {
+          cost: 0,
+          duration_ms: duration,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Import crew data
+   */
+  async import_crew_data(
+    params: ImportCrewDataParams,
+    context: AuthContext
+  ): Promise<{ imported: number; errors: string[] }> {
+    const startTime = Date.now();
+
+    try {
+      // 1. Extract intent
+      const intent: Intent = {
+        action: 'IMPORT_CREW_DATA',
+        crew_id: context.crew_id,
+        metadata: { merge: params.merge },
+      };
+
+      // 2. Validate authorization (only owners)
+      await validateAuthorization(intent, context);
+
+      // 3. Import data via service
+      const result = await this.adminService.importCrewData(
+        params.file,
+        context.crew_id,
+        params.merge || false,
+        context
+      );
+      const duration = Date.now() - startTime;
+      const cost = this.calculateCost('import_crew_data', result.imported);
+
+      // 4. Log operation
+      await this.auditService.logOperation(
+        context,
+        intent,
+        'IMPORT_CREW_DATA',
+        'success',
+        {
+          cost,
+          duration_ms: duration,
+          imported: result.imported,
+          errors: result.errors.length,
+        }
+      );
+
+      // 5. Return result
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      await this.auditService.logOperation(
+        context,
+        { action: 'IMPORT_CREW_DATA', crew_id: context.crew_id },
+        'IMPORT_CREW_DATA',
+        'failure',
+        {
+          cost: 0,
+          duration_ms: duration,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Prune expired memories
+   */
+  async prune_expired_memories(
+    params: PruneExpiredMemoriesParams,
+    context: AuthContext
+  ): Promise<{
+    pruned: number;
+    reason: string;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // 1. Extract intent
+      const intent: Intent = {
+        action: 'PRUNE_EXPIRED_MEMORIES',
+        crew_id: context.crew_id,
+        metadata: { dry_run: params.dry_run },
+      };
+
+      // 2. Validate authorization (only owners)
+      await validateAuthorization(intent, context);
+
+      // 3. Prune memories via service
+      const result = await this.adminService.pruneExpiredMemories(
+        context.crew_id,
+        params.dry_run || false,
+        context
+      );
+      const duration = Date.now() - startTime;
+      const cost = this.calculateCost('prune_expired_memories', result.pruned);
+
+      // 4. Log operation
+      await this.auditService.logOperation(
+        context,
+        intent,
+        'PRUNE_EXPIRED_MEMORIES',
+        'success',
+        {
+          cost,
+          duration_ms: duration,
+          pruned: result.pruned,
+        }
+      );
+
+      // 5. Return result
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      await this.auditService.logOperation(
+        context,
+        { action: 'PRUNE_EXPIRED_MEMORIES', crew_id: context.crew_id },
+        'PRUNE_EXPIRED_MEMORIES',
+        'failure',
+        {
+          cost: 0,
+          duration_ms: duration,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Generate audit report
+   */
+  async generate_audit_report(
+    params: GenerateAuditReportParams,
+    context: AuthContext
+  ): Promise<{
+    crew_id: string;
+    period: { start: string; end: string };
+    total_operations: number;
+    by_operation: Record<string, number>;
+    total_cost: number;
+    summary: string;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // 1. Extract intent
+      const intent: Intent = {
+        action: 'GENERATE_AUDIT_REPORT',
+        crew_id: context.crew_id,
+        metadata: { period: `${params.start_date} to ${params.end_date}` },
+      };
+
+      // 2. Validate authorization (only owners)
+      await validateAuthorization(intent, context);
+
+      // 3. Generate report via service
+      const report = await this.adminService.generateAuditReport(
+        context.crew_id,
+        params.start_date,
+        params.end_date,
+        context
+      );
+      const duration = Date.now() - startTime;
+      const cost = this.calculateCost('generate_audit_report', 1);
+
+      // 4. Log operation
+      await this.auditService.logOperation(
+        context,
+        intent,
+        'GENERATE_AUDIT_REPORT',
+        'success',
+        {
+          cost,
+          duration_ms: duration,
+        }
+      );
+
+      // 5. Return report
+      return report;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      await this.auditService.logOperation(
+        context,
+        { action: 'GENERATE_AUDIT_REPORT', crew_id: context.crew_id },
+        'GENERATE_AUDIT_REPORT',
+        'failure',
+        {
+          cost: 0,
+          duration_ms: duration,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Get audit log for a crew
    */
   async getAuditLog(crew_id: string): Promise<unknown[]> {
@@ -509,6 +1020,14 @@ export class CrewAPIClient {
       delete_memory: 0.00001,
       restore_memory: 0.00001,
       execute_crew: 0.001,
+      search_memories: 0.00001,
+      explain_retrieval: 0.00001,
+      compliance_status: 0.00001,
+      expiration_forecast: 0.00001,
+      export_crew_data: 0.0001,
+      import_crew_data: 0.0001,
+      prune_expired_memories: 0.00005,
+      generate_audit_report: 0.0001,
     };
 
     const baseCost = costPerUnit[operation] || 0.0001;
