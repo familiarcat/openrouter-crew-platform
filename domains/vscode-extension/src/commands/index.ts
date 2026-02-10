@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import { CLIExecutor } from '../services/cli-executor';
+import { CrewAPIService } from '../services/crew-api-service';
 import { CrewTreeViewProvider } from '../providers/crew-tree-provider';
 import { CostTreeViewProvider } from '../providers/cost-tree-provider';
 import { ProjectTreeViewProvider } from '../providers/project-tree-provider';
@@ -17,6 +18,10 @@ export function registerCommands(
   costProvider: CostTreeViewProvider,
   projectProvider: ProjectTreeViewProvider
 ): void {
+  // Initialize CrewAPIService
+  const outputChannel = vscode.window.createOutputChannel('Crew API');
+  const crewAPIService = new CrewAPIService(outputChannel);
+
   // Crew Commands
   context.subscriptions.push(
     vscode.commands.registerCommand('openrouter-crew.crew.roster', async () => {
@@ -53,6 +58,37 @@ export function registerCommands(
       } else {
         vscode.window.showErrorMessage(`Failed to consult ${member}: ${result.error}`);
       }
+    })
+  );
+
+  // Memory Commands (via CrewAPIClient)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openrouter-crew.memory.create', async () => {
+      await crewAPIService.createMemory();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openrouter-crew.memory.search', async () => {
+      await crewAPIService.searchMemories();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openrouter-crew.memory.compliance', async () => {
+      await crewAPIService.getComplianceStatus();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openrouter-crew.memory.forecast', async () => {
+      await crewAPIService.getExpirationForecast();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('openrouter-crew.crew.execute', async () => {
+      await crewAPIService.executeCrew();
     })
   );
 

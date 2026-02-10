@@ -43,6 +43,31 @@
         "category": "Crew"
       },
       {
+        "command": "openrouter-crew.crew.execute",
+        "title": "Execute Crew",
+        "category": "Crew"
+      },
+      {
+        "command": "openrouter-crew.memory.create",
+        "title": "Create Memory",
+        "category": "Memory"
+      },
+      {
+        "command": "openrouter-crew.memory.search",
+        "title": "Search Memories",
+        "category": "Memory"
+      },
+      {
+        "command": "openrouter-crew.memory.compliance",
+        "title": "Check Compliance Status",
+        "category": "Memory"
+      },
+      {
+        "command": "openrouter-crew.memory.forecast",
+        "title": "Forecast Memory Expiration",
+        "category": "Memory"
+      },
+      {
         "command": "openrouter-crew.project.create",
         "title": "Create Project",
         "category": "Project"
@@ -138,8 +163,10 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
+    "@openrouter-crew/crew-api-client": "workspace:*",
     "@openrouter-crew/shared-cost-tracking": "workspace:*",
     "@openrouter-crew/shared-crew-coordination": "workspace:*",
+    "@supabase/supabase-js": "^2.38.0",
     "axios": "^1.6.5"
   },
   "devDependencies": {
