@@ -36,16 +36,19 @@ import { validateAuthorization } from './services/authorization';
 import { AuditService } from './services/audit';
 import { MemoryService } from './services/memory';
 import { AdminService } from './services/admin';
+import { MemoryDecayService } from './services/memory-decay';
 
 export class CrewAPIClient {
   private auditService: AuditService;
   private memoryService: MemoryService;
   private adminService: AdminService;
+  private decayService: MemoryDecayService;
 
   constructor(private supabase: SupabaseClient) {
     this.auditService = new AuditService(supabase);
     this.memoryService = new MemoryService(supabase);
     this.adminService = new AdminService(supabase);
+    this.decayService = new MemoryDecayService(supabase);
   }
 
   /**
