@@ -19,10 +19,10 @@ async function checkProjects() {
     return;
   }
 
-  console.log(`Found ${data.length} projects:\n`);
+  console.log(`Found ${data?.length || 0} projects:\n`);
 
-  data.forEach((project) => {
-    const metadata = project.metadata as any;
+  (data || []).forEach((project: any) => {
+    const metadata = project?.metadata as any;
     const isDomain = metadata?.isDomainProject || false;
     const featureAreas = metadata?.featureAreas || [];
     const health = metadata?.health;

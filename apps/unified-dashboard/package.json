@@ -17,6 +17,7 @@
     "lucide-react": "^0.294.0",
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.0.0",
+    "date-fns": "^3.0.0",
     "@openrouter-crew/shared-schemas": "workspace:*",
     "@openrouter-crew/shared-cost-tracking": "workspace:*",
     "@openrouter-crew/shared-crew-coordination": "workspace:*"

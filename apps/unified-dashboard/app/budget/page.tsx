@@ -36,11 +36,11 @@ export default function BudgetPage() {
 
         setBudgetData({
           crewId: 'crew_1',
-          limit: budget.limit || 500,
-          spent: budget.spent || 320,
-          remaining: budget.remaining || 180,
-          period: budget.period || 'monthly',
-          percentUsed: budget.percentUsed || 64,
+          limit: budget?.limit || 500,
+          spent: budget?.spent || 320,
+          remaining: budget?.remaining || 180,
+          period: budget?.period || 'monthly',
+          percentUsed: budget?.percentUsed || 64,
         });
       } catch (error) {
         console.error('Failed to load budget data:', error);

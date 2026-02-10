@@ -112,13 +112,13 @@ export function Sidebar() {
           .order('updated_at', { ascending: false })
           .limit(5);
 
-        if (data) {
+        if (data && Array.isArray(data)) {
           // Map to ProjectSummary format and enrich with domain
-          const enrichedProjects = data.map(p => {
+          const enrichedProjects = (data as any[]).map((p: any) => {
             const enriched = enrichProjectWithDomain(p);
             return {
-              id: p.id,
-              name: p.name,
+              id: p.id || '',
+              name: p.name || 'Untitled',
               status: p.status || 'draft',
               progress: 0, // Calculate from domain features if needed
             } as ProjectSummary;

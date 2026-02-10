@@ -138,7 +138,7 @@ export class CrewAPIService {
         }
       }
 
-      let results;
+      let results: any = undefined;
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -156,7 +156,7 @@ export class CrewAPIService {
         }
       );
 
-      if (!results || results.length === 0) {
+      if (!results || (results && results.length === 0)) {
         vscode.window.showInformationMessage('No memories found');
         return;
       }
@@ -192,7 +192,7 @@ export class CrewAPIService {
       const client = await this.initializeClient();
       const context = this.getAuthContext();
 
-      let status;
+      let status: any = undefined;
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -212,17 +212,17 @@ export class CrewAPIService {
 
       this.outputChannel.appendLine('');
       this.outputChannel.appendLine('=== GDPR Compliance Status ===');
-      this.outputChannel.appendLine(`Period: ${status.period}`);
-      this.outputChannel.appendLine(`Total Memories: ${status.total_memories}`);
-      this.outputChannel.appendLine(`Deleted Memories: ${status.deleted_memories}`);
-      this.outputChannel.appendLine(`Recovery Window: ${status.recovery_window_days} days`);
+      this.outputChannel.appendLine(`Period: ${status?.period}`);
+      this.outputChannel.appendLine(`Total Memories: ${status?.total_memories}`);
+      this.outputChannel.appendLine(`Deleted Memories: ${status?.deleted_memories}`);
+      this.outputChannel.appendLine(`Recovery Window: ${status?.recovery_window_days} days`);
       this.outputChannel.appendLine(
-        `GDPR Compliant: ${status.gdpr_compliant ? '✓ Yes' : '✗ No'}`
+        `GDPR Compliant: ${status?.gdpr_compliant ? '✓ Yes' : '✗ No'}`
       );
       this.outputChannel.appendLine('');
       this.outputChannel.show();
 
-      const message = status.gdpr_compliant
+      const message = status?.gdpr_compliant
         ? '✓ Your crew memories are GDPR compliant'
         : '⚠ Your crew memories may not be GDPR compliant';
 
@@ -242,7 +242,7 @@ export class CrewAPIService {
       const client = await this.initializeClient();
       const context = this.getAuthContext();
 
-      let forecast;
+      let forecast: any = undefined;
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -261,14 +261,14 @@ export class CrewAPIService {
 
       this.outputChannel.appendLine('');
       this.outputChannel.appendLine('=== Memory Expiration Forecast ===');
-      this.outputChannel.appendLine(`Expiring Soon: ${forecast.expiring_soon} memories`);
-      this.outputChannel.appendLine(`Expiring in 30 days: ${forecast.expiring_30days} memories`);
-      this.outputChannel.appendLine(`Expiring in 90 days: ${forecast.expiring_90days} memories`);
+      this.outputChannel.appendLine(`Expiring Soon: ${forecast?.expiring_soon} memories`);
+      this.outputChannel.appendLine(`Expiring in 30 days: ${forecast?.expiring_30days} memories`);
+      this.outputChannel.appendLine(`Expiring in 90 days: ${forecast?.expiring_90days} memories`);
       this.outputChannel.appendLine('');
       this.outputChannel.show();
 
       vscode.window.showInformationMessage(
-        `Memory forecast updated (${forecast.expiring_soon} expiring soon)`
+        `Memory forecast updated (${forecast?.expiring_soon} expiring soon)`
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -298,7 +298,7 @@ export class CrewAPIService {
         }
       }
 
-      let result;
+      let result: any = undefined;
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -318,18 +318,18 @@ export class CrewAPIService {
 
       this.outputChannel.appendLine('');
       this.outputChannel.appendLine('=== Crew Execution Result ===');
-      this.outputChannel.appendLine(`Execution ID: ${result.execution_id}`);
-      this.outputChannel.appendLine(`Status: ${result.status}`);
-      this.outputChannel.appendLine(`Duration: ${result.duration_ms}ms`);
-      this.outputChannel.appendLine(`Cost: $${result.cost.toFixed(4)}`);
+      this.outputChannel.appendLine(`Execution ID: ${result?.execution_id}`);
+      this.outputChannel.appendLine(`Status: ${result?.status}`);
+      this.outputChannel.appendLine(`Duration: ${result?.duration_ms}ms`);
+      this.outputChannel.appendLine(`Cost: $${result?.cost?.toFixed(4)}`);
       this.outputChannel.appendLine('');
       this.outputChannel.appendLine('Output:');
-      this.outputChannel.appendLine(result.output);
+      this.outputChannel.appendLine(result?.output);
       this.outputChannel.appendLine('');
       this.outputChannel.show();
 
       vscode.window.showInformationMessage(
-        `Crew execution completed (Cost: $${result.cost.toFixed(4)})`
+        `Crew execution completed (Cost: $${result?.cost?.toFixed(4)})`
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

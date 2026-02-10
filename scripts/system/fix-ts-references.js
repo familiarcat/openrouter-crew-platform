@@ -20,11 +20,18 @@ function parseJsonC(content) {
   return JSON.parse(json);
 }
 
-function fixTsConfig(filePath, rootModuleResolution) {
+function fixTsConfig(filePath, rootModuleResolution, referencedProjects = new Set()) {
   if (!fs.existsSync(filePath)) {
     console.warn(`⚠️ Config file not found: ${filePath}`);
     return { changed: false, isNextProject: false };
   }
+
+  const projectDir = path.dirname(filePath);
+
+  // Check if this project is referenced from root
+  const isReferencedFromRoot = [...referencedProjects].some(refPath =>
+    path.resolve(ROOT_DIR, refPath) === projectDir
+  );
 
   let content = fs.readFileSync(filePath, 'utf8');
   let config;
@@ -55,8 +62,6 @@ function fixTsConfig(filePath, rootModuleResolution) {
     config.ignoreDeprecations = "6.0";
     changed = true;
   }
-
-  const projectDir = path.dirname(filePath);
   const hasNextConfig = fs.existsSync(path.join(projectDir, 'next.config.js')) || 
                         fs.existsSync(path.join(projectDir, 'next.config.mjs')) ||
                         fs.existsSync(path.join(projectDir, 'next.config.ts'));
@@ -68,6 +73,9 @@ function fixTsConfig(filePath, rootModuleResolution) {
                         (config.include && config.include.some(i => i.includes('next-env.d.ts')));
 
   // 3. Fix: Composite setting
+  const isLibraryPackage = config.compilerOptions.outDir !== undefined &&
+                           config.compilerOptions.outDir !== null;
+
   if (isNextProject) {
     // Next.js projects cannot be composite if they are noEmit: true
     if (config.compilerOptions.composite === true) {
@@ -75,8 +83,28 @@ function fixTsConfig(filePath, rootModuleResolution) {
       config.compilerOptions.composite = false;
       changed = true;
     }
-  } else {
-    // Non-Next.js projects (and Root) should be composite if they are part of the monorepo structure
+  } else if (isReferencedFromRoot) {
+    // Projects referenced from root MUST be composite
+    if (config.compilerOptions.composite !== true) {
+      console.log(`🔧 [Fix] Setting 'composite': true for referenced project in ${path.relative(ROOT_DIR, filePath)}`);
+      config.compilerOptions.composite = true;
+      changed = true;
+    }
+    // Ensure incremental is not explicitly disabled
+    if (config.compilerOptions.incremental === false) {
+      console.log(`🔧 [Fix] Removing 'incremental': false for referenced project in ${path.relative(ROOT_DIR, filePath)}`);
+      delete config.compilerOptions.incremental;
+      changed = true;
+    }
+  } else if (isLibraryPackage) {
+    // Library packages not referenced from root can be non-composite
+    if (config.compilerOptions.composite !== false) {
+      console.log(`🔧 [Fix] Setting 'composite': false for library package in ${path.relative(ROOT_DIR, filePath)}`);
+      config.compilerOptions.composite = false;
+      changed = true;
+    }
+  } else if (filePath !== ROOT_TSCONFIG) {
+    // Other non-library, non-Next.js projects should be composite if they are part of the monorepo structure
     if (config.compilerOptions.composite !== true) {
       console.log(`🔧 [Fix] Setting 'composite': true in ${path.relative(ROOT_DIR, filePath)}`);
       config.compilerOptions.composite = true;
@@ -85,12 +113,23 @@ function fixTsConfig(filePath, rootModuleResolution) {
   }
 
   if (isNextProject) {
-    // Remove deprecated baseUrl if it matches "." or "./"
-    if (config.compilerOptions.baseUrl === '.' || config.compilerOptions.baseUrl === './') {
-       console.log(`🔧 [Fix] Removing deprecated 'baseUrl' in ${path.relative(ROOT_DIR, filePath)}`);
-       delete config.compilerOptions.baseUrl;
-       changed = true;
+    // Next.js projects NEED baseUrl: "." for path aliases to work
+    // Only remove baseUrl if there are no path aliases configured
+    if (!config.compilerOptions.paths || Object.keys(config.compilerOptions.paths).length === 0) {
+      if (config.compilerOptions.baseUrl === '.' || config.compilerOptions.baseUrl === './') {
+         console.log(`🔧 [Fix] Removing deprecated 'baseUrl' in ${path.relative(ROOT_DIR, filePath)}`);
+         delete config.compilerOptions.baseUrl;
+         changed = true;
+      }
+    } else {
+      // Path aliases are configured; ensure baseUrl is set
+      if (!config.compilerOptions.baseUrl || config.compilerOptions.baseUrl === '') {
+         console.log(`🔧 [Fix] Setting 'baseUrl': "." for path aliases in ${path.relative(ROOT_DIR, filePath)}`);
+         config.compilerOptions.baseUrl = '.';
+         changed = true;
+      }
     }
+
     if (!config.compilerOptions.paths) {
        config.compilerOptions.paths = {};
     }
@@ -134,6 +173,18 @@ function fixTsConfig(filePath, rootModuleResolution) {
     }
   }
 
+  // 7. Fix: Ensure "scripts" folder is in exclude for Next.js projects
+  if (isNextProject && fs.existsSync(path.join(projectDir, 'scripts'))) {
+    if (!config.exclude) {
+      config.exclude = [];
+    }
+    if (!config.exclude.includes('scripts')) {
+      console.log(`🔧 [Fix] Adding 'scripts' to exclude in ${path.relative(ROOT_DIR, filePath)}`);
+      config.exclude.push('scripts');
+      changed = true;
+    }
+  }
+
   if (changed) {
     fs.writeFileSync(filePath, JSON.stringify(config, null, 2) + '\n');
     return { changed: true, isNextProject };
@@ -172,14 +223,23 @@ function main() {
 
   let fixedCount = 0;
   const nextProjects = new Set();
+  const referencedProjects = new Set();
+
   const rootConfigRaw = fs.readFileSync(ROOT_TSCONFIG, 'utf8');
   const rootConfigParsed = parseJsonC(rootConfigRaw);
   const rootModuleResolution = rootConfigParsed.compilerOptions?.moduleResolution;
 
+  // Extract referenced projects from root config
+  if (rootConfigParsed.references && Array.isArray(rootConfigParsed.references)) {
+    rootConfigParsed.references.forEach(ref => {
+      referencedProjects.add(ref.path);
+    });
+  }
+
   // Find ALL tsconfig.json files to ensure comprehensive patching
   const allTsConfigs = findAllTsConfigs(ROOT_DIR);
   for (const configPath of allTsConfigs) {
-    const result = fixTsConfig(configPath, rootModuleResolution);
+    const result = fixTsConfig(configPath, rootModuleResolution, referencedProjects);
     if (result.changed) fixedCount++;
     if (result.isNextProject) {
       // Store relative path from root to project dir

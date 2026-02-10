@@ -9,6 +9,9 @@ export { MemoryDecayService, DEFAULT_DECAY_POLICIES } from './services/memory-de
 export type { DecayMetrics } from './services/memory-decay';
 export { MemoryService } from './services/memory';
 export { AdminService } from './services/admin';
+export { MemoryAnalyticsService } from './services/memory-analytics';
+export { MemoryArchivalService } from './services/memory-archival';
+export { CostOptimizationService } from './services/cost-optimization';
 export {
   validateAuthorization,
   getRequiredRoles,

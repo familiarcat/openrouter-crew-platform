@@ -1,24 +1,13 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.extension.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "lib": [
-      "ES2020",
-      "DOM"
-    ],
-    "target": "ES2020",
     "module": "node16",
     "moduleResolution": "node16",
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "composite": true
+    "composite": true,
+    "incremental": true
   },
-  "ignoreDeprecations": "6.0",
   "include": [
     "src/**/*"
   ],
@@ -27,5 +16,6 @@
     "dist",
     "tests",
     "**/*.test.ts"
-  ]
+  ],
+  "ignoreDeprecations": "6.0"
 }

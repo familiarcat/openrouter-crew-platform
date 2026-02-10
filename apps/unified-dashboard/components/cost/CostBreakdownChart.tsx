@@ -93,15 +93,16 @@ export default function CostBreakdownChart({ breakdown }: CostBreakdownChartProp
               'bg-green-500': '#22c55e',
             };
             return (
-              <path
-                key={idx}
-                d={slice.path}
-                fill={colorMap[slice.color]}
-                stroke="white"
-                strokeWidth="1.5"
-                className="hover:opacity-80 transition-opacity cursor-pointer"
-                title={`${slice.label}: $${slice.value.toFixed(2)} (${slice.percentage.toFixed(1)}%)`}
-              />
+              <g key={idx}>
+                <path
+                  d={slice.path}
+                  fill={colorMap[slice.color]}
+                  stroke="white"
+                  strokeWidth="1.5"
+                  className="hover:opacity-80 transition-opacity cursor-pointer"
+                />
+                <title>{`${slice.label}: $${slice.value.toFixed(2)} (${slice.percentage.toFixed(1)}%)`}</title>
+              </g>
             );
           })}
 
