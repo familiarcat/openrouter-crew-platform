@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { createClient } from '@supabase/supabase-js';
-import { CrewAPIClient, AuthContext } from '@openrouter-crew/crew-api-client';
+import { CrewAPIClient, AuthContext, MemoryDecayService } from '@openrouter-crew/crew-api-client';
 
 /**
  * CrewAPIClient service for VSCode extension
@@ -8,6 +8,7 @@ import { CrewAPIClient, AuthContext } from '@openrouter-crew/crew-api-client';
  */
 export class CrewAPIService {
   private client: CrewAPIClient | null = null;
+  private decayService: MemoryDecayService | null = null;
   private outputChannel: vscode.OutputChannel;
   private userId: string = 'vscode-user';
   private crewId: string = 'default-crew';
@@ -46,6 +47,7 @@ export class CrewAPIService {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     this.client = new CrewAPIClient(supabase);
+    this.decayService = new MemoryDecayService(supabase);
 
     return this.client;
   }
@@ -333,6 +335,135 @@ export class CrewAPIService {
       const message = error instanceof Error ? error.message : String(error);
       this.outputChannel.appendLine(`✗ Failed to execute crew: ${message}`);
       vscode.window.showErrorMessage(`Failed to execute crew: ${message}`);
+    }
+  }
+
+  /**
+   * Show retention statistics for the crew
+   */
+  async showRetentionStatistics(): Promise<void> {
+    try {
+      await this.initializeClient();
+
+      if (!this.decayService) {
+        throw new Error('Decay service not initialized');
+      }
+
+      this.outputChannel.appendLine('');
+      this.outputChannel.appendLine('=== Memory Retention Statistics ===');
+      this.outputChannel.appendLine(`Crew: ${this.crewId}`);
+
+      const stats = await this.decayService.getRetentionStatistics(this.crewId);
+
+      this.outputChannel.appendLine(`Total Memories: ${stats.totalMemories}`);
+      this.outputChannel.appendLine(`Active Memories: ${stats.activeMemories}`);
+      this.outputChannel.appendLine(`Soft-Deleted: ${stats.softDeletedMemories}`);
+      this.outputChannel.appendLine(`Expiring in 7 days: ${stats.expiringIn7Days}`);
+      this.outputChannel.appendLine(`Expiring in 30 days: ${stats.expiringIn30Days}`);
+      this.outputChannel.appendLine(`Average Confidence: ${(stats.averageConfidence * 100).toFixed(1)}%`);
+
+      this.outputChannel.appendLine('');
+      this.outputChannel.appendLine('By Retention Tier:');
+      Object.entries(stats.memoryByTier).forEach(([tier, count]) => {
+        this.outputChannel.appendLine(`  ${tier}: ${count}`);
+      });
+
+      this.outputChannel.appendLine('');
+      this.outputChannel.show();
+
+      vscode.window.showInformationMessage('Retention statistics displayed');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.outputChannel.appendLine(`✗ Failed to get retention statistics: ${message}`);
+      vscode.window.showErrorMessage(`Failed to get retention statistics: ${message}`);
+    }
+  }
+
+  /**
+   * Show memories expiring soon
+   */
+  async showExpiringMemories(daysUntilExpiration: number = 7): Promise<void> {
+    try {
+      await this.initializeClient();
+
+      const decayService = this.decayService;
+      if (!decayService) {
+        throw new Error('Decay service not initialized');
+      }
+
+      this.outputChannel.appendLine('');
+      this.outputChannel.appendLine(`=== Memories Expiring in ${daysUntilExpiration} Days ===`);
+
+      const memories = (await decayService.findExpiringMemories(this.crewId, daysUntilExpiration)) || [];
+
+      if (!Array.isArray(memories) || memories.length === 0) {
+        this.outputChannel.appendLine('No memories expiring soon');
+        this.outputChannel.show();
+        return;
+      }
+
+      (memories as any[]).forEach((memory: any) => {
+        const metrics = decayService.getDecayMetrics(memory);
+        this.outputChannel.appendLine('');
+        this.outputChannel.appendLine(`ID: ${memory.id}`);
+        this.outputChannel.appendLine(`Content: ${memory.content.substring(0, 60)}...`);
+        this.outputChannel.appendLine(`Type: ${memory.type}`);
+        this.outputChannel.appendLine(`Confidence: ${(metrics.currentConfidence * 100).toFixed(1)}%`);
+        this.outputChannel.appendLine(`Days Until Expiration: ${Math.ceil(metrics.daysUntilExpiration)}`);
+      });
+
+      this.outputChannel.appendLine('');
+      this.outputChannel.show();
+
+      vscode.window.showInformationMessage(`Found ${memories.length} memories expiring soon`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.outputChannel.appendLine(`✗ Failed to find expiring memories: ${message}`);
+      vscode.window.showErrorMessage(`Failed to find expiring memories: ${message}`);
+    }
+  }
+
+  /**
+   * Show memories ready for hard deletion
+   */
+  async showMemoriesReadyForDeletion(): Promise<void> {
+    try {
+      await this.initializeClient();
+
+      const decayService = this.decayService;
+      if (!decayService) {
+        throw new Error('Decay service not initialized');
+      }
+
+      this.outputChannel.appendLine('');
+      this.outputChannel.appendLine('=== Memories Ready for Permanent Deletion ===');
+
+      const memories = (await decayService.findMemoriesReadyForHardDelete(this.crewId)) || [];
+
+      if (!Array.isArray(memories) || memories.length === 0) {
+        this.outputChannel.appendLine('No memories ready for deletion');
+        this.outputChannel.show();
+        return;
+      }
+
+      this.outputChannel.appendLine(`Found ${memories.length} memories beyond recovery window:`);
+      this.outputChannel.appendLine('');
+
+      (memories as any[]).forEach((memory: any) => {
+        this.outputChannel.appendLine(`ID: ${memory.id}`);
+        this.outputChannel.appendLine(`Deleted at: ${new Date(memory.deleted_at || '').toLocaleString()}`);
+        this.outputChannel.appendLine(`Content: ${memory.content.substring(0, 60)}...`);
+        this.outputChannel.appendLine('---');
+      });
+
+      this.outputChannel.appendLine('');
+      this.outputChannel.show();
+
+      vscode.window.showInformationMessage(`${memories.length} memories ready for permanent deletion`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.outputChannel.appendLine(`✗ Failed to find memories ready for deletion: ${message}`);
+      vscode.window.showErrorMessage(`Failed to find memories ready for deletion: ${message}`);
     }
   }
 }
