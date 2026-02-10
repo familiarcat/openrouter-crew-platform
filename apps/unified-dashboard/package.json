@@ -12,6 +12,7 @@
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
+    "@openrouter-crew/crew-api-client": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",
     "lucide-react": "^0.294.0",
     "clsx": "^2.0.0",
