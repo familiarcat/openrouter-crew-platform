@@ -83,38 +83,41 @@
 
 ---
 
-## Week 2: Web Dashboard (Pending)
+## Week 2: Web Dashboard (In Progress)
 
 ### Goals
-- Cost analytics dashboard
-- Budget management UI
-- Memory analytics dashboard
-- Archival management UI
+- Cost analytics dashboard ✅ (DONE)
+- Budget management UI (in progress)
+- Memory analytics dashboard (pending)
+- Archival management UI (pending)
 - **Target**: 44 tests
+- **Current**: 12/44 tests
 
-### Components to Build
+### Completed Components
 
 #### Dashboard Pages
-- [ ] `/app/cost/page.tsx` - Cost analytics
+- [x] `/app/cost/page.tsx` - Cost analytics
 - [ ] `/app/budget/page.tsx` - Budget management
 - [ ] `/app/analytics/page.tsx` - Analytics dashboard
 - [ ] `/app/archive/page.tsx` - Archive management
 
-#### Components
-- [ ] `CostAnalyticsDashboard.tsx`
-- [ ] `CostTrendChart.tsx`
-- [ ] `BudgetGauge.tsx`
+#### Components - Cost Dashboard (COMPLETE)
+- [x] `CostAnalyticsDashboard.tsx` - Overview cards & breakdown
+- [x] `CostTrendChart.tsx` - Time-based cost visualization
+- [x] `BudgetGauge.tsx` - Budget status with gauge
+- [x] `CostBreakdownChart.tsx` - Pie chart by operation
+- [x] Component tests (12 tests) ✅
+
+#### Remaining Components
+- [ ] `BudgetManager.tsx`
 - [ ] `MemoryAnalyticsDashboard.tsx`
 - [ ] `TopicsCloud.tsx`
 - [ ] `ArchivalManager.tsx`
 - [ ] `ArchiveRecommendations.tsx`
-
-#### Tests
-- Component tests (12)
-- Chart rendering tests (8)
-- Archival workflow tests (8)
-- Budget UI tests (6)
-- Integration tests (10)
+- [ ] Chart rendering tests (8)
+- [ ] Archival workflow tests (8)
+- [ ] Budget UI tests (6)
+- [ ] Integration tests (10)
 
 ---
 
@@ -174,10 +177,10 @@
 | Milestone | Tests | Status | ETA |
 |-----------|-------|--------|-----|
 | Week 1: CLI | 30 | 🟡 In Progress (19/30) | Feb 12 |
-| Week 2: Web | 44 | ⚪ Pending | Feb 15 |
+| Week 2: Web | 44 | 🟡 In Progress (12/44) | Feb 15 |
 | Week 3: VSCode | 22 | ⚪ Pending | Feb 18 |
 | Week 4: n8n | 38 | ⚪ Pending | Feb 25 |
-| **Sprint 4 Total** | **134** | **14%** | **Feb 28** |
+| **Sprint 4 Total** | **134** | **23%** | **Feb 28** |
 
 ---
 
@@ -221,8 +224,17 @@ None currently.
 ### Feb 9 (Day 1)
 - ✅ Created budget set/status commands
 - ✅ Created analytics summary command
-- ✅ Created test frameworks (19 tests)
+- ✅ Created CLI test frameworks (19 tests)
 - ⏭️ Next: Complete remaining CLI commands
+
+### Feb 9 (Day 2 - Continuing)
+- ✅ Created cost analytics dashboard page
+- ✅ Created CostAnalyticsDashboard component
+- ✅ Created CostTrendChart component
+- ✅ Created BudgetGauge component
+- ✅ Created CostBreakdownChart component
+- ✅ Created component tests (12 tests)
+- ⏭️ Next: Budget management UI + Analytics dashboard
 
 ---
 
