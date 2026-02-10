@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { crewMemoryAPI } from '../crew-api';
+import type { Memory } from '@openrouter-crew/crew-api-client';
 
 /**
  * Hook for managing crew memory operations with loading/error states
@@ -185,9 +186,63 @@ export function useCrewStatus(crewId?: string, userId?: string) {
     }
   }, [crewId, userId]);
 
+  const getRetentionStats = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await crewMemoryAPI.getRetentionStatistics({
+        crewId,
+      });
+      return result;
+    } catch (err) {
+      handleError(err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [crewId]);
+
+  const getExpiringMemories = useCallback(
+    async (daysUntilExpiration: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await crewMemoryAPI.findExpiringMemories(daysUntilExpiration, {
+          crewId,
+        });
+        return result;
+      } catch (err) {
+        handleError(err);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [crewId]
+  );
+
+  const getMemoriesReadyForDelete = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await crewMemoryAPI.findMemoriesReadyForHardDelete({
+        crewId,
+      });
+      return result;
+    } catch (err) {
+      handleError(err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [crewId]);
+
   return {
     getCompliance,
     getForecast,
+    getRetentionStats,
+    getExpiringMemories,
+    getMemoriesReadyForDelete,
     loading,
     error,
   };
@@ -229,6 +284,41 @@ export function useCrewExecution(crewId?: string, userId?: string) {
 
   return {
     execute,
+    loading,
+    error,
+  };
+}
+
+/**
+ * Hook for memory decay metrics
+ */
+export function useMemoryDecay(memory?: Memory) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleError = (err: any) => {
+    const message = err instanceof Error ? err.message : String(err);
+    setError(message);
+    return null;
+  };
+
+  const getMetrics = useCallback(async () => {
+    if (!memory) return null;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await crewMemoryAPI.getDecayMetrics(memory);
+      return result;
+    } catch (err) {
+      handleError(err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [memory]);
+
+  return {
+    getMetrics,
     loading,
     error,
   };

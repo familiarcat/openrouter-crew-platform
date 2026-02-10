@@ -6,6 +6,7 @@
 export { CrewAPIClient } from './CrewAPIClient';
 export { AuditService } from './services/audit';
 export { MemoryDecayService, DEFAULT_DECAY_POLICIES } from './services/memory-decay';
+export type { DecayMetrics } from './services/memory-decay';
 export { MemoryService } from './services/memory';
 export { AdminService } from './services/admin';
 export {

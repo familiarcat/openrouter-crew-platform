@@ -1,7 +1,20 @@
 'use client';
 
-import { CrewAPIClient, AuthContext } from '@openrouter-crew/crew-api-client';
+import { CrewAPIClient, MemoryDecayService, AuthContext, Memory, DecayMetrics } from '@openrouter-crew/crew-api-client';
 import { getSupabase } from './supabase';
+
+/**
+ * Type definitions for decay service return types
+ */
+export interface RetentionStats {
+  totalMemories: number;
+  activeMemories: number;
+  softDeletedMemories: number;
+  expiringIn7Days: number;
+  expiringIn30Days: number;
+  averageConfidence: number;
+  memoryByTier: Record<string, number>;
+}
 
 /**
  * Global CrewAPIClient instance
@@ -34,9 +47,31 @@ export function getWebAuthContext(overrides?: Partial<AuthContext>): AuthContext
 }
 
 /**
+ * Memory API interface
+ */
+export interface CrewMemoryAPI {
+  create(content: string, type: string, options?: any): Promise<any>;
+  list(options?: any): Promise<any>;
+  search(query: string, options?: any): Promise<any>;
+  update(id: string, updates: any, options?: any): Promise<any>;
+  delete(id: string, permanent?: boolean, options?: any): Promise<any>;
+  restore(id: string, options?: any): Promise<any>;
+  explain(memoryId: string, query: string, options?: any): Promise<any>;
+  getComplianceStatus(options?: any): Promise<any>;
+  getExpirationForecast(options?: any): Promise<any>;
+  export(format?: 'json' | 'csv', options?: any): Promise<any>;
+  execute(input: string, options?: any): Promise<any>;
+  getAuditLog(crewId?: string): Promise<any>;
+  getDecayMetrics(memory: Memory): Promise<DecayMetrics>;
+  getRetentionStatistics(options?: { crewId?: string }): Promise<RetentionStats>;
+  findExpiringMemories(daysUntilExpiration: number, options?: { crewId?: string }): Promise<Memory[]>;
+  findMemoriesReadyForHardDelete(options?: { crewId?: string }): Promise<Memory[]>;
+}
+
+/**
  * Memory API - High-level interface for React components
  */
-export const crewMemoryAPI = {
+export const crewMemoryAPI: CrewMemoryAPI = {
   /**
    * Create a new memory
    */
@@ -255,6 +290,45 @@ export const crewMemoryAPI = {
   async getAuditLog(crewId?: string) {
     const client = getCrewAPIClient();
     return client.getAuditLog(crewId || 'default-crew');
+  },
+
+  /**
+   * Get decay metrics for a specific memory
+   */
+  async getDecayMetrics(memory: Memory) {
+    const supabase = getSupabase();
+    const decayService = new MemoryDecayService(supabase);
+    return decayService.getDecayMetrics(memory);
+  },
+
+  /**
+   * Get retention statistics for a crew
+   */
+  async getRetentionStatistics(options?: { crewId?: string }) {
+    const supabase = getSupabase();
+    const decayService = new MemoryDecayService(supabase);
+    const crewId = options?.crewId || 'default-crew';
+    return decayService.getRetentionStatistics(crewId);
+  },
+
+  /**
+   * Find memories expiring within specified days
+   */
+  async findExpiringMemories(daysUntilExpiration: number, options?: { crewId?: string }) {
+    const supabase = getSupabase();
+    const decayService = new MemoryDecayService(supabase);
+    const crewId = options?.crewId || 'default-crew';
+    return decayService.findExpiringMemories(crewId, daysUntilExpiration);
+  },
+
+  /**
+   * Find memories ready for hard deletion (beyond recovery window)
+   */
+  async findMemoriesReadyForHardDelete(options?: { crewId?: string }) {
+    const supabase = getSupabase();
+    const decayService = new MemoryDecayService(supabase);
+    const crewId = options?.crewId || 'default-crew';
+    return decayService.findMemoriesReadyForHardDelete(crewId);
   },
 };
 
