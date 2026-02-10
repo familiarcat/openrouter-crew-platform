@@ -97,7 +97,7 @@ export class EmbeddingProvider {
    */
   private isCacheValid(entry: CacheEntry): boolean {
     const age = Date.now() - entry.timestamp;
-    return age < this.config.cache.ttlMs;
+    return age < (this.config.cache.ttlMs || 24 * 60 * 60 * 1000);
   }
 
   /**
@@ -281,7 +281,7 @@ export class EmbeddingProvider {
     const now = Date.now();
 
     for (const [key, entry] of this.cache.entries()) {
-      if (now - entry.timestamp > this.config.cache.ttlMs) {
+      if (now - entry.timestamp > (this.config.cache.ttlMs || 24 * 60 * 60 * 1000)) {
         this.cache.delete(key);
         removed++;
       }
