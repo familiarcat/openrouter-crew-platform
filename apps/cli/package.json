@@ -14,6 +14,8 @@
     "format": "prettier --write src"
   },
   "dependencies": {
+    "@openrouter-crew/crew-api-client": "workspace:*",
+    "@supabase/supabase-js": "^2.38.0",
     "axios": "^1.6.5",
     "chalk": "^4.1.2",
     "commander": "^11.1.0",

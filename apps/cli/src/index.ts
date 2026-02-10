@@ -10,6 +10,7 @@ require('dotenv').config();
 import crewCommand from './commands/crew';
 import projectCommand from './commands/project';
 import costCommand from './commands/cost';
+import memoryCommand from './commands/memory';
 
 // Version
 const version = '1.0.0';
@@ -27,6 +28,7 @@ program.option('--debug', 'enable debug logging');
 program.addCommand(crewCommand);
 program.addCommand(projectCommand);
 program.addCommand(costCommand);
+program.addCommand(memoryCommand);
 
 // Help text
 program.on('--help', () => {
@@ -35,9 +37,12 @@ program.on('--help', () => {
   console.log('  crew status                    # Show crew status and availability');
   console.log('  crew consult picard "task"     # Consult Captain Picard');
   console.log('  crew activate data             # Activate Data for a task');
+  console.log('  memory create "note"           # Create a new memory');
+  console.log('  memory list                    # List all memories');
+  console.log('  memory search "query"          # Search memories');
+  console.log('  memory compliance              # Check GDPR compliance');
   console.log('  project feature my-feature     # Create a new feature');
   console.log('  cost report                    # Show cost summary');
-  console.log('  cost optimize picard "task"    # Check optimization options');
   console.log('');
 });
 
