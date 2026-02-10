@@ -26,7 +26,9 @@
       "Bash(npm test:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nExpand CrewAPIClient with all query and admin operations\n\n## Summary\nCompleted expansion of CrewAPIClient with all remaining catalog operations.\nCrewAPIClient now provides a complete, unified API for all surfaces with\nfull semantic parity, authorization enforcement, and audit logging.\n\n## Changes\n\n### CrewAPIClient Expansion\n- Added query operations: search_memories, explain_retrieval,\n  compliance_status, expiration_forecast\n- Added admin operations: export_crew_data, import_crew_data,\n  prune_expired_memories, generate_audit_report\n- Updated cost calculation to include all 14+ operation types\n- All operations follow: Intent → Authorization → Execution → Logging → Response\n\n### Service Integration\n- Integrated MemoryService for advanced query operations with filtering,\n  relevance scoring, and retrieval policies\n- Integrated AdminService for data export/import, memory pruning, and\n  audit reporting\n- Enhanced AuditService to support additional metadata fields for detailed\n  operation tracking\n\n### Testing & Configuration\n- Expanded test suite to 13 comprehensive semantic parity tests\n- Added Jest TypeScript support with ts-jest configuration\n- Enhanced mock Supabase client to support full query API \\(eq, gte, lte, lt,\n  ilike, order, limit, single\\)\n- All tests passing: 13/13 ✓\n\n### Type Safety\n- Extended AuditLogEntry metadata to support operation-specific fields\n- Full TypeScript support with strict mode enabled\n- All operations properly typed with comprehensive interfaces\n\n## Impact\n- Phase 1 of CrewAPIClient nearly complete\n- Ready for surface integration \\(CLI, Web, IDE, n8n\\)\n- Foundation for semantic parity enforcement across all surfaces\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git checkout:*)",
+      "Bash(pnpm test:*)"
     ]
   }
 }
