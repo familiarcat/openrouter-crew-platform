@@ -16,7 +16,7 @@ import {
   NodeOperationError,
 } from 'n8n-workflow';
 import { createClient } from '@supabase/supabase-js';
-import { CrewAPIClient } from '@openrouter-crew/crew-api-client';
+import { CrewAPIClient, MemoryDecayService } from '@openrouter-crew/crew-api-client';
 
 export class CrewMemoryNode implements INodeType {
   description: INodeTypeDescription = {
@@ -82,6 +82,21 @@ export class CrewMemoryNode implements INodeType {
             name: 'Get Expiration Forecast',
             value: 'forecast',
             description: 'Forecast memory expiration',
+          },
+          {
+            name: 'Get Retention Statistics',
+            value: 'retention-stats',
+            description: 'Get memory retention statistics and decay metrics',
+          },
+          {
+            name: 'Find Expiring Memories',
+            value: 'expiring-memories',
+            description: 'Find memories expiring within specified days',
+          },
+          {
+            name: 'Find Memories Ready for Deletion',
+            value: 'memories-for-deletion',
+            description: 'Find soft-deleted memories beyond recovery window',
           },
         ],
         default: 'create',
@@ -230,6 +245,20 @@ export class CrewMemoryNode implements INodeType {
         },
         default: '30d',
         description: 'Period to check (e.g., 30d, 90d)',
+      },
+
+      // Decay metrics parameters
+      {
+        displayName: 'Days Until Expiration',
+        name: 'days_until_expiration',
+        type: 'number',
+        displayOptions: {
+          show: {
+            operation: ['expiring-memories'],
+          },
+        },
+        default: 7,
+        description: 'Number of days to look ahead for expiring memories',
       },
 
       // Context parameters
@@ -395,6 +424,25 @@ export class CrewMemoryNode implements INodeType {
               },
               context
             );
+            break;
+          }
+
+          case 'retention-stats': {
+            const decayService = new MemoryDecayService(supabase);
+            result = await decayService.getRetentionStatistics(crewId);
+            break;
+          }
+
+          case 'expiring-memories': {
+            const decayService = new MemoryDecayService(supabase);
+            const daysUntilExpiration = this.getNodeParameter('days_until_expiration', i, 7) as number;
+            result = await decayService.findExpiringMemories(crewId, daysUntilExpiration);
+            break;
+          }
+
+          case 'memories-for-deletion': {
+            const decayService = new MemoryDecayService(supabase);
+            result = await decayService.findMemoriesReadyForHardDelete(crewId);
             break;
           }
 
