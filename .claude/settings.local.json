@@ -35,7 +35,8 @@
       "Bash(/opt/homebrew/bin/pnpm exec typescript /opt/homebrew/bin/pnpm exec which tsc)",
       "Bash(pnpm -r build:*)",
       "Bash(pnpm --filter @openrouter-crew/crew-api-client build:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)"
     ]
   }
 }

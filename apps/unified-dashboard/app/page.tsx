@@ -10,7 +10,7 @@ export default function DashboardHome() {
   const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'active').length;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div suppressHydrationWarning className="p-8 max-w-7xl mx-auto">
       <header className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Platform Overview</h1>
