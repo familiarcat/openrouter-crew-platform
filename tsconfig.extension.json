@@ -4,5 +4,6 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["ES2020", "DOM"]
-  }
+  },
+  "ignoreDeprecations": "6.0"
 }

@@ -4,5 +4,6 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "downlevelIteration": true
-  }
+  },
+  "ignoreDeprecations": "6.0"
 }

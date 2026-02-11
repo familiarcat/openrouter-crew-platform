@@ -4,12 +4,13 @@
     "target": "es2015",
     "lib": ["dom", "dom.iterable", "esnext"],
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
     "jsx": "preserve",
     "noEmit": true,
     "isolatedModules": true,
     "allowJs": true,
     "composite": false,
     "incremental": false
-  }
+  },
+  "ignoreDeprecations": "6.0"
 }

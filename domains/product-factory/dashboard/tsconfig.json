@@ -16,9 +16,10 @@
     },
     "noEmit": true,
     "moduleResolution": "Bundler",
-    "baseUrl": "."
+    "baseUrl": ".",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "preserve"
   },
-  "ignoreDeprecations": "6.0",
   "include": [
     "src/**/*",
     "index.ts"
