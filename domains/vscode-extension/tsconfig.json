@@ -3,10 +3,11 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "module": "node16",
-    "moduleResolution": "node16",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "composite": true,
-    "incremental": true
+    "incremental": true,
+    "target": "ES2022"
   },
   "include": [
     "src/**/*"

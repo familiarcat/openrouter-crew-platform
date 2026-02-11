@@ -1,73 +1,68 @@
-CYAN='\033[0;36m'
+#!/bin/bash
+
+# Unified Sync Script for OpenRouter Crew Platform
+# Synchronizes state between Local (Git/Files) and Remote (Supabase/n8n)
+# Usage: ./sync-all.sh [env] [direction]
+#   env:       local (default) | prod
+#   direction: push (default) | pull
+
+set -e
+
+# Configuration
+ENV=${1:-local}
+DIRECTION=${2:-push}
+
+# Colors
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Ensure we are in root
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-cd "$ROOT_DIR" || exit 1
+echo -e "${BLUE}=== OpenRouter Crew Platform: Unified Sync ===${NC}"
+echo -e "Environment: ${YELLOW}$ENV${NC}"
+echo -e "Direction:   ${YELLOW}$DIRECTION${NC} (Code <-> Infra)"
 
-# Parse Arguments
-N8N_MODE="interactive"
-DB_MODE="interactive"
-
-for arg in "$@"; do
-  case $arg in
-    --n8n=*)
-      N8N_MODE="${arg#*=}"
-      ;;
-    --db-push)
-      DB_MODE="push"
-      ;;
-  esac
-done
-
-echo -e "${CYAN}🔄 Starting Universal System Sync...${NC}"
-
-# 1. Database -> TypeScript Types (Supabase -> UI)
-
-# 2. n8n Workflows (Local <-> Remote)
-echo -e "\n${YELLOW}2️⃣  Syncing n8n Workflows...${NC}"
-
-if [ "$N8N_MODE" == "interactive" ]; then
-    echo "   Select sync direction:"
-    echo "   1) Push Local -> Remote (Deploy)"
-    echo "   2) Pull Remote -> Local (Save)"
-    echo "   3) Skip"
-    read -r -p "   Choice [1]: " n8n_choice
-    n8n_choice=${n8n_choice:-1}
-    
-    if [ "$n8n_choice" -eq 1 ]; then N8N_MODE="push"; fi
-    if [ "$n8n_choice" -eq 2 ]; then N8N_MODE="pull"; fi
+# Ensure secrets are loaded
+if [ -f "scripts/secrets/sync-from-zshrc.sh" ]; then
+    source scripts/secrets/sync-from-zshrc.sh > /dev/null 2>&1
 fi
 
-if [ "$N8N_MODE" == "push" ]; then
-    node scripts/n8n/sync-workflows.js --direction=to-n8n --prod
-elif [ "$N8N_MODE" == "pull" ]; then
-    node scripts/n8n/sync-workflows.js --direction=from-n8n --prod
-else
-    echo "   Skipping n8n sync."
-fi
-
-# 3. Secrets (Zsh -> Env)
-echo -e "\n${YELLOW}3️⃣  Verifying Secrets...${NC}"
-bash scripts/secrets/sync-from-zshrc.sh
-
-# 4. Database Migrations (Local -> Remote)
-echo -e "\n${YELLOW}4️⃣  Database Migrations...${NC}"
-
-if [ "$DB_MODE" == "interactive" ]; then
-    echo "   Push local migrations to remote Supabase? (y/N)"
-    read -r -p "   Choice [N]: " db_choice
-    if [[ "$db_choice" =~ ^[Yy]$ ]]; then DB_MODE="push"; fi
-fi
-
-if [ "$DB_MODE" == "push" ]; then
-    if command -v supabase &> /dev/null; then
-        supabase db push
+if [ "$DIRECTION" == "push" ]; then
+    echo -e "\n${BLUE}[1/3] Syncing Supabase Schema (Push)...${NC}"
+    if [ "$ENV" == "prod" ]; then
+        # For prod, we push migrations
+        npx supabase db push
     else
-        echo -e "${YELLOW}⚠️  Supabase CLI not found.${NC}"
+        # For local, we reset to ensure clean state matches migrations
+        npx supabase db reset
     fi
-else
-    echo "   Skipping DB push."
+
+    echo -e "\n${BLUE}[2/3] Syncing n8n Workflows (Push)...${NC}"
+    # Push local JSON files to n8n instance
+    if [ "$ENV" == "prod" ]; then
+        node scripts/n8n/sync-workflows.js --prod --push
+    else
+        node scripts/n8n/sync-workflows.js --local --push
+    fi
+
+    echo -e "\n${BLUE}[3/3] Generating Types...${NC}"
+    bash scripts/supabase/generate-types.sh
+
+elif [ "$DIRECTION" == "pull" ]; then
+    echo -e "\n${BLUE}[1/2] Syncing n8n Workflows (Pull)...${NC}"
+    # Pull active workflows from n8n instance to local JSON
+    if [ "$ENV" == "prod" ]; then
+        node scripts/n8n/sync-workflows.js --prod --pull
+    else
+        node scripts/n8n/sync-workflows.js --local --pull
+    fi
+
+    echo -e "\n${BLUE}[2/2] Generating Types from DB...${NC}"
+    # We don't pull schema (migrations are source of truth), but we regen types
+    bash scripts/supabase/generate-types.sh
 fi
 
-echo -e "\n${GREEN}✅ Universal Sync Complete.${NC}"
+echo -e "\n${GREEN}✅ Sync Complete!${NC}"
+if [ "$DIRECTION" == "pull" ]; then
+    echo -e "Review changes in 'packages/n8n-workflows' and 'packages/shared-schemas' before committing."
+fi

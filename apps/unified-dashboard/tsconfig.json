@@ -12,7 +12,10 @@
       ]
     },
     "noEmit": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "target": "ES2022"
   },
   "include": [
     "next-env.d.ts",

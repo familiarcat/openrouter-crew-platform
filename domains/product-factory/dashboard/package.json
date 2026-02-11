@@ -1,5 +1,5 @@
 {
-  "name": "@openrouter-crew/shared-gateway-agent",
+  "name": "@openrouter-crew/product-factory-dashboard",
   "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,6 +8,7 @@
     "dev": "tsc -w"
   },
   "dependencies": {
+    "lucide-react": "^0.563.0"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

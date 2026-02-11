@@ -1,6 +1,6 @@
 # Security Group for EC2 Instance
 resource "aws_security_group" "ec2" {
-  name_description = "${var.project_name}-ec2-sg"
+  name             = "${var.project_name}-ec2-sg"
   description      = "Security group for OpenRouter Crew Platform EC2 instance"
   vpc_id           = aws_vpc.main.id
 

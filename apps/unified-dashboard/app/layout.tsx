@@ -1,28 +1,29 @@
-import './globals.css';
-import { ThemeProvider } from '@/lib/theme-context';
-import DashboardNavigation from '@/components/DashboardNavigation';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { UniversalNavigation } from "@openrouter-crew/shared-ui-components/navigation";
 
-export const metadata = {
-  title: 'OpenRouter Crew Platform',
-  description: 'Unified Dashboard for all domains',
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "OpenRouter Crew Platform",
+  description: "Unified AI Orchestration Dashboard",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <body className="bg-[#0b0d11] text-white min-h-screen">
-        <ThemeProvider>
-          <div className="flex min-h-screen">
-            <DashboardNavigation />
-            <main className="flex-1 ml-64">
-              {children}
-            </main>
-          </div>
-        </ThemeProvider>
+      <body className={`${inter.className} flex h-screen overflow-hidden bg-gray-50`}>
+        <aside className="flex-shrink-0 h-full border-r bg-white w-64">
+          <UniversalNavigation variant="sidebar" />
+        </aside>
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
       </body>
     </html>
   );

@@ -43,6 +43,15 @@
     },
     "format:check": {
       "outputs": []
+    },
+    "@openrouter-crew/shared-gateway-agent#build": {
+      "outputs": []
+    },
+    "@openrouter-crew/shared-openrouter-client#build": {
+      "outputs": []
+    },
+    "@openrouter-crew/shared-ui-components#build": {
+      "outputs": []
     }
   }
 }

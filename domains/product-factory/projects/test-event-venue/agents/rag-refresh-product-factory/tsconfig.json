@@ -10,13 +10,13 @@
     "strict": false,
     "noEmit": true,
     "incremental": false,
-    "module": "esnext",
+    "module": "ESNext",
     "esModuleInterop": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "target": "ES2017",
+    "target": "ES2022",
     "paths": {
       "@/*": [
         "./*"

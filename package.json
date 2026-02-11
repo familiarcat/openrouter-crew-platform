@@ -15,7 +15,8 @@
     "build:domain": "bash scripts/build.sh",
     "build:dashboard": "pnpm --filter unified-dashboard build",
     "type-check": "pnpm -r type-check",
-    "fix:tsconfig": "node scripts/system/fix-ts-references.js",
+    "fix:tsconfig": "node scripts/system/fix-tsconfig-corruption.js",
+    "fix:deps": "bash scripts/system/fix-lucide-deps.sh",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "test:integration": "pnpm --filter @openrouter-crew/integration-tests test",
@@ -47,12 +48,15 @@
     "feature:push": "bash scripts/agile/push-feature.sh",
     "story:create": "bash scripts/agile/create-story.sh",
     "story:push": "bash scripts/agile/push-story.sh",
+    "milestone:create": "bash scripts/agile/create-milestone.sh",
+    "milestone:push": "bash scripts/agile/push-milestone.sh",
     "clean": "pnpm -r clean && rm -rf node_modules",
     "organize": "bash scripts/organize-workspace.sh",
     "reset": "bash scripts/reset-build.sh",
     "setup": "pnpm install && pnpm secrets:sync && pnpm supabase:start",
     "domain:create": "bash scripts/domain/create-domain.sh",
-    "sync:all": "bash scripts/system/sync-all.sh"
+    "sync:all": "bash scripts/system/sync-all.sh",
+    "generate:types": "bash scripts/supabase/generate-types.sh"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

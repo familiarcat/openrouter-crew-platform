@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
+    "module": "ESNext",
     "outDir": "./dist",
     "rootDir": ".",
     "strict": true,
@@ -15,7 +15,7 @@
       ]
     },
     "noEmit": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "baseUrl": "."
   },
   "ignoreDeprecations": "6.0",

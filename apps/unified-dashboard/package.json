@@ -20,7 +20,8 @@
     "date-fns": "^3.0.0",
     "@openrouter-crew/shared-schemas": "workspace:*",
     "@openrouter-crew/shared-cost-tracking": "workspace:*",
-    "@openrouter-crew/shared-crew-coordination": "workspace:*"
+    "@openrouter-crew/shared-crew-coordination": "workspace:*",
+    "@openrouter-crew/shared-ui-components": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5",

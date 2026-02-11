@@ -4,7 +4,8 @@ const nextConfig = {
   transpilePackages: [
     '@openrouter-crew/shared-crew-coordination',
     '@openrouter-crew/shared-cost-tracking',
-    '@openrouter-crew/shared-schemas'
+    '@openrouter-crew/shared-schemas',
+    '@openrouter-crew/shared-ui-components'
   ],
   experimental: {
     serverActions: {
