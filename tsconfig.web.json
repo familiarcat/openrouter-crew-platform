@@ -10,7 +10,7 @@
     "isolatedModules": true,
     "allowJs": true,
     "composite": false,
-    "incremental": false
-  },
-  "ignoreDeprecations": "6.0"
+    "incremental": false,
+    "ignoreDeprecations": "5.0"
+  }
 }

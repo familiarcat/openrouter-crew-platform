@@ -22,11 +22,11 @@
       "@crew/*": [
         "domains/shared/crew-api-client/src/*"
       ],
-      "@shared/cost-tracking/*": [
-        "domains/shared/cost-tracking/src/*"
-      ],
       "@shared/crew-coordination/*": [
         "domains/shared/crew-coordination/src/*"
+      ],
+      "@shared/cost-tracking/*": [
+        "domains/shared/cost-tracking/src/*"
       ],
       "@shared/schemas/*": [
         "domains/shared/schemas/src/*"
@@ -43,15 +43,17 @@
       "@dashboard/*": [
         "apps/unified-dashboard/*"
       ]
-    }
+    },
+    "baseUrl": "."
   },
-  "ignoreDeprecations": "6.0",
+  "ignoreDeprecations": "5.0",
   "exclude": [
     "node_modules",
     "dist",
     ".next",
     "out"
   ],
+  "files": [],
   "references": [
     {
       "path": "./apps/cli"

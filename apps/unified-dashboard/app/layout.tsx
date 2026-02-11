@@ -17,11 +17,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} flex h-screen overflow-hidden bg-gray-50`}>
-        <aside className="flex-shrink-0 h-full border-r bg-white w-64">
+      <body className={`${inter.className} flex h-screen overflow-hidden`}>
+        <aside className="flex-shrink-0 h-full border-r border-white/10 bg-[#16181d] w-64">
           <UniversalNavigation variant="sidebar" />
         </aside>
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </body>

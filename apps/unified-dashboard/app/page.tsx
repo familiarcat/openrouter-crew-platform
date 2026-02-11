@@ -106,7 +106,7 @@ export default function DashboardHome() {
                         {project.status}
                       </span>
                     </td>
-                    <td className="p-4 text-right font-mono text-gray-300">
+                    <td className="p-4 text-right font-mono text-gray-300" suppressHydrationWarning>
                       ${project.budget.spent.toLocaleString()} / ${project.budget.allocated.toLocaleString()}
                     </td>
                   </tr>
@@ -145,7 +145,7 @@ function MetricCard({ title, value, trend, color = "text-white" }: { title: stri
     <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
       <div className="text-gray-400 text-sm mb-2">{title}</div>
       <div className={`text-3xl font-bold mb-1 ${color}`}>{value}</div>
-      <div className="text-xs text-gray-500">{trend}</div>
+      <div className="text-xs text-gray-500" suppressHydrationWarning>{trend}</div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.web.json",
   "compilerOptions": {
+    "ignoreDeprecations": "5.0",
     "plugins": [
       {
         "name": "next"
@@ -27,6 +28,5 @@
     "node_modules",
     ".next",
     "scripts"
-  ],
-  "ignoreDeprecations": "6.0"
+  ]
 }

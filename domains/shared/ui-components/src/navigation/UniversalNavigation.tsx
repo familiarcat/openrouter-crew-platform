@@ -34,7 +34,7 @@ export const UniversalNavigation: React.FC<UniversalNavigationProps> = ({
   };
 
   return (
-    <nav className={`universal-nav ${variant === 'sidebar' ? 'w-64 h-full bg-background border-r' : 'w-full'}`}>
+    <nav suppressHydrationWarning className={`universal-nav ${variant === 'sidebar' ? 'w-64 h-full bg-background border-r' : 'w-full'}`}>
       <div className="p-4 border-b mb-2">
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
           Platform Navigation
