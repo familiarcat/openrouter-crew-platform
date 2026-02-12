@@ -36,7 +36,10 @@
       "Bash(pnpm -r build:*)",
       "Bash(pnpm --filter @openrouter-crew/crew-api-client build:*)",
       "Bash(npx tsc:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm view:*)",
+      "Bash(pnpm list:*)",
+      "Bash(pnpm --filter unified-dashboard run type-check:*)"
     ]
   }
 }

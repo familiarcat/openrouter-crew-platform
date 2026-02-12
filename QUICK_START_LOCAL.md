@@ -326,6 +326,7 @@ To cleanly stop all services:
 
 # Or manually stop:
 pnpm stop-services    # Stop Node processes
+./scripts/stop-nextjs.sh # Stop Next.js instances specifically
 supabase stop         # Stop Supabase
 docker-compose down   # Stop Docker containers
 ```

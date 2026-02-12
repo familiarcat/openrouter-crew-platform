@@ -8,10 +8,14 @@
     "url": "https://github.com/bradygeorgen/openrouter-crew-platform.git"
   },
   "scripts": {
-    "dev": "concurrently \"pnpm dev:dashboard\" \"pnpm dev:supabase\"",
+    "dev": "concurrently \"pnpm dev:dashboards\" \"pnpm dev:supabase\"",
+    "dev:dashboards": "concurrently \"pnpm --filter unified-dashboard dev\" \"pnpm --filter alex-ai-universal-dashboard dev --port 3001\" \"pnpm --filter dj-booking-dashboard dev --port 3002\" \"pnpm --filter test-event-venue-dashboard dev --port 3003\"",
     "dev:dashboard": "pnpm --filter unified-dashboard dev",
     "dev:supabase": "supabase start",
-    "dev:all": "docker-compose up",    "build": "pnpm fix:tsconfig && turbo build",
+    "dev:all": "docker-compose up",
+    "build": "pnpm fix:tsconfig && turbo build",
+    "build:dashboards": "turbo run build --filter=unified-dashboard --filter=alex-ai-universal-dashboard --filter=dj-booking-dashboard --filter=test-event-venue-dashboard",
+    "build:dashboards:prod": "pnpm run build:dashboards && echo 'All dashboards built successfully'",
     "build:domain": "bash scripts/build.sh",
     "build:dashboard": "pnpm --filter unified-dashboard build",
     "type-check": "pnpm -r type-check",
@@ -70,6 +74,12 @@
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@9.12.3",
+  "pnpm": {
+    "overrides": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    }
+  },
   "dependencies": {
     "supabase": "^2.72.9"
   }

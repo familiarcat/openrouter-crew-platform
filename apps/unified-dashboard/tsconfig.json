@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.web.json",
   "compilerOptions": {
-    "ignoreDeprecations": "5.0",
     "plugins": [
       {
         "name": "next"
@@ -13,7 +12,6 @@
       ]
     },
     "noEmit": true,
-    "baseUrl": ".",
     "moduleResolution": "Bundler",
     "module": "ESNext",
     "target": "ES2022"

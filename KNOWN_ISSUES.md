@@ -55,3 +55,20 @@ Build was still running when verification was done. May need similar path update
 - ✅ Domain route proxies functional
 - ✅ Feature federation script working
 - ✅ pnpm workspace configured correctly
+
+## VSCode Extension Issues
+
+### Chat Feature Encoding Error
+
+**Status**: Known Error
+**Priority**: High
+
+**Issue**:
+`Error: Cannot convert argument to a ByteString because the character at index 7 has a value of 9989 which is greater than 255.`
+
+**Cause**:
+The chat feature attempts to Base64 encode strings containing emojis (specifically `✅` at index 7, likely from log prefixes like `[INFO] ✅`) using `btoa()`, which fails on characters > 255.
+
+**Resolution**:
+Update the extension code to properly handle UTF-8 characters before encoding:
+`btoa(unescape(encodeURIComponent(string)))` or use `Buffer.from(string, 'utf-8').toString('base64')`.

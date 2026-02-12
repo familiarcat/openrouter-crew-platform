@@ -11,6 +11,5 @@
     "allowJs": true,
     "composite": false,
     "incremental": false,
-    "ignoreDeprecations": "5.0"
   }
 }
