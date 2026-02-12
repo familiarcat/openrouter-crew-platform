@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { SidebarWrapper } from "./sidebar-wrapper";
+import { AppShell } from "./app-shell";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,11 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className={`${inter.className} flex h-screen overflow-hidden bg-[#0b0d11] text-white`}>
-        <SidebarWrapper />
-        <main className="flex-1 overflow-y-auto">
+      <body suppressHydrationWarning className={`${inter.className} antialiased`}>
+        <AppShell>
           {children}
-        </main>
+        </AppShell>
       </body>
     </html>
   );

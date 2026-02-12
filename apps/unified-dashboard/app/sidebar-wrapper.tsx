@@ -9,7 +9,7 @@ const UniversalNavigation = dynamic(
 
 export function SidebarWrapper() {
   return (
-    <aside suppressHydrationWarning className="flex-shrink-0 h-full border-r border-white/10 bg-[#16181d] w-64">
+    <aside suppressHydrationWarning className="flex-shrink-0 h-full border-r border-white/10 bg-[var(--card-bg)] w-64">
       <UniversalNavigation variant="sidebar" />
     </aside>
   );
