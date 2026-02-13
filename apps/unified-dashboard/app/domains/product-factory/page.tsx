@@ -3,13 +3,13 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
 
-export default function ReleaseNotesPage() {
+export default function ProductFactoryPage() {
   return (
     <div className="flex-1 flex flex-col p-6 h-full">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Release Notes</h1>
-          <p className="text-gray-400">Version history and changelogs</p>
+          <h1 className="text-2xl font-bold text-white">Product Factory</h1>
+          <p className="text-gray-400">Idea generation and product development pipeline</p>
         </div>
         <a 
           href="http://localhost:3003" 
@@ -26,7 +26,7 @@ export default function ReleaseNotesPage() {
         <iframe 
           src="http://localhost:3003" 
           className="w-full h-full border-0"
-          title="Release Notes"
+          title="Product Factory Dashboard"
         />
       </div>
     </div>

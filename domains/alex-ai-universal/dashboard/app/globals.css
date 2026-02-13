@@ -3,40 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 236, 237, 238;
-  --background-start-rgb: 13, 16, 34;
-  --background-end-rgb: 11, 15, 29;
-  
-  /* Alex AI Theme Variables */
-  --alex-purple: 124, 92, 255;
-  --alex-blue: 0, 119, 182;
-  --alex-gold: 201, 162, 39;
-  --alex-cyan: 0, 194, 255;
-  --alex-magenta: 255, 92, 147;
-  
-  /* UI System Variables */
+  /* Unified Design System Tokens */
+  --background: #0b0d11;
+  --foreground: #ffffff;
+  --card-bg: #16181d;
+  --card: #16181d;
   --border: rgba(255, 255, 255, 0.1);
-  --card-bg: rgba(255, 255, 255, 0.05);
-  --radius: 12px;
-  --spacing-lg: 24px;
+  --radius: 0.75rem;
+  --accent: #60a5fa;
+  --text-muted: #9ca3af;
+  --text: #ffffff;
+
+  /* Legacy/Specific Alex AI Vars (Preserved for component compatibility) */
+  --alex-purple: #7c5cff;
+  --alex-blue: #0077b6;
+  --alex-gold: #c9a227;
 }
 
+html,
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      rgb(var(--background-start-rgb)),
-      rgb(var(--background-end-rgb))
-    );
-  min-height: 100vh;
-  font-feature-settings: "rlig" 1, "calt" 1;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-  .glass-panel {
-    @apply bg-white/5 backdrop-blur-md border border-white/10;
-  }
+  height: 100%;
+  background: var(--background);
+  color: var(--foreground);
 }

@@ -39,6 +39,7 @@
     "n8n:backup": "bash scripts/n8n/backup-workflows-cli.sh",
     "secrets:sync": "bash scripts/secrets/sync-from-zshrc.sh",
     "secrets:validate": "node scripts/secrets/validate-env.js",
+    "deploy:full": "bash scripts/deploy-full.sh",
     "deploy:local": "docker-compose up -d",
     "git:verify": "bash scripts/git/verify-git-status.sh",
     "git:setup": "node scripts/git/setup-remote.js",

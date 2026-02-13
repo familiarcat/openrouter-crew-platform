@@ -1,15 +1,10 @@
-/**
- * Root Layout for Alex AI Platform
- * Provides state management and dev navigation to all routes
- * Reviewed by: Captain Picard (Architecture) & Counselor Troi (UX Flow)
- */
-
 import type { Metadata } from 'next';
+import { Inter } from "next/font/google";
 import { StateProvider } from '@/lib/state-manager';
 import DashboardChrome from '@/components/DashboardChrome';
 import './globals.css';
-import '../styles/universal.css';
-import GlobalThemeStyles from '@/components/GlobalThemeStyles';
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'Alex AI - Vibe Coding Platform',
@@ -23,11 +18,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={`${inter.className} antialiased bg-[var(--background)] text-[var(--foreground)]`}>
         <StateProvider>
-          <GlobalThemeStyles />
           <DashboardChrome />
-          <main>
+          <main className="min-h-screen">
             {children}
           </main>
         </StateProvider>
@@ -35,16 +29,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-/**
- * Code Review - Captain Picard:
- * "Strategic architecture soundly implemented. The StateProvider wraps the entire
- * application, ensuring unified state management. The DevNavigation provides clear
- * orientation. The padding accounts for fixed navigation. Excellent work."
- * 
- * Code Review - Counselor Troi:
- * "The emotional flow is correct - users never feel lost. The suppressHydrationWarning
- * prevents jarring hydration mismatches. The layout provides safety and structure.
- * This creates user confidence."
- */
-

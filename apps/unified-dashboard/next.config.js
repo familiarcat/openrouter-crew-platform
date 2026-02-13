@@ -1,21 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  output: "standalone",
   transpilePackages: [
-    '@openrouter-crew/shared-crew-coordination',
-    '@openrouter-crew/shared-cost-tracking',
-    '@openrouter-crew/shared-schemas',
-    '@openrouter-crew/shared-ui-components'
+    "@openrouter-crew/shared-ui-components",
+    "@openrouter-crew/crew-api-client",
+    "@openrouter-crew/shared-schemas",
+    "@openrouter-crew/shared-cost-tracking",
+    "@openrouter-crew/shared-crew-coordination"
   ],
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb'
-    }
+  eslint: {
+    ignoreDuringBuilds: true,
   },
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  }
-}
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

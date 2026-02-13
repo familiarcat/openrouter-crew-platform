@@ -1,24 +1,33 @@
 'use client';
 
 import React from 'react';
-import { Database } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
-export default function RAGPage() {
+export default function ProductFactoryRagPage() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2">RAG Knowledge Base</h1>
-        <p className="text-gray-400">Manage retrieval augmented generation knowledge</p>
+    <div className="flex-1 flex flex-col p-6 h-full">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Product Factory RAG</h1>
+          <p className="text-gray-400">Knowledge base and vector store management</p>
+        </div>
+        <a 
+          href="http://localhost:3003" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors border border-white/10"
+        >
+          <ExternalLink size={16} />
+          <span>Open Standalone</span>
+        </a>
       </div>
 
-      <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
-        <div className="flex items-center justify-center gap-3 py-12">
-          <Database className="w-6 h-6 text-gray-500" />
-          <div className="text-gray-400">
-            <p>RAG knowledge base coming soon</p>
-            <p className="text-sm text-gray-500 mt-1">Document indexing and retrieval</p>
-          </div>
-        </div>
+      <div className="flex-1 bg-[var(--card-bg)] rounded-xl border border-[var(--border)] overflow-hidden relative min-h-[500px]">
+        <iframe 
+          src="http://localhost:3003" 
+          className="w-full h-full border-0"
+          title="Product Factory RAG"
+        />
       </div>
     </div>
   );

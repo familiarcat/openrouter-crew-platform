@@ -1,150 +1,73 @@
-/**
- * Archive Management Page
- * Displays and manages archived memories
- */
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import ArchiveListPanel from '@/components/archive/ArchiveListPanel';
-import ArchiveStatsPanel from '@/components/archive/ArchiveStatsPanel';
-import ArchiveActionsPanel from '@/components/archive/ArchiveActionsPanel';
-import { MemoryArchivalService } from '@openrouter-crew/crew-api-client';
+import React from 'react';
+import { Archive, RotateCcw, Trash2, Search } from 'lucide-react';
 
-interface ArchiveStats {
-  totalArchived: number;
-  totalSize: string;
-  compressionRatio: number;
-  averageAge: number;
-  oldestArchive: string;
-  newestArchive: string;
-}
+const MOCK_ARCHIVE = [
+  { id: 1, name: "Project Alpha 2023", type: "Project", date: "2023-12-15", size: "1.2 GB" },
+  { id: 2, name: "Legacy Crew Config v1", type: "Configuration", date: "2024-01-10", size: "45 KB" },
+  { id: 3, name: "Q4 Financial Reports", type: "Document", date: "2024-01-05", size: "12 MB" },
+  { id: 4, name: "Beta Testing Logs", type: "Logs", date: "2023-11-30", size: "450 MB" },
+  { id: 5, name: "Old Marketing Assets", type: "Assets", date: "2023-10-20", size: "2.8 GB" },
+];
 
 export default function ArchivePage() {
-  const [stats, setStats] = useState<ArchiveStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'archives' | 'stats' | 'actions'>('archives');
-
-  useEffect(() => {
-    const loadArchiveStats = async () => {
-      try {
-        const archivalService = new MemoryArchivalService({
-          strategy: 'automatic',
-          minAgeDays: 30,
-          compressionEnabled: true,
-        });
-
-        // Calculate metrics
-        const metrics = archivalService.calculateMetrics();
-
-        setStats({
-          totalArchived: 245,
-          totalSize: '2.3 GB',
-          compressionRatio: 0.68,
-          averageAge: 92,
-          oldestArchive: '2024-06-15',
-          newestArchive: '2026-01-20',
-        });
-      } catch (error) {
-        console.error('Failed to load archive stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadArchiveStats();
-  }, []);
-
-  if (loading || !stats) {
-    return <div className="p-8 text-gray-500">Loading archive data...</div>;
-  }
-
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Archive Management</h1>
-          <p className="text-gray-600 mt-2">View and manage archived memories</p>
-        </div>
+    <div className="p-8 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold text-white mb-2">Archive</h1>
+      <p className="text-gray-400 mb-8">Long-term storage for historical project data and memories</p>
 
-        {/* Key Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <p className="text-sm text-gray-600">Total Archived</p>
-            <p className="text-2xl font-bold text-gray-900">{stats.totalArchived}</p>
+      <div className="bg-[#16181d] border border-white/10 rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-white/10 flex justify-between items-center">
+          <div className="relative max-w-md w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+            <input 
+              type="text" 
+              placeholder="Search archives..." 
+              className="w-full bg-black/20 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+            />
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <p className="text-sm text-gray-600">Storage Used</p>
-            <p className="text-2xl font-bold text-blue-600">{stats.totalSize}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <p className="text-sm text-gray-600">Compression Ratio</p>
-            <p className="text-2xl font-bold text-green-600">{(stats.compressionRatio * 100).toFixed(0)}%</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <p className="text-sm text-gray-600">Avg. Age</p>
-            <p className="text-2xl font-bold text-purple-600">{stats.averageAge} days</p>
+          <div className="text-sm text-gray-500">
+            Total Storage: <span className="text-white">4.5 GB</span>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('archives')}
-            className={`px-4 py-3 font-medium transition-colors ${
-              activeTab === 'archives'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Archived Memories
-          </button>
-          <button
-            onClick={() => setActiveTab('stats')}
-            className={`px-4 py-3 font-medium transition-colors ${
-              activeTab === 'stats'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Statistics
-          </button>
-          <button
-            onClick={() => setActiveTab('actions')}
-            className={`px-4 py-3 font-medium transition-colors ${
-              activeTab === 'actions'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Actions
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="bg-white rounded-lg shadow p-6">
-          {activeTab === 'archives' && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Archived Memories</h2>
-              <ArchiveListPanel crewId="crew_1" />
-            </div>
-          )}
-
-          {activeTab === 'stats' && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Archive Statistics</h2>
-              <ArchiveStatsPanel stats={stats} />
-            </div>
-          )}
-
-          {activeTab === 'actions' && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Archive Management</h2>
-              <ArchiveActionsPanel crewId="crew_1" />
-            </div>
-          )}
-        </div>
+        <table className="w-full text-left text-sm">
+          <thead className="bg-white/5 text-gray-400">
+            <tr>
+              <th className="p-4 font-medium">Name</th>
+              <th className="p-4 font-medium">Type</th>
+              <th className="p-4 font-medium">Archived Date</th>
+              <th className="p-4 font-medium">Size</th>
+              <th className="p-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {MOCK_ARCHIVE.map(item => (
+              <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                <td className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Archive size={16} className="text-gray-500" />
+                    <span className="text-white font-medium">{item.name}</span>
+                  </div>
+                </td>
+                <td className="p-4 text-gray-400">{item.type}</td>
+                <td className="p-4 text-gray-400">{item.date}</td>
+                <td className="p-4 text-gray-400 font-mono">{item.size}</td>
+                <td className="p-4 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-blue-400 transition-colors" title="Restore">
+                      <RotateCcw size={16} />
+                    </button>
+                    <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-red-400 transition-colors" title="Delete Forever">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

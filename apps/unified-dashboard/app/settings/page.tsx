@@ -1,142 +1,82 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Save, AlertCircle, Bell, Shield, Database, Zap } from 'lucide-react';
+import React from 'react';
+import { User, Lock, Bell, Globe, Save } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
-
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Global Settings</h1>
-        <p className="text-gray-400">Configure platform-wide preferences and integrations</p>
-      </div>
+    <div className="p-8 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold text-white mb-8">Settings</h1>
 
-      {saved && (
-        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-green-500" />
-          <span className="text-green-500">Settings saved successfully</span>
-        </div>
-      )}
+      <div className="space-y-8">
+        {/* Profile Section */}
+        <section className="bg-[#16181d] border border-white/10 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <User className="text-blue-400" size={24} />
+            <h2 className="text-xl font-semibold text-white">Profile Settings</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Display Name</label>
+              <input type="text" defaultValue="Admin User" className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+              <input type="email" defaultValue="admin@openrouter.ai" className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
+            </div>
+          </div>
+        </section>
 
-      <div className="space-y-6">
+        {/* API Keys */}
+        <section className="bg-[#16181d] border border-white/10 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Lock className="text-yellow-400" size={24} />
+            <h2 className="text-xl font-semibold text-white">API Configuration</h2>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">OpenRouter API Key</label>
+              <div className="flex gap-2">
+                <input type="password" value="sk-or-xxxxxxxxxxxxxxxx" readOnly className="flex-1 bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-gray-400 font-mono" />
+                <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white text-sm transition-colors">Reveal</button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Supabase URL</label>
+              <input type="text" defaultValue="https://xyz.supabase.co" className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
+            </div>
+          </div>
+        </section>
+
         {/* Notifications */}
-        <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Bell className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-semibold text-white">Notification Settings</h2>
+        <section className="bg-[#16181d] border border-white/10 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Bell className="text-red-400" size={24} />
+            <h2 className="text-xl font-semibold text-white">Notifications</h2>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" defaultChecked className="w-4 h-4 rounded" />
-              <span className="text-gray-300">Email notifications for critical alerts</span>
+              <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-gray-600 bg-black/20 text-blue-600 focus:ring-blue-500" />
+              <span className="text-gray-300">Email alerts for budget overruns</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" defaultChecked className="w-4 h-4 rounded" />
-              <span className="text-gray-300">Slack integration enabled</span>
+              <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-gray-600 bg-black/20 text-blue-600 focus:ring-blue-500" />
+              <span className="text-gray-300">Weekly digest reports</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" className="w-4 h-4 rounded" />
-              <span className="text-gray-300">Daily digest reports</span>
+              <input type="checkbox" className="w-5 h-5 rounded border-gray-600 bg-black/20 text-blue-600 focus:ring-blue-500" />
+              <span className="text-gray-300">System health alerts</span>
             </label>
           </div>
-        </div>
+        </section>
 
-        {/* Security */}
-        <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Shield className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-white">Security Settings</h2>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="text-gray-300 text-sm">API Key Rotation (days)</label>
-              <input type="number" defaultValue="90" className="mt-2 w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white" />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" defaultChecked className="w-4 h-4 rounded" />
-              <span className="text-gray-300">Enable two-factor authentication</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" defaultChecked className="w-4 h-4 rounded" />
-              <span className="text-gray-300">Enforce HTTPS</span>
-            </label>
-          </div>
+        <div className="flex justify-end pt-4">
+          <button className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors shadow-lg shadow-blue-900/20">
+            <Save size={18} />
+            <span>Save Changes</span>
+          </button>
         </div>
-
-        {/* Performance */}
-        <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Zap className="w-5 h-5 text-yellow-400" />
-            <h2 className="text-lg font-semibold text-white">Performance Settings</h2>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="text-gray-300 text-sm">Cache TTL (seconds)</label>
-              <input type="number" defaultValue="3600" className="mt-2 w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white" />
-            </div>
-            <div>
-              <label className="text-gray-300 text-sm">Request Timeout (seconds)</label>
-              <input type="number" defaultValue="30" className="mt-2 w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white" />
-            </div>
-          </div>
-        </div>
-
-        {/* Data Management */}
-        <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Database className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-lg font-semibold text-white">Data Management</h2>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="text-gray-300 text-sm">Retention Period (days)</label>
-              <input type="number" defaultValue="365" className="mt-2 w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white" />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" className="w-4 h-4 rounded" />
-              <span className="text-gray-300">Automatic backup enabled</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-3">
-        <button
-          onClick={handleSave}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium flex items-center gap-2 transition"
-        >
-          <Save className="w-4 h-4" />
-          Save Settings
-        </button>
-        <button className="px-6 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg font-medium transition">
-          Reset to Defaults
-        </button>
       </div>
     </div>
-  );
-}
-
-function CheckCircle2({ className }: { className: string }) {
-  return (
-    <svg
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
   );
 }

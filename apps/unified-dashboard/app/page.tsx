@@ -144,7 +144,7 @@ function MetricCard({ title, value, trend, color = "text-white" }: { title: stri
   return (
     <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
       <div className="text-gray-400 text-sm mb-2">{title}</div>
-      <div className={`text-3xl font-bold mb-1 ${color}`}>{value}</div>
+      <div className={`text-3xl font-bold mb-1 ${color}`} suppressHydrationWarning>{value}</div>
       <div className="text-xs text-gray-500" suppressHydrationWarning>{trend}</div>
     </div>
   );
