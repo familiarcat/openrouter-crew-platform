@@ -50,7 +50,18 @@ if gh workflow run deploy.yml --ref "$BRANCH" -f environment="$ENVIRONMENT" -f r
     
     echo -e "\n${BLUE}👀 Waiting for workflow to start...${NC}"
     sleep 5
-    gh run watch $(gh run list --workflow=deploy.yml --branch "$BRANCH" --limit 1 --json databaseId -q '.[0].databaseId')
+    
+    RUN_ID=$(gh run list --workflow=deploy.yml --branch "$BRANCH" --limit 1 --json databaseId -q '.[0].databaseId')
+    echo -e "   Tracking Run ID: ${BLUE}${RUN_ID}${NC}"
+
+    if gh run watch "$RUN_ID"; then
+        echo -e "\n${GREEN}✅ Remote deployment completed successfully!${NC}"
+    else
+        echo -e "\n${RED}❌ Remote deployment failed.${NC}"
+        echo -e "${YELLOW}Fetching failure logs...${NC}"
+        gh run view "$RUN_ID" --log-failed
+        exit 1
+    fi
 else
     echo -e "${RED}❌ Failed to trigger workflow.${NC}"
     exit 1
