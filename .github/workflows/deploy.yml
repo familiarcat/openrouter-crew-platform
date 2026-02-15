@@ -15,6 +15,8 @@ on:
         options:
           - staging
           - production
+          - uat
+          - test
         default: staging
 
 env:
@@ -154,7 +156,7 @@ jobs:
     needs: [pre-deployment, build]
     environment:
       name: ${{ github.event.inputs.environment }}
-      url: https://openrouter-crew-platform.yourdomain.com
+      url: https://dashboard.${{ github.event.inputs.environment == 'production' && 'pbradygeorgen.com' || format('{0}.pbradygeorgen.com', github.event.inputs.environment) }}
 
     steps:
       - name: Configure AWS credentials
@@ -258,6 +260,16 @@ jobs:
             exit 1
           fi
 
+      - name: Post-deploy domain configuration
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/ci-post-deploy.sh ${{ github.event.inputs.environment }}
+
   # Post-deployment health checks
   verify:
     name: Post-Deployment Verification
@@ -268,7 +280,7 @@ jobs:
       - name: Health check - Dashboard
         run: |
           echo "🏥 Checking dashboard health..."
-          curl -f https://openrouter-crew-platform.yourdomain.com/api/health || \
+          curl -f http://${{ secrets.EC2_PUBLIC_IP }}:3000/api/health || \
           curl -f http://${{ secrets.EC2_PUBLIC_IP }}:3000/api/health
           echo "✅ Dashboard is healthy"
 
@@ -296,7 +308,7 @@ jobs:
           echo "**Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Services" >> $GITHUB_STEP_SUMMARY
-          echo "- Dashboard: https://openrouter-crew-platform.yourdomain.com" >> $GITHUB_STEP_SUMMARY
+          echo "- Dashboard: http://${{ secrets.EC2_PUBLIC_IP }}:3000" >> $GITHUB_STEP_SUMMARY
           echo "- n8n: http://${{ secrets.EC2_PUBLIC_IP }}:5678" >> $GITHUB_STEP_SUMMARY
           echo "- Supabase Studio: http://${{ secrets.EC2_PUBLIC_IP }}:54323" >> $GITHUB_STEP_SUMMARY
 

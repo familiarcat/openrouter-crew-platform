@@ -10,6 +10,7 @@ set -e
 # Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${BLUE}🚀 Starting Full Stack Deployment...${NC}"
@@ -58,6 +59,11 @@ fi
 echo -e "${GREEN}✅ Infrastructure Ready:${NC}"
 echo "   Instance ID: $INSTANCE_ID"
 echo "   Public IP:   $PUBLIC_IP"
+
+echo -e "\n${BLUE}🌐 Service URLs (will be active after deployment):${NC}"
+echo "   Web Dashboard:   http://$PUBLIC_IP:3000"
+echo "   n8n Automation:  http://$PUBLIC_IP:5678"
+echo "   Supabase Studio: http://$PUBLIC_IP:54323"
 
 cd ..
 
@@ -129,12 +135,31 @@ EOF
 )
 
 # Encode the script to Base64 to avoid JSON parsing issues with special characters
-ENCODED_SCRIPT=$(echo "$REMOTE_SCRIPT" | base64)
+ENCODED_SCRIPT=$(echo "$REMOTE_SCRIPT" | base64 | tr -d '\n')
 
 echo "Sending deployment command to instance $INSTANCE_ID..."
+COMMAND_ID=$(aws ssm send-command \
+    --instance-ids "$INSTANCE_ID" \
+    --document-name "AWS-RunShellScript" \
+    --region "$AWS_REGION" \
+    --parameters "{\"commands\":[\"echo $ENCODED_SCRIPT | base64 -d | bash\"]}" \
+    --query "Command.CommandId" \
+    --output text)
 
-COMMAND_ID=$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name "AWS-RunShellScript" --region "$AWS_REGION" --parameters "{\"commands\":[\"echo $ENCODED_SCRIPT | base64 -d | bash\"]}" --query "Command.CommandId" --output text)
-echo "SSM command sent (ID: $COMMAND_ID). Check AWS Console for status."
+echo "SSM command sent (ID: $COMMAND_ID). Waiting for execution..."
+
+# Wait for the command to finish and check status
+aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --region "$AWS_REGION"
+STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --region "$AWS_REGION" --query "Status" --output text)
+
+if [ "$STATUS" == "Success" ]; then
+    echo -e "${GREEN}✅ Deployment script executed successfully on EC2.${NC}"
+else
+    echo -e "${RED}❌ Deployment script failed on EC2.${NC}"
+    echo "Error Output:"
+    aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --region "$AWS_REGION" --query "StandardErrorContent" --output text
+    exit 1
+fi
 
 echo -e "\n${GREEN}🎉 Full Deployment Complete!${NC}"
 echo "--------------------------------------------------"
