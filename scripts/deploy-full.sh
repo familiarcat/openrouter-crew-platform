@@ -13,6 +13,21 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+ENVIRONMENT="${1:-production}"
+
+# Resolve Base Domain based on Environment
+case "$ENVIRONMENT" in
+  production|prod) BASE_DOMAIN="pbradygeorgen.com" ;;
+  staging) BASE_DOMAIN="staging.pbradygeorgen.com" ;;
+  uat) BASE_DOMAIN="uat.pbradygeorgen.com" ;;
+  test) BASE_DOMAIN="test.pbradygeorgen.com" ;;
+  *) echo "❌ Unknown environment: $ENVIRONMENT"; exit 1 ;;
+esac
+
+DASHBOARD_URL="http://dashboard.${BASE_DOMAIN}:3000"
+N8N_URL="http://automation.${BASE_DOMAIN}:5678"
+SUPABASE_STUDIO_URL="http://supabase.${BASE_DOMAIN}:54323"
+
 echo -e "${BLUE}🚀 Starting Full Stack Deployment...${NC}"
 
 # Check for Terraform
@@ -22,7 +37,7 @@ if ! command -v terraform &> /dev/null; then
 fi
 
 # Check for Docker
-if ! command -v docker &> /dev/null; then
+if ! docker info > /dev/null 2>&1; then
     echo "❌ Docker is not installed or not running."
     exit 1
 fi
@@ -61,9 +76,9 @@ echo "   Instance ID: $INSTANCE_ID"
 echo "   Public IP:   $PUBLIC_IP"
 
 echo -e "\n${BLUE}🌐 Service URLs (will be active after deployment):${NC}"
-echo "   Web Dashboard:   http://$PUBLIC_IP:3000"
-echo "   n8n Automation:  http://$PUBLIC_IP:5678"
-echo "   Supabase Studio: http://$PUBLIC_IP:54323"
+echo "   Web Dashboard:   $DASHBOARD_URL"
+echo "   n8n Automation:  $N8N_URL"
+echo "   Supabase Studio: $SUPABASE_STUDIO_URL"
 
 cd ..
 
@@ -118,8 +133,9 @@ IMAGE_URI=${IMAGE_URI}
 SUPABASE_URL=${SUPABASE_URL}
 SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
 OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-N8N_BASE_URL=http://${PUBLIC_IP}:5678
+N8N_BASE_URL=${N8N_URL}
 N8N_API_KEY=${N8N_API_KEY}
 N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
 REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -161,9 +177,14 @@ else
     exit 1
 fi
 
+# 4. DNS Configuration
+echo -e "\n${BLUE}🌍 Phase 4: DNS Configuration${NC}"
+export EC2_PUBLIC_IP=$PUBLIC_IP
+./scripts/ci-post-deploy.sh "$ENVIRONMENT"
+
 echo -e "\n${GREEN}🎉 Full Deployment Complete!${NC}"
 echo "--------------------------------------------------"
-echo "Web Dashboard:   http://$PUBLIC_IP:3000"
-echo "n8n Automation:  http://$PUBLIC_IP:5678"
-echo "Supabase Studio: http://$PUBLIC_IP:54323"
+echo "Web Dashboard:   $DASHBOARD_URL"
+echo "n8n Automation:  $N8N_URL"
+echo "Supabase Studio: $SUPABASE_STUDIO_URL"
 echo "--------------------------------------------------"
