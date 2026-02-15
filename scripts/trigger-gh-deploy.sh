@@ -53,6 +53,7 @@ if gh workflow run deploy.yml --ref "$BRANCH" -f environment="$ENVIRONMENT" -f r
     
     RUN_ID=$(gh run list --workflow=deploy.yml --branch "$BRANCH" --limit 1 --json databaseId -q '.[0].databaseId')
     echo -e "   Tracking Run ID: ${BLUE}${RUN_ID}${NC}"
+    echo -e "   View Logs:       ${BLUE}https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions/runs/${RUN_ID}${NC}"
 
     if gh run watch "$RUN_ID"; then
         echo -e "\n${GREEN}✅ Remote deployment completed successfully!${NC}"
