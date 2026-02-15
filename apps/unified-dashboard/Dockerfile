@@ -30,6 +30,9 @@ COPY . .
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED 1
 
+COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile --prefer-offline
+
 # Build ONLY the dashboard and its dependencies
 RUN pnpm --filter @openrouter-crew/unified-dashboard build
 
