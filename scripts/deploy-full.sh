@@ -11,7 +11,24 @@ set -e
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 RED='\033[0;31m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
+
+# Error handling
+handle_error() {
+    local line_no=$1
+    echo -e "\n${RED}❌ Deployment failed at line ${line_no}.${NC}"
+    echo -e "${YELLOW}Check the logs above for details.${NC}"
+}
+trap 'handle_error ${LINENO}' ERR
+
+log_step() {
+    echo -e "\n${BLUE}👉 $1${NC}"
+}
+
+log_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
 
 ENVIRONMENT="${1:-production}"
 
@@ -28,9 +45,10 @@ DASHBOARD_URL="http://dashboard.${BASE_DOMAIN}:3000"
 N8N_URL="http://automation.${BASE_DOMAIN}:5678"
 SUPABASE_STUDIO_URL="http://supabase.${BASE_DOMAIN}:54323"
 
-echo -e "${BLUE}🚀 Starting Full Stack Deployment...${NC}"
+echo -e "${BLUE}🚀 Starting Full Stack Deployment to ${YELLOW}${ENVIRONMENT}${BLUE}...${NC}"
 
 # Check for Terraform
+log_step "Checking prerequisites..."
 if ! command -v terraform &> /dev/null; then
     echo "❌ Terraform is not installed."
     exit 1
@@ -41,6 +59,7 @@ if ! docker info > /dev/null 2>&1; then
     echo "❌ Docker is not installed or not running."
     exit 1
 fi
+log_success "Prerequisites met."
 
 # 1. Infrastructure Provisioning
 echo -e "\n${BLUE}📦 Phase 1: Infrastructure Provisioning (Terraform)${NC}"
@@ -54,15 +73,16 @@ cd terraform
 
 # Initialize if needed
 if [ ! -d ".terraform" ]; then
-    echo "Initializing Terraform..."
+    log_step "Initializing Terraform..."
     terraform init
 fi
 
-echo "Applying Terraform configuration..."
-terraform apply -auto-approve
+log_step "Applying Terraform configuration..."
+# Use -input=false to avoid hanging on prompts if something is wrong
+terraform apply -auto-approve -input=false
 
 # Capture outputs
-echo "Capturing infrastructure outputs..."
+log_step "Capturing infrastructure outputs..."
 INSTANCE_ID=$(terraform output -raw instance_id)
 PUBLIC_IP=$(terraform output -raw instance_public_ip)
 
@@ -71,7 +91,7 @@ if [ -z "$INSTANCE_ID" ]; then
     exit 1
 fi
 
-echo -e "${GREEN}✅ Infrastructure Ready:${NC}"
+log_success "Infrastructure Ready"
 echo "   Instance ID: $INSTANCE_ID"
 echo "   Public IP:   $PUBLIC_IP"
 
@@ -90,25 +110,27 @@ if [ -z "$AWS_REGION" ]; then
     echo "AWS region not configured, defaulting to $AWS_REGION"
 fi
 
-echo "Logging into ECR..."
+log_step "Logging into ECR..."
 ECR_REGISTRY=$(aws ecr get-authorization-token --region "$AWS_REGION" --output text --query 'authorizationData[0].proxyEndpoint' | sed 's|https://||')
 aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
 ECR_REPOSITORY="openrouter-crew-platform"
 
 # Ensure ECR repository exists
+log_step "Checking ECR repository..."
 if ! aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" --region "$AWS_REGION" > /dev/null 2>&1; then
     echo "⚠️  ECR Repository '$ECR_REPOSITORY' not found. Creating it..."
     aws ecr create-repository --repository-name "$ECR_REPOSITORY" --region "$AWS_REGION"
 else
-    echo "✅ ECR Repository '$ECR_REPOSITORY' exists."
+    log_success "ECR Repository '$ECR_REPOSITORY' exists."
 fi
 
 IMAGE_TAG=$(git rev-parse --short HEAD)-$(date +%s)
 IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-echo "Building Docker image: $IMAGE_URI"
+log_step "Building Docker image: $IMAGE_URI"
 docker build \
+    --progress=plain \
     --platform linux/amd64 \
     --build-arg NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL" \
     --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
@@ -116,8 +138,9 @@ docker build \
     -f apps/unified-dashboard/Dockerfile \
     .
 
-echo "Pushing Docker image to ECR..."
+log_step "Pushing Docker image to ECR..."
 docker push "$IMAGE_URI"
+log_success "Image pushed successfully."
 
 echo -e "\n${BLUE}🚀 Phase 3: Deploying to EC2 via SSM${NC}"
 
@@ -153,7 +176,7 @@ EOF
 # Encode the script to Base64 to avoid JSON parsing issues with special characters
 ENCODED_SCRIPT=$(echo "$REMOTE_SCRIPT" | base64 | tr -d '\n')
 
-echo "Sending deployment command to instance $INSTANCE_ID..."
+log_step "Sending deployment command to instance $INSTANCE_ID..."
 COMMAND_ID=$(aws ssm send-command \
     --instance-ids "$INSTANCE_ID" \
     --document-name "AWS-RunShellScript" \
@@ -162,14 +185,14 @@ COMMAND_ID=$(aws ssm send-command \
     --query "Command.CommandId" \
     --output text)
 
-echo "SSM command sent (ID: $COMMAND_ID). Waiting for execution..."
+log_step "SSM command sent (ID: $COMMAND_ID). Waiting for execution..."
 
 # Wait for the command to finish and check status
 aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --region "$AWS_REGION"
 STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --region "$AWS_REGION" --query "Status" --output text)
 
 if [ "$STATUS" == "Success" ]; then
-    echo -e "${GREEN}✅ Deployment script executed successfully on EC2.${NC}"
+    log_success "Deployment script executed successfully on EC2."
 else
     echo -e "${RED}❌ Deployment script failed on EC2.${NC}"
     echo "Error Output:"

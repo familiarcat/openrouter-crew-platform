@@ -120,6 +120,7 @@ jobs:
           echo "🔨 Building unified dashboard image..."
 
           docker build \
+            --progress=plain \
             --platform linux/amd64 \
             --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
