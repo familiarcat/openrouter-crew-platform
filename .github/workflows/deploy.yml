@@ -60,6 +60,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Setup Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -128,26 +136,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and Push Docker image
-        uses: docker/build-push-action@v5
+      - name: Build and Push Docker image (Verbose)
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        with:
-          context: .
-          file: apps/unified-dashboard/Dockerfile
-          push: true
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.pre-deployment.outputs.image_tag }}
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
-          build-args: |
-            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-            BUILD_TIME=${{ needs.pre-deployment.outputs.build_time }}
-            GIT_SHA=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-          provenance: false
+          IMAGE_TAG: ${{ needs.pre-deployment.outputs.image_tag }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --progress=plain \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            --build-arg BUILD_TIME=${{ needs.pre-deployment.outputs.build_time }} \
+            --build-arg GIT_SHA=${{ github.sha }} \
+            --tag $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG \
+            --tag $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push \
+            -f apps/unified-dashboard/Dockerfile .
 
       - name: Debug Build Failure
         if: failure()
