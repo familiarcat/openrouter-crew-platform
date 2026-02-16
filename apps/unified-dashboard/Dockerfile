@@ -7,7 +7,8 @@ RUN corepack enable
 FROM base AS pruner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-RUN npm install -g turbo@latest
+# Install turbo globally for reliability
+RUN npm install -g turbo@2.8.3
 COPY . .
 RUN turbo prune --scope=@openrouter-crew/unified-dashboard --docker
 
@@ -19,6 +20,8 @@ WORKDIR /app
 # Copy only package.json files from the pruner stage
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+# Ensure workspace config is present
+COPY --from=pruner /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Install dependencies
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
@@ -32,6 +35,7 @@ COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code from the pruner stage
 COPY --from=pruner /app/out/full/ .
+COPY --from=pruner /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED 1
