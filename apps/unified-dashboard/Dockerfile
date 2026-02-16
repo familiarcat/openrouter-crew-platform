@@ -18,8 +18,19 @@ COPY domains/shared/cost-tracking/package.json ./domains/shared/cost-tracking/pa
 COPY domains/shared/crew-coordination/package.json ./domains/shared/crew-coordination/package.json
 COPY domains/shared/schemas/package.json ./domains/shared/schemas/package.json
 COPY domains/shared/ui-components/package.json ./domains/shared/ui-components/package.json
+COPY domains/shared/openrouter-client/package.json ./domains/shared/openrouter-client/package.json
+COPY domains/shared/n8n-integration/package.json ./domains/shared/n8n-integration/package.json
+COPY domains/shared/workflows/package.json ./domains/shared/workflows/package.json
 
-RUN pnpm install --frozen-lockfile
+# Copy other workspaces to satisfy lockfile
+COPY apps/cli/package.json ./apps/cli/package.json
+COPY domains/vscode-extension/package.json ./domains/vscode-extension/package.json
+COPY domains/alex-ai-universal/dashboard/package.json ./domains/alex-ai-universal/dashboard/package.json
+COPY domains/product-factory/dashboard/package.json ./domains/product-factory/dashboard/package.json
+COPY domains/product-factory/project-templates/dj-booking/dashboard/package.json ./domains/product-factory/project-templates/dj-booking/dashboard/package.json
+COPY domains/product-factory/projects/test-event-venue/dashboard/package.json ./domains/product-factory/projects/test-event-venue/dashboard/package.json
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # 2. Rebuild the source code only when needed
 FROM base AS builder
@@ -31,7 +42,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
 
 COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
-RUN pnpm install --frozen-lockfile --prefer-offline
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline
 
 # Build ONLY the dashboard and its dependencies
 RUN pnpm --filter @openrouter-crew/unified-dashboard build
