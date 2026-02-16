@@ -7,7 +7,7 @@ RUN corepack enable
 FROM base AS pruner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-RUN npm install -g turbo
+RUN npm install -g turbo@latest
 COPY . .
 RUN turbo prune --scope=@openrouter-crew/unified-dashboard --docker
 
