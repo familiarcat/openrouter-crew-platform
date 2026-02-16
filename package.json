@@ -42,6 +42,8 @@
     "deploy:full": "bash scripts/deploy-full.sh",
     "deploy:dns": "bash scripts/ci-post-deploy.sh",
     "deploy:remote": "bash scripts/trigger-gh-deploy.sh",
+    "ship": "bash scripts/ship.sh",
+    "debug:ci": "bash scripts/debug/analyze-ci-failure.sh",
     "deploy:local": "docker-compose up -d",
     "git:verify": "bash scripts/git/verify-git-status.sh",
     "git:setup": "node scripts/git/setup-remote.js",

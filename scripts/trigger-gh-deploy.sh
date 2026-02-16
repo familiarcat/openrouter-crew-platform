@@ -60,7 +60,7 @@ if gh workflow run deploy.yml --ref "$BRANCH" -f environment="$ENVIRONMENT" -f r
     else
         echo -e "\n${RED}❌ Remote deployment failed.${NC}"
         echo -e "${YELLOW}Fetching failure logs...${NC}"
-        gh run view "$RUN_ID" --log-failed
+        gh run view "$RUN_ID" --log
         exit 1
     fi
 else
