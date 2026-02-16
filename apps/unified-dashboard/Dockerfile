@@ -3,51 +3,43 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-# 1. Install dependencies only when needed
+# 1. Prune the workspace (isolates only what is needed for this app)
+FROM base AS pruner
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+RUN npm install -g turbo
+COPY . .
+RUN turbo prune --scope=@openrouter-crew/unified-dashboard --docker
+
+# 2. Install dependencies (using the pruned json)
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package.json files for workspace installation
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/unified-dashboard/package.json ./apps/unified-dashboard/package.json
+# Copy only package.json files from the pruner stage
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 
-# Copy shared packages package.json files
-COPY domains/shared/crew-api-client/package.json ./domains/shared/crew-api-client/package.json
-COPY domains/shared/cost-tracking/package.json ./domains/shared/cost-tracking/package.json
-COPY domains/shared/crew-coordination/package.json ./domains/shared/crew-coordination/package.json
-COPY domains/shared/schemas/package.json ./domains/shared/schemas/package.json
-COPY domains/shared/ui-components/package.json ./domains/shared/ui-components/package.json
-COPY domains/shared/openrouter-client/package.json ./domains/shared/openrouter-client/package.json
-COPY domains/shared/n8n-integration/package.json ./domains/shared/n8n-integration/package.json
-COPY domains/shared/workflows/package.json ./domains/shared/workflows/package.json
-
-# Copy other workspaces to satisfy lockfile
-COPY apps/cli/package.json ./apps/cli/package.json
-COPY domains/vscode-extension/package.json ./domains/vscode-extension/package.json
-COPY domains/alex-ai-universal/dashboard/package.json ./domains/alex-ai-universal/dashboard/package.json
-COPY domains/product-factory/dashboard/package.json ./domains/product-factory/dashboard/package.json
-COPY domains/product-factory/project-templates/dj-booking/dashboard/package.json ./domains/product-factory/project-templates/dj-booking/dashboard/package.json
-COPY domains/product-factory/projects/test-event-venue/dashboard/package.json ./domains/product-factory/projects/test-event-venue/dashboard/package.json
-
+# Install dependencies
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-# 2. Rebuild the source code only when needed
+# 3. Build the application
 FROM base AS builder
 WORKDIR /app
+
+# Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+
+# Copy source code from the pruner stage
+COPY --from=pruner /app/out/full/ .
 
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED 1
 
-COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline
-
-# Build ONLY the dashboard and its dependencies
+# Build the project
 RUN pnpm --filter @openrouter-crew/unified-dashboard build
 
-# 3. Production image, copy all the files and run next
+# 4. Production image
 FROM base AS runner
 WORKDIR /app
 
