@@ -33,6 +33,7 @@ jobs:
     outputs:
       deploy_decision: ${{ steps.validate.outputs.deploy }}
       image_tag: ${{ steps.tag.outputs.tag }}
+      build_time: ${{ steps.tag.outputs.timestamp }}
 
     steps:
       - name: Checkout code
@@ -47,6 +48,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -74,6 +86,7 @@ jobs:
           SHORT_SHA=${GITHUB_SHA::7}
           TAG="${SHORT_SHA}-$(date +%s)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
           echo "🏷️  Image tag: $TAG"
 
       - name: Deployment decision
@@ -112,26 +125,29 @@ jobs:
           aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }}
           echo "✅ ECR repository ready"
 
-      - name: Build Docker image
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ needs.pre-deployment.outputs.image_tag }}
-        run: |
-          echo "🔨 Building unified dashboard image..."
-
-          docker build \
-            --progress=plain \
-            --platform linux/amd64 \
-            --build-arg NEXT_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
-            --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-            --build-arg GIT_SHA=${{ github.sha }} \
-            --tag $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG \
-            --tag $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest \
-            -f apps/unified-dashboard/Dockerfile \
-            .
-
-          echo "✅ Image built successfully"
+        with:
+          context: .
+          file: apps/unified-dashboard/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.pre-deployment.outputs.image_tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+            BUILD_TIME=${{ needs.pre-deployment.outputs.build_time }}
+            GIT_SHA=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          provenance: false
 
       - name: Debug Build Failure
         if: failure()
@@ -142,19 +158,10 @@ jobs:
           echo "#### Disk Usage" >> $GITHUB_STEP_SUMMARY
           df -h >> $GITHUB_STEP_SUMMARY
 
-      - name: Push image to ECR
+      - name: Output Image URI
         id: push
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ needs.pre-deployment.outputs.image_tag }}
         run: |
-          IMAGE_URI="$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG"
-
-          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
-          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
-
-          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-          echo "✅ Image pushed: $IMAGE_URI"
+          echo "image_uri=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ needs.pre-deployment.outputs.image_tag }}" >> $GITHUB_OUTPUT
 
       - name: Image scan
         run: |
@@ -171,6 +178,10 @@ jobs:
     environment:
       name: ${{ github.event.inputs.environment }}
       url: https://dashboard.${{ github.event.inputs.environment == 'production' && 'pbradygeorgen.com' || format('{0}.pbradygeorgen.com', github.event.inputs.environment) }}
+    outputs:
+      dashboard_url: ${{ steps.urls.outputs.dashboard }}
+      n8n_url: ${{ steps.urls.outputs.n8n }}
+      supabase_url: ${{ steps.urls.outputs.supabase }}
 
     steps:
       - name: Configure AWS credentials
@@ -350,9 +361,9 @@ jobs:
           echo "**Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Services" >> $GITHUB_STEP_SUMMARY
-          echo "- [Web Dashboard](${{ steps.urls.outputs.dashboard }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [n8n Automation](${{ steps.urls.outputs.n8n }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Supabase Studio](${{ steps.urls.outputs.supabase }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Web Dashboard](${{ needs.deploy.outputs.dashboard_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [n8n Automation](${{ needs.deploy.outputs.n8n_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Supabase Studio](${{ needs.deploy.outputs.supabase_url }})" >> $GITHUB_STEP_SUMMARY
 
   # Notification (optional - from alex-ai pattern)
   notify:

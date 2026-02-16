@@ -129,6 +129,7 @@ IMAGE_TAG=$(git rev-parse --short HEAD)-$(date +%s)
 IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
 log_step "Building Docker image: $IMAGE_URI"
+export DOCKER_BUILDKIT=1
 docker build \
     --progress=plain \
     --platform linux/amd64 \
