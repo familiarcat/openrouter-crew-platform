@@ -9,27 +9,47 @@ interface ObservationItem {
   tags?: string[];
 }
 
+interface CrewMemoryFile {
+  title?: string;
+  name?: string;
+  summary?: string;
+  notes?: string;
+  findings?: string;
+  description?: string;
+  date?: string;
+  timestamp?: string;
+  tags?: string[];
+  topics?: string[];
+}
+
 function loadObservations(): ObservationItem[] {
   try {
     const memoriesDir = path.resolve(process.cwd(), '..', 'crew-memories', 'active');
+    if (!fs.existsSync(memoriesDir)) {
+      console.warn(`[ObservationLounge] Memories directory not found: ${memoriesDir}`);
+      return [];
+    }
     const files = fs.readdirSync(memoriesDir).filter(f => f.endsWith('.json'));
     const items: ObservationItem[] = [];
     for (const f of files) {
       try {
         const raw = fs.readFileSync(path.join(memoriesDir, f), 'utf8');
-        const json = JSON.parse(raw);
+        const json: CrewMemoryFile = JSON.parse(raw);
         items.push({
           id: f,
           title: json.title || json.name || f.replace(/\.json$/, ''),
           summary: json.summary || json.notes || json.findings || json.description,
-          date: json.date || json.timestamp || undefined,
-          tags: json.tags || json.topics || undefined
+          date: json.date || json.timestamp,
+          tags: json.tags || json.topics
         });
-      } catch {}
+      } catch (parseError) {
+        console.error(`[ObservationLounge] Failed to parse ${f}:`, parseError);
+      }
     }
-    items.sort((a,b)=> b.id.localeCompare(a.id));
+    items.sort((a, b) => (b.date || b.id).localeCompare(a.date || a.id));
     return items;
-  } catch {
+  } catch (readDirError) {
+    console.error(`[ObservationLounge] Failed to read memories directory:`, readDirError);
     return [];
   }
 }
@@ -44,9 +64,7 @@ export default async function ObservationLoungePage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 16 }}>
         {items.map((it) => {
-          const summary: string = typeof it.summary === 'string' 
-            ? it.summary 
-            : (it.summary ? (() => { try { return JSON.stringify(it.summary); } catch { return String(it.summary); } })() : '—');
+          const summary: string = it.summary || '—';
           return (
           <article key={it.id} style={{
             border: '1px solid var(--border)',
@@ -70,4 +88,3 @@ export default async function ObservationLoungePage() {
     </div>
   );
 }
-

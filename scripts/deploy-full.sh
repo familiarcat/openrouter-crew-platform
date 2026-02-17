@@ -130,8 +130,8 @@ IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
 log_step "Building Docker image: $IMAGE_URI"
 export DOCKER_BUILDKIT=1
-docker build \
-    --progress=plain \
+docker buildx build \
+    --progress=plain --load \
     --platform linux/amd64 \
     --build-arg NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL" \
     --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \

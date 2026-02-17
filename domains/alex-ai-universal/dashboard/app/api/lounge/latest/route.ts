@@ -2,6 +2,28 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+interface CrewMemory {
+  crew_member: string;
+  agent_id: string;
+  title: string;
+  summary: string;
+  key_findings: string[];
+  conclusions: string[];
+  recommendations: string[];
+  timestamp: string;
+}
+
+interface LoungeLatestResponse {
+  crew: CrewMemory[];
+}
+
+interface CrewMemoryFile extends Partial<Omit<CrewMemory, 'agent_id'>> {
+  member?: string;
+  name?: string;
+  topic?: string;
+  brief?: string;
+  date?: string;
+}
 /**
  * Lounge Latest API
  * - Strictly proxies to n8n (no direct Supabase access from UI)
@@ -40,7 +62,6 @@ export async function GET() {
     ].filter(Boolean) as string[]));
 
     let data: any = null;
-    let lastError: { status?: number; body?: string } | null = null;
 
     const sharedHeaders: Record<string, string> = {};
     const signingSecret = process.env.N8N_WEBHOOK_SECRET || process.env.N8N_CONTROLLER_TOKEN;
@@ -55,15 +76,13 @@ export async function GET() {
         const timeout = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(url, { method: 'GET', signal: controller.signal, headers: { 'Accept': 'application/json', ...sharedHeaders } });
         clearTimeout(timeout);
-        if (!res.ok) {
-          lastError = { status: res.status, body: await res.text().catch(() => '') };
-          continue;
-        }
-        data = await res.json().catch(() => null);
-        if (data) {
+
+        const responseData = await res.json().catch(() => null) as LoungeLatestResponse | null;
+        if (res.ok && responseData && Array.isArray(responseData.crew)) {
+          data = responseData;
           break;
         }
-      } catch (e) {
+      } catch {
         // try next candidate
         continue;
       }
@@ -77,13 +96,13 @@ export async function GET() {
           path.resolve(cwd, '..'),
           path.resolve(cwd, '..', '..')
         ]));
-        const candidates: string[] = [];
+        const searchPaths: string[] = [];
         for (const root of roots) {
-          candidates.push(path.join(root, 'crew-memories', 'active'));
-          candidates.push(path.join(root, 'crew-memories'));
+          searchPaths.push(path.join(root, 'crew-memories', 'active'));
+          searchPaths.push(path.join(root, 'crew-memories'));
         }
         const seen = new Set<string>();
-        const crew: any[] = [];
+        const crew: CrewMemory[] = [];
 
         const aliasToSlug: Record<string, string> = {
           // Geordi variants
@@ -115,13 +134,13 @@ export async function GET() {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '');
         };
-        for (const dir of candidates) {
+        for (const dir of searchPaths) {
           if (!fs.existsSync(dir)) continue;
           const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
           for (const file of files) {
             const filePath = path.join(dir, file);
             try {
-              const json = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+              const json: CrewMemoryFile = JSON.parse(fs.readFileSync(filePath, 'utf8'));
               const member = json.crew_member || json.member || json.name || path.basename(file, '.json');
               const slug = toSlug(member);
               if (seen.has(slug)) continue;
@@ -134,9 +153,11 @@ export async function GET() {
                 key_findings: Array.isArray(json.key_findings) ? json.key_findings.map(String) : [],
                 conclusions: Array.isArray(json.conclusions) ? json.conclusions.map(String) : [],
                 recommendations: Array.isArray(json.recommendations) ? json.recommendations.map(String) : [],
-                timestamp: String(json.timestamp || json.date || '')
+                timestamp: String(json.timestamp || json.date || new Date().toISOString())
               });
-            } catch {}
+            } catch (parseError) {
+              console.error(`[Lounge Dev Fallback] Failed to parse ${file}:`, parseError);
+            }
           }
         }
         return NextResponse.json({ crew }, { status: 200 });
@@ -147,9 +168,10 @@ export async function GET() {
 
     // Minimal shape validation/sanitization
     // Expecting: { crew: [{ crew_member, title, summary, key_findings, conclusions, recommendations, timestamp }] }
-    const crew = Array.isArray((data as any).crew) ? (data as any).crew : [];
-    const safe = crew.map((m: any) => ({
+    const crew: CrewMemory[] = data?.crew ?? [];
+    const safe: CrewMemory[] = crew.map((m) => ({
       crew_member: String(m.crew_member || ''),
+      agent_id: String((m as any).agent_id || ''), // Not in standard response, but keep for dev fallback consistency
       title: String(m.title || ''),
       summary: String(m.summary || ''),
       key_findings: Array.isArray(m.key_findings) ? m.key_findings.map(String) : [],
@@ -159,10 +181,11 @@ export async function GET() {
     }));
 
     return NextResponse.json({ crew: safe }, { status: 200 });
-  } catch (err: any) {
-    const message = err?.name === 'AbortError' ? 'Upstream timeout' : (err?.message || 'Unknown error');
+  } catch (err: unknown) {
+    let message = 'Unknown error';
+    if (err instanceof Error) {
+        message = err.name === 'AbortError' ? 'Upstream timeout' : err.message;
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
-

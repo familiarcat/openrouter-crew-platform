@@ -3,65 +3,42 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-# 1. Prune the workspace (isolates only what is needed for this app)
-FROM base AS pruner
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
-# Install turbo globally for reliability
-RUN npm install -g turbo@2.8.3
-COPY . .
-RUN turbo prune --scope=@openrouter-crew/unified-dashboard --docker
-
-# 2. Install dependencies (using the pruned json)
+# 1. Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/unified-dashboard/package.json ./apps/unified-dashboard/package.json
+# Copy other workspace packages if needed for strict install, or use --ignore-scripts
+RUN pnpm install --frozen-lockfile
 
-# Copy only package.json files from the pruner stage
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-# Ensure workspace config is present
-COPY --from=pruner /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-
-# Install dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-
-# 3. Build the application
+# 2. Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-
-# Copy dependencies
+COPY . .
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy source code from the pruner stage
-COPY --from=pruner /app/out/full/ .
-COPY --from=pruner /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Build-time variables for Next.js
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Disable telemetry during build
-ENV NEXT_TELEMETRY_DISABLED 1
+RUN pnpm --filter unified-dashboard build
 
-# Build the project
-RUN pnpm --filter @openrouter-crew/unified-dashboard build
-
-# 4. Production image
+# 3. Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
-
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy standalone build from the correct location
 COPY --from=builder --chown=nextjs:nodejs /app/apps/unified-dashboard/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/unified-dashboard/.next/static ./apps/unified-dashboard/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/unified-dashboard/public ./apps/unified-dashboard/public
 
 USER nextjs
-
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
 
 CMD ["node", "apps/unified-dashboard/server.js"]

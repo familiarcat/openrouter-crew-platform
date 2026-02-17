@@ -53,9 +53,11 @@ elif [[ "$TARGET" == *":"* ]]; then
   echo "------------------------------------------------"
   echo "✅ Project build for '$PROJECT' complete."
 
-elif [ "$TARGET" == "product-factory" ] || [ "$TARGET" == "alex-ai-universal" ]; then
-  if [ "$TARGET" == "product-factory" ]; then
+elif [ "$TARGET" == "product-factory" ] || [ "$TARGET" == "alex-ai-universal" ] || [ "$TARGET" == "unified-dashboard" ]; then
+  if [ "$TARGET" == "unified-dashboard" ]; then
     PACKAGE_NAME="unified-dashboard"
+  elif [ "$TARGET" == "product-factory" ]; then
+    PACKAGE_NAME="@openrouter-crew/product-factory-dashboard"
   else
     PACKAGE_NAME="@openrouter-crew/${TARGET}-dashboard"
   fi
