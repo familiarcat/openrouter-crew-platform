@@ -10,6 +10,7 @@ export type { DecayMetrics } from './services/memory-decay';
 export { MemoryService } from './services/memory';
 export { AdminService } from './services/admin';
 export { MemoryAnalyticsService } from './services/memory-analytics';
+export { MemoryCompressionService } from './services/memory-compression';
 export { MemoryArchivalService } from './services/memory-archival';
 export { CostOptimizationService } from './services/cost-optimization';
 export {
@@ -18,35 +19,10 @@ export {
   hasPermission,
 } from './services/authorization';
 
-export type {
-  Surface,
-  RetrievalPolicy,
-  MemoryType,
-  RetentionTier,
-  UserRole,
-  AuthContext,
-  Intent,
-  OperationResult,
-  CreateMemoryParams,
-  CreateMemoryResponse,
-  RetrieveMemoriesParams,
-  RetrieveMemoriesResponse,
-  Memory,
-  UpdateMemoryParams,
-  DeleteMemoryParams,
-  RestoreMemoryParams,
-  CreateCrewParams,
-  ExecuteCrewParams,
-  ExecuteCrewResponse,
-  ListCrewsParams,
-  SearchMemoriesParams,
-  ComplianceStatusParams,
-  ExpirationForecastParams,
-  ExportCrewDataParams,
-  ImportCrewDataParams,
-  PruneExpiredMemoriesParams,
-  GenerateAuditReportParams,
-  AuditLogEntry,
-} from './types';
+// Export all types and errors for consumers
+export * from './types';
+export * from './errors';
 
-export { UnauthorizedError, OperationError } from './types';
+// Note: The original file had some type exports that are now covered by `export * from './types'`.
+// The `UnauthorizedError` and `OperationError` are replaced by the more specific error classes
+// in `errors.ts`. This change simplifies the public API.

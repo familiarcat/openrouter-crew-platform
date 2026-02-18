@@ -114,8 +114,8 @@ importers:
         specifier: ^3.0.0
         version: 3.6.0
       lucide-react:
-        specifier: ^0.294.0
-        version: 0.294.0(react@18.3.1)
+        specifier: ^0.563.0
+        version: 0.563.0(react@18.3.1)
       next:
         specifier: 15.1.4
         version: 15.1.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -4552,11 +4552,6 @@ packages:
 
   lucide-react@0.263.1:
     resolution: {integrity: sha512-keqxAx97PlaEN89PXZ6ki1N8nRjGWtDa4021GFYLNj0RgruM5odbpl8GHTExj0hhPq3sF6Up0gnxt6TSHu+ovw==}
-    peerDependencies:
-      react: 18.3.1
-
-  lucide-react@0.294.0:
-    resolution: {integrity: sha512-V7o0/VECSGbLHn3/1O67FUgBwWB+hmzshrgDVRJQhMh8uj5D3HBuIvhuAmQTtlupILSplwIZg5FTc4tTKMA2SA==}
     peerDependencies:
       react: 18.3.1
 
@@ -11441,10 +11436,6 @@ snapshots:
       yallist: 4.0.0
 
   lucide-react@0.263.1(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-
-  lucide-react@0.294.0(react@18.3.1):
     dependencies:
       react: 18.3.1
 

@@ -6,6 +6,7 @@
  */
 
 import { UsageEvent } from './types';
+import { LLMUsageEvent } from '@openrouter-crew/shared-schemas';
 
 export interface TrackerConfig {
   supabaseUrl: string;
@@ -80,6 +81,39 @@ export class UsageTracker {
     if (!response.ok) {
       throw new Error(`Failed to persist: ${response.statusText}`);
     }
+  }
+
+  /**
+   * Fetch recent events from Supabase
+   */
+  async fetchEvents(limit: number = 1000): Promise<LLMUsageEvent[]> {
+    const response = await fetch(
+      `${this.config.supabaseUrl}/rest/v1/${this.config.tableName}?select=*&order=timestamp.desc&limit=${limit}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.config.supabaseKey,
+          'Authorization': `Bearer ${this.config.supabaseKey}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch usage events: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // The data from Supabase is in snake_case, which matches the LLMUsageEvent type.
+    // The optimizer expects this format.
+    const events: LLMUsageEvent[] = data;
+
+    // Note: We are not updating the in-memory `this.events` cache here because it has a
+    // different type (camelCase `UsageEvent`). This fetch is a direct-to-consumer method
+    // for analysis, which correctly uses the snake_case schema from the database.
+
+    return events;
   }
 
   /**

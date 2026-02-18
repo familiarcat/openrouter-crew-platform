@@ -16,7 +16,8 @@
     "moduleResolution": "Bundler",
     "module": "ESNext",
     "target": "ES2022",
-    "baseUrl": "."
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "next-env.d.ts",
