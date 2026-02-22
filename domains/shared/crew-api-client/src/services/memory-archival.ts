@@ -77,6 +77,18 @@ export class MemoryArchivalService {
     // For the CLI demo, we'll just confirm it was found and remove it.
     // A full implementation would decompress and save to the active memory store.
     this.archive.delete(archiveId);
-    return { ...archivedMemory.metadata, id: archivedMemory.originalId, content: "Restored content..." } as Memory;
+    return {
+      id: archivedMemory.originalId,
+      crew_id: 'unknown', // This information is lost in the current ArchivedMemory structure
+      content: "Restored content...",
+      type: archivedMemory.metadata.type as any,
+      retention_tier: archivedMemory.metadata.retentionTier,
+      confidence_level: archivedMemory.metadata.confidence,
+      created_at: archivedMemory.originalCreatedAt,
+      updated_at: archivedMemory.originalUpdatedAt,
+      access_count: 0,
+      last_accessed: new Date().toISOString(),
+      tags: archivedMemory.metadata.tags,
+    } as Memory;
   }
 }

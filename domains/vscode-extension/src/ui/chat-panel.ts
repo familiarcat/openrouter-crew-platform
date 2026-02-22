@@ -1,9 +1,15 @@
+import * as vscode from 'vscode';
+import { LLMRouter } from '../services/llm-router';
+import { CostTracker } from '../services/cost-tracker';
+import { ContextBuilder } from '../services/context-builder';
+
 /**
  * Chat Panel UI
  *
  * Webview-based chat interface for AI interactions.
  * Handles messages, cost display, and result rendering.
  */
+
 
 /**
  * Chat message
@@ -90,7 +96,7 @@ export class ChatPanel {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alex AI Chat</title>
+  <title>OpenRouter Crew Chat</title>
   <style>
     * {
       margin: 0;
@@ -222,12 +228,41 @@ export class ChatPanel {
       background: var(--vscode-terminal-background);
       border: 1px solid var(--vscode-list-hoverBackground);
       border-radius: 4px;
-      padding: 12px;
-      overflow-x: auto;
       margin: 8px 0;
+      overflow: hidden;
     }
 
-    .code-block code {
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 12px;
+      background: var(--vscode-editor-inactiveSelectionBackground);
+      border-bottom: 1px solid var(--vscode-list-hoverBackground);
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .copy-button {
+      background: transparent;
+      border: none;
+      color: var(--vscode-textLink-foreground);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    .copy-button:hover {
+      background: var(--vscode-list-hoverBackground);
+    }
+
+    .code-content {
+      padding: 12px;
+      overflow-x: auto;
+    }
+
+    .code-content code {
       font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
       font-size: 12px;
     }
@@ -256,7 +291,7 @@ export class ChatPanel {
 </head>
 <body>
   <div class="header">
-    <div class="title">🤖 Alex AI Assistant</div>
+    <div class="title">🤖 OpenRouter Crew Assistant</div>
     <div class="cost-meter">
       <span id="budget-text">Budget: $0.00</span>
       <div class="cost-bar">
@@ -269,7 +304,7 @@ export class ChatPanel {
   <div class="messages" id="messages">
     <div class="message assistant">
       <div class="message-content">
-        <p>Hi! I'm Alex, your AI coding companion. I can help you:</p>
+        <p>Hi! I'm your AI coding companion. I can help you:</p>
         <ul style="margin: 8px 0 0 20px;">
           <li>Review and analyze code</li>
           <li>Generate new code</li>
@@ -287,7 +322,7 @@ export class ChatPanel {
       type="text"
       class="input-field"
       id="input"
-      placeholder="Ask me anything about code..."
+      placeholder="Ask anything about your code..."
       autocomplete="off"
     />
     <button class="send-button" id="send">Send</button>
@@ -339,10 +374,24 @@ export class ChatPanel {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
+    function copyCode(button) {
+      const codeBlock = button.closest('.code-block');
+      const code = codeBlock.querySelector('code').innerText;
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = button.innerText;
+        button.innerText = 'Copied!';
+        setTimeout(() => {
+          button.innerText = originalText;
+        }, 2000);
+      });
+    }
+
     function formatContent(text) {
       // Simple markdown rendering
-      text = text.replace(/\`\`\`(.*?)\n([\s\S]*?)\`\`\`/g,
-        '<div class="code-block"><code>$2</code></div>');
+      text = text.replace(/\`\`\`(.*?)\n([\s\S]*?)\`\`\`/g, function(match, lang, code) {
+        return '<div class="code-block"><div class="code-header"><span>' + (lang || 'text') + '</span><button class="copy-button" onclick="copyCode(this)">Copy</button></div><div class="code-content"><code>' + code + '</code></div></div>';
+      });
       text = text.replace(/\`([^\`]+)\`/g, '<code style="background: var(--vscode-list-hoverBackground); padding: 2px 4px; border-radius: 2px;">$1</code>');
       text = text.replace(/\n/g, '<br>');
       return text;
@@ -419,4 +468,80 @@ export class ChatPanel {
   updateBudget(remaining: number): void {
     this.budgetRemaining = remaining;
   }
+}
+
+/**
+ * ChatViewProvider for the sidebar webview.
+ */
+export class ChatViewProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'openrouter-crew.chat';
+
+    private _view?: vscode.WebviewView;
+    private chatModel: ChatPanel;
+
+    constructor(
+        private readonly extensionUri: vscode.Uri,
+        private llmRouter: LLMRouter,
+        private costTracker: CostTracker,
+        private contextBuilder: ContextBuilder
+    ) {
+        this.chatModel = new ChatPanel();
+        // Listen to cost updates to update budget in webview
+        this.costTracker.onDidUpdateCost(() => this.updateBudget());
+    }
+
+    public resolveWebviewView(
+        webviewView: vscode.WebviewView,
+        context: vscode.WebviewViewResolveContext,
+        _token: vscode.CancellationToken,
+    ) {
+        this._view = webviewView;
+
+        webviewView.webview.options = {
+            enableScripts: true,
+            localResourceRoots: [this.extensionUri]
+        };
+
+        webviewView.webview.html = this.chatModel.generateHTML();
+
+        webviewView.webview.onDidReceiveMessage(async (message) => {
+            if (message.command === 'executeCommand') {
+                await this.handleUserMessage(message.text);
+            }
+        });
+
+        // Initial budget update
+        this.updateBudget();
+    }
+
+    public async handleUserMessage(prompt: string) {
+        if (!this._view) {
+            return;
+        }
+
+        this.chatModel.addMessage('user', prompt);
+
+        try {
+            const contextString = await this.contextBuilder.buildContext(prompt);
+            const response = await this.llmRouter.route({
+                prompt,
+                context: contextString,
+                intent: 'ASK',
+            });
+
+            const assistantMessage = this.chatModel.addMessage('assistant', response.content, { model: response.model, cost: response.cost, executionTimeMs: response.executionTimeMs });
+            this._view.webview.postMessage({ command: 'addMessage', ...assistantMessage });
+        } catch (error: any) {
+            const errorMessage = this.chatModel.addMessage('assistant', `Sorry, an error occurred: ${error.message}`);
+            this._view.webview.postMessage({ command: 'addMessage', ...errorMessage });
+        }
+    }
+
+    private updateBudget() {
+        if (!this._view) return;
+        const metrics = this.costTracker.getMetrics();
+        const dailyBudget = this.costTracker.getDailyBudget();
+        this.chatModel.updateBudget(metrics.remainingBudget);
+        this._view.webview.postMessage({ command: 'updateBudget', remaining: metrics.remainingBudget, total: metrics.todayCost, limit: dailyBudget });
+    }
 }

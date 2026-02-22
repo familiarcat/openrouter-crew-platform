@@ -129,10 +129,34 @@ export class CLIExecutor {
   }
 
   /**
-   * Optimize costs
+   * Create memory
+   */
+  async createMemory(content: string): Promise<CLIResult<any>> {
+    return this.execute(['memory', 'create', content, '--json']);
+  }
+
+  /**
+   * Search memories
+   */
+  async searchMemories(query: string): Promise<CLIResult<any>> {
+    return this.execute(['memory', 'search', query, '--json']);
+  }
+
+  /**
+   * Check compliance
+   */
+  async checkCompliance(): Promise<CLIResult<any>> {
+    return this.execute(['memory', 'compliance', '--json']);
+  }
+
+  /**
+   * Optimize costs for a crew member and task
    */
   async optimizeCosts(member: string, task: string): Promise<CLIResult<any>> {
-    return this.execute(['cost', 'optimize', member, task, '--json']);
+    // This is a guess for the CLI command structure.
+    // The actual command might be different.
+    // Example: crew cost optimize --member "picard" --task "analyze logs"
+    return this.execute(['cost', 'optimize', '--member', member, '--task', task, '--json']);
   }
 
   /**

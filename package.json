@@ -55,6 +55,7 @@
     "deploy:aws": "bash scripts/aws/deploy.sh",
     "pipeline": "bash scripts/pipeline.sh",
     "deploy:vercel": "pnpm --filter unified-dashboard vercel",
+    "release:vscode": "bash scripts/release-vscode-local.sh",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",

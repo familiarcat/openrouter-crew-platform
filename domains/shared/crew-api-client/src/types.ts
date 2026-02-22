@@ -6,9 +6,28 @@
 // Base types from the analysis document
 export type Surface = 'ide' | 'cli' | 'web' | 'n8n' | 'api';
 export type RetrievalPolicy = 'task-specific' | 'default';
-export type MemoryType = 'story' | 'insight' | 'pattern';
+export type MemoryType = 'story' | 'insight' | 'pattern' | 'lesson' | 'best-practice';
 export type RetentionTier = 'eternal' | 'standard' | 'temporary' | 'session';
 export type UserRole = 'owner' | 'member' | 'viewer';
+
+export interface Intent {
+  action: string;
+  crew_id?: string;
+}
+
+export interface AuthContext {
+  user_id: string;
+  crew_id: string;
+  role: UserRole;
+  surface: Surface;
+}
+
+export class UnauthorizedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
 
 // Core Data Models
 export interface Memory {
@@ -136,6 +155,7 @@ export interface GetCrewStatusResponse {
 export interface SearchMemoriesParams {
   query: string;
   filters?: Record<string, any>;
+  limit?: number;
 }
 export interface SearchMemoriesResponse {
   memories: Memory[];
@@ -157,6 +177,33 @@ export interface PruneExpiredMemoriesParams {
 }
 export interface PruneExpiredMemiesResponse extends OperationResult {
   pruned_count: number;
+}
+
+export interface ComplianceStatusParams {
+  crew_id: string;
+  period?: string;
+}
+
+export interface ExpirationForecastParams {
+  crew_id: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  user_id: string;
+  crew_id: string;
+  surface: Surface;
+  intent: Intent;
+  action: string;
+  result: 'success' | 'failure';
+  error?: string;
+  metadata: {
+    cost: number;
+    duration_ms: number;
+    memory_ids?: string[];
+    [key: string]: any;
+  };
+  created_at: string;
 }
 
 export interface ArchivedMemory {
@@ -183,4 +230,44 @@ export interface ArchivalConfig {
   minAgeDays?: number;
   compressionEnabled?: boolean;
   encryptionEnabled?: boolean;
+}
+
+// Instrumentation Types
+export interface ExecutionContext {
+  requestId: string;
+  traceId: string;
+  spanId: string;
+  domain: string;
+  feature: string;
+  action: string;
+  userId?: string;
+  timestamp: Date;
+  [key: string]: any;
+}
+
+export interface CostMeasurement {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCost: number;
+  actualCost: number;
+  model: string;
+  durationMs: number;
+}
+
+export interface LLMRequestInstrumentation {
+  context: ExecutionContext;
+  model: string;
+  prompt: string;
+  cost: CostMeasurement;
+  successfulRequest: boolean;
+  errorMessage?: string;
+  timestamp: Date;
+  [key: string]: any;
+}
+
+export interface CostEvent {
+  eventType: string;
+  instrumentation: LLMRequestInstrumentation | any;
+  timestamp: Date;
 }

@@ -1,436 +1,205 @@
-/**
- * Cost Tracker Service
- *
- * Real-time cost tracking, budget enforcement, and analytics.
- * Integrates with Supabase for persistent storage.
- */
+import * as vscode from 'vscode';
 
-/**
- * Cost transaction record
- */
 export interface CostTransaction {
-  id?: string;
   timestamp: number;
   model: string;
   intent: string;
   inputTokens: number;
   outputTokens: number;
   costUSD: number;
-  budgetRemaining: number;
-  success: boolean;
-  metadata?: Record<string, any>;
+  complexity?: string;
 }
 
-/**
- * Cost analytics
- */
-export interface CostAnalytics {
-  totalCost: number;
+export interface CostMetrics {
+  todayCost: number;
+  thisMonthCost: number;
+  remainingBudget: number;
+  requestCount: number;
   averageCost: number;
-  transactionCount: number;
-  budgetRemaining: number;
-  budgetUsedPercent: number;
-  dailyCost: number;
-  costByModel: Record<string, number>;
-  costByIntent: Record<string, number>;
-  highestCostTransaction: CostTransaction | null;
-  trend: 'stable' | 'increasing' | 'decreasing';
+  rateLimitHits: number;
 }
 
-/**
- * Budget alert
- */
-export interface BudgetAlert {
-  type: 'warning' | 'critical' | 'exceeded';
-  threshold: number;
-  currentUsage: number;
-  message: string;
-  suggestedAction: string;
-}
-
-/**
- * Cost Tracker for budget management
- */
-export class CostTracker {
+export class CostTracker implements vscode.Disposable {
+  private context: vscode.ExtensionContext;
+  private _onDidUpdateCost = new vscode.EventEmitter<void>();
+  public readonly onDidUpdateCost = this._onDidUpdateCost.event;
+  private disposable: vscode.Disposable;
   private transactions: CostTransaction[] = [];
-  private dailyBudget: number = 100;  // $100 default daily budget
-  private budgetRemaining: number = 100;
-  private dailyReset: Date = new Date();
-  private alerts: BudgetAlert[] = [];
+  private rateLimitHits: { timestamp: number }[] = [];
 
-  constructor(dailyBudgetUSD: number = 100) {
-    this.dailyBudget = dailyBudgetUSD;
-    this.budgetRemaining = dailyBudgetUSD;
-    this.resetIfNewDay();
+  private static readonly KEY_DAILY_USAGE = 'openrouter-crew.dailyUsage';
+  private static readonly KEY_LAST_RESET = 'openrouter-crew.lastResetDate';
+  private static readonly KEY_MONTHLY_USAGE = 'openrouter-crew.monthlyUsage';
+  private static readonly KEY_LAST_MONTH_RESET = 'openrouter-crew.lastMonthResetDate';
+  private static readonly KEY_FILTER_START = 'openrouter-crew.filterStartDate';
+  private static readonly KEY_FILTER_END = 'openrouter-crew.filterEndDate';
+
+  constructor(context: vscode.ExtensionContext) {
+    this.context = context;
+    this.checkAndResetDaily();
+    this.checkAndResetMonthly();
+
+    const configListener = vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration('openrouter-crew.budget.daily')) {
+        this._onDidUpdateCost.fire();
+      }
+    });
+
+    this.disposable = vscode.Disposable.from(configListener);
   }
 
-  /**
-   * Record a transaction
-   */
-  recordTransaction(
-    model: string,
-    intent: string,
-    inputTokens: number,
-    outputTokens: number,
-    costUSD: number,
-    metadata?: Record<string, any>
-  ): { success: boolean; alert?: BudgetAlert } {
-    this.resetIfNewDay();
+  private checkAndResetDaily() {
+    const lastReset = this.context.globalState.get<string>(CostTracker.KEY_LAST_RESET);
+    const today = new Date().toDateString();
 
-    // Check budget before recording
-    if (costUSD > this.budgetRemaining) {
-      const alert = this.createAlert('exceeded', costUSD);
-      this.alerts.push(alert);
-      return { success: false, alert };
+    if (lastReset !== today) {
+      this.resetDailyUsage(true);
     }
+  }
 
-    // Deduct cost from budget
-    this.budgetRemaining -= costUSD;
+  private checkAndResetMonthly() {
+    const lastReset = this.context.globalState.get<string>(CostTracker.KEY_LAST_MONTH_RESET);
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-    // Create transaction record
-    const transaction: CostTransaction = {
+    if (lastReset !== currentMonth) {
+      this.resetMonthlyUsage(true);
+    }
+  }
+
+  public async recordTransaction(model: string, intent: string, inputTokens: number, outputTokens: number, cost: number, complexity?: string): Promise<void> {
+    const tx: CostTransaction = {
       timestamp: Date.now(),
       model,
       intent,
       inputTokens,
       outputTokens,
-      costUSD,
-      budgetRemaining: this.budgetRemaining,
-      success: true,
-      metadata,
+      costUSD: cost,
+      complexity: complexity || 'UNKNOWN'
     };
+    this.transactions.push(tx);
+    await this.trackCost(cost);
+  }
 
-    this.transactions.push(transaction);
+  public async recordRateLimitHit(): Promise<void> {
+    this.rateLimitHits.push({ timestamp: Date.now() });
+    this._onDidUpdateCost.fire(); // Refresh views
+  }
 
-    // Check for alerts
-    const alert = this.checkBudgetThresholds();
-    if (alert) {
-      this.alerts.push(alert);
-      return { success: true, alert };
+  public async clearRateLimitHistory(): Promise<void> {
+    this.rateLimitHits = [];
+    this._onDidUpdateCost.fire();
+  }
+
+  public async trackCost(amount: number): Promise<void> {
+    this.checkAndResetDaily();
+    this.checkAndResetMonthly();
+    
+    const current = this.getDailyUsage();
+    await this.context.globalState.update(CostTracker.KEY_DAILY_USAGE, current + amount);
+
+    const currentMonthly = this.getMonthlyUsage();
+    await this.context.globalState.update(CostTracker.KEY_MONTHLY_USAGE, currentMonthly + amount);
+
+    this._onDidUpdateCost.fire();
+  }
+
+  public getDailyUsage(): number {
+    return this.context.globalState.get<number>(CostTracker.KEY_DAILY_USAGE) || 0;
+  }
+
+  public getMonthlyUsage(): number {
+    return this.context.globalState.get<number>(CostTracker.KEY_MONTHLY_USAGE) || 0;
+  }
+
+  public async resetDailyUsage(isAutoReset: boolean = false): Promise<void> {
+    await this.context.globalState.update(CostTracker.KEY_DAILY_USAGE, 0);
+    
+    if (isAutoReset) {
+      await this.context.globalState.update(CostTracker.KEY_LAST_RESET, new Date().toDateString());
     }
+    
+    this._onDidUpdateCost.fire();
+  }
 
-    return { success: true };
+  public async resetMonthlyUsage(isAutoReset: boolean = false): Promise<void> {
+    await this.context.globalState.update(CostTracker.KEY_MONTHLY_USAGE, 0);
+    
+    if (isAutoReset) {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      await this.context.globalState.update(CostTracker.KEY_LAST_MONTH_RESET, currentMonth);
+    }
+    
+    this._onDidUpdateCost.fire();
+  }
+
+  public getDailyBudget(): number {
+    const config = vscode.workspace.getConfiguration('openrouterCrew');
+    return config.get<number>('budget.daily') || 1.00;
   }
 
   /**
-   * Get cost analytics
+   * Estimates the cost of a hypothetical request based on token counts and model.
+   * @param inputTokens The number of input tokens.
+   * @param outputTokens The number of output tokens.
+   * @param model The model identifier string.
+   * @returns The estimated cost in USD.
    */
-  getAnalytics(): CostAnalytics {
-    this.resetIfNewDay();
-
-    const costByModel: Record<string, number> = {};
-    const costByIntent: Record<string, number> = {};
-    let totalCost = 0;
-    let highestCostTransaction: CostTransaction | null = null;
-
-    for (const tx of this.transactions) {
-      totalCost += tx.costUSD;
-
-      // Track by model
-      costByModel[tx.model] = (costByModel[tx.model] || 0) + tx.costUSD;
-
-      // Track by intent
-      costByIntent[tx.intent] = (costByIntent[tx.intent] || 0) + tx.costUSD;
-
-      // Find highest cost
-      if (!highestCostTransaction || tx.costUSD > highestCostTransaction.costUSD) {
-        highestCostTransaction = tx;
-      }
+  public estimateCost(inputTokens: number, outputTokens: number, model: string): number {
+    let cost = 0;
+    // Pricing per 1M tokens (Input/Output)
+    // Claude 3.5 Sonnet: $3 / $15
+    // Claude 3 Opus: $15 / $75
+    // Claude 3 Haiku: $0.25 / $1.25
+    // Gemini Flash: $0.075 / $0.30
+    if (model.includes('claude-3-sonnet')) {
+      cost = (inputTokens * 3 + outputTokens * 15) / 1000000;
+    } else if (model.includes('claude-3-opus')) {
+      cost = (inputTokens * 15 + outputTokens * 75) / 1000000;
+    } else if (model.includes('claude-3-haiku')) {
+      cost = (inputTokens * 0.25 + outputTokens * 1.25) / 1000000;
+    } else if (model.includes('gemini')) {
+      cost = (inputTokens * 0.075 + outputTokens * 0.30) / 1000000;
+    } else if (model.includes('gpt-4')) {
+      cost = (inputTokens * 10 + outputTokens * 30) / 1000000;
+    } else if (model.includes('claude')) { // Fallback for other Claude models
+      cost = (inputTokens * 3 + outputTokens * 15) / 1000000;
     }
+    return cost;
+  }
 
-    // Calculate daily cost (transactions from today)
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const dailyCost = this.transactions
-      .filter(tx => tx.timestamp >= todayStart.getTime())
-      .reduce((sum, tx) => sum + tx.costUSD, 0);
-
-    // Determine trend
-    const recentTxs = this.transactions.slice(-10);
-    const avgRecentCost = recentTxs.length > 0
-      ? recentTxs.reduce((sum, tx) => sum + tx.costUSD, 0) / recentTxs.length
-      : 0;
-    const avgOlderCost = this.transactions.length > 10
-      ? this.transactions.slice(0, -10).reduce((sum, tx) => sum + tx.costUSD, 0) / (this.transactions.length - 10)
-      : avgRecentCost;
-
-    let trend: 'stable' | 'increasing' | 'decreasing' = 'stable';
-    if (avgRecentCost > avgOlderCost * 1.2) trend = 'increasing';
-    else if (avgRecentCost < avgOlderCost * 0.8) trend = 'decreasing';
-
+  public getFilterState(): { startDate: Date | undefined; endDate: Date | undefined } {
+    const start = this.context.globalState.get<string>(CostTracker.KEY_FILTER_START);
+    const end = this.context.globalState.get<string>(CostTracker.KEY_FILTER_END);
     return {
-      totalCost,
-      averageCost: this.transactions.length > 0 ? totalCost / this.transactions.length : 0,
-      transactionCount: this.transactions.length,
-      budgetRemaining: this.budgetRemaining,
-      budgetUsedPercent: ((this.dailyBudget - this.budgetRemaining) / this.dailyBudget) * 100,
-      dailyCost,
-      costByModel,
-      costByIntent,
-      highestCostTransaction,
-      trend,
+      startDate: start ? new Date(start) : undefined,
+      endDate: end ? new Date(end) : undefined
     };
   }
 
-  /**
-   * Get transaction history
-   */
-  getHistory(limit: number = 50): CostTransaction[] {
-    return this.transactions.slice(-limit);
+  public async updateFilterState(startDate: Date | undefined, endDate: Date | undefined): Promise<void> {
+    await this.context.globalState.update(CostTracker.KEY_FILTER_START, startDate?.toISOString());
+    await this.context.globalState.update(CostTracker.KEY_FILTER_END, endDate?.toISOString());
   }
 
-  /**
-   * Get alerts
-   */
-  getAlerts(): BudgetAlert[] {
-    return this.alerts;
+  public getHistory(): CostTransaction[] {
+    return this.transactions;
   }
 
-  /**
-   * Clear alerts
-   */
-  clearAlerts(): void {
-    this.alerts = [];
-  }
-
-  /**
-   * Set daily budget
-   */
-  setBudget(budgetUSD: number): void {
-    this.dailyBudget = budgetUSD;
-    if (this.budgetRemaining > budgetUSD) {
-      this.budgetRemaining = budgetUSD;
-    }
-  }
-
-  /**
-   * Get remaining budget
-   */
-  getRemainingBudget(): number {
-    this.resetIfNewDay();
-    return this.budgetRemaining;
-  }
-
-  /**
-   * Estimate cost reduction vs Copilot
-   */
-  estimateCopilotSavings(): {
-    estimatedCopilotCost: number;
-    actualCost: number;
-    savings: number;
-    savingsPercent: number;
-  } {
-    const actualCost = this.transactions.reduce((sum, tx) => sum + tx.costUSD, 0);
-    // Copilot charges ~$0.05 per query on average
-    const estimatedCopilotCost = this.transactions.length * 0.05;
-    const savings = estimatedCopilotCost - actualCost;
-    const savingsPercent = estimatedCopilotCost > 0 ? (savings / estimatedCopilotCost) * 100 : 0;
-
+  public getMetrics(): CostMetrics {
+    const dailyUsage = this.getDailyUsage();
+    const monthlyUsage = this.getMonthlyUsage();
+    const dailyBudget = this.getDailyBudget();
     return {
-      estimatedCopilotCost,
-      actualCost,
-      savings,
-      savingsPercent,
+      todayCost: dailyUsage,
+      thisMonthCost: monthlyUsage,
+      remainingBudget: Math.max(0, dailyBudget - dailyUsage),
+      requestCount: this.transactions.length,
+      averageCost: this.transactions.length > 0 ? dailyUsage / this.transactions.length : 0,
+      rateLimitHits: this.rateLimitHits.length,
     };
   }
 
-  /**
-   * Generate cost report
-   */
-  generateReport(): string {
-    const analytics = this.getAnalytics();
-    const savings = this.estimateCopilotSavings();
-
-    let report = '📊 Cost Report\n';
-    report += `==================\n\n`;
-
-    report += `💰 Budget Status\n`;
-    report += `- Daily Budget: $${this.dailyBudget.toFixed(2)}\n`;
-    report += `- Used: $${(this.dailyBudget - this.budgetRemaining).toFixed(2)} (${analytics.budgetUsedPercent.toFixed(1)}%)\n`;
-    report += `- Remaining: $${this.budgetRemaining.toFixed(2)}\n\n`;
-
-    report += `📈 Usage Statistics\n`;
-    report += `- Transactions: ${analytics.transactionCount}\n`;
-    report += `- Average Cost/Query: $${analytics.averageCost.toFixed(4)}\n`;
-    report += `- Today's Cost: $${analytics.dailyCost.toFixed(2)}\n`;
-    report += `- Trend: ${analytics.trend}\n\n`;
-
-    report += `🎯 Cost by Model\n`;
-    for (const [model, cost] of Object.entries(analytics.costByModel)) {
-      report += `- ${model}: $${cost.toFixed(2)}\n`;
-    }
-    report += '\n';
-
-    report += `📝 Cost by Intent\n`;
-    for (const [intent, cost] of Object.entries(analytics.costByIntent)) {
-      report += `- ${intent}: $${cost.toFixed(2)}\n`;
-    }
-    report += '\n';
-
-    report += `💡 Copilot Comparison\n`;
-    report += `- Copilot Estimated: $${savings.estimatedCopilotCost.toFixed(2)}\n`;
-    report += `- Our Cost: $${savings.actualCost.toFixed(2)}\n`;
-    report += `- Savings: $${savings.savings.toFixed(2)} (${savings.savingsPercent.toFixed(1)}% cheaper)\n`;
-
-    return report;
-  }
-
-  /**
-   * Check budget thresholds and create alerts
-   */
-  private checkBudgetThresholds(): BudgetAlert | null {
-    const percent = ((this.dailyBudget - this.budgetRemaining) / this.dailyBudget) * 100;
-
-    if (percent >= 95) {
-      return this.createAlert('critical', percent);
-    } else if (percent >= 75) {
-      return this.createAlert('warning', percent);
-    }
-
-    return null;
-  }
-
-  /**
-   * Create budget alert
-   */
-  private createAlert(type: 'warning' | 'critical' | 'exceeded', usage: number): BudgetAlert {
-    const messages: Record<string, string> = {
-      warning: `Budget usage at ${usage.toFixed(0)}% - Consider slowing down requests`,
-      critical: `Budget usage at ${usage.toFixed(0)}% - Approaching daily limit`,
-      exceeded: `Daily budget exceeded - Request denied`,
-    };
-
-    const suggestions: Record<string, string> = {
-      warning: 'Consider batching requests or upgrading budget',
-      critical: 'Reduce request frequency immediately',
-      exceeded: 'Increase daily budget or wait for reset',
-    };
-
-    return {
-      type,
-      threshold: type === 'warning' ? 75 : type === 'critical' ? 95 : 100,
-      currentUsage: usage,
-      message: messages[type],
-      suggestedAction: suggestions[type],
-    };
-  }
-
-  /**
-   * Reset budget if new day
-   */
-  private resetIfNewDay(): void {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    if (this.dailyReset < today) {
-      this.budgetRemaining = this.dailyBudget;
-      this.dailyReset = today;
-      this.alerts = [];
-    }
-  }
-
-  /**
-   * Export transactions for Supabase
-   */
-  exportForSupabase(): CostTransaction[] {
-    return this.transactions.map(tx => ({
-      ...tx,
-      id: tx.id || `${Date.now()}-${Math.random()}`,
-    }));
-  }
-
-  /**
-   * Clear all history
-   */
-  clearHistory(): void {
-    this.transactions = [];
-    this.alerts = [];
-    this.budgetRemaining = this.dailyBudget;
-  }
-}
-
-/**
- * Supabase Cost Tracker - persists to database
- */
-export class SupabaseAwareCostTracker extends CostTracker {
-  private supabaseUrl?: string;
-  private supabaseKey?: string;
-  private userId?: string;
-  private syncQueue: CostTransaction[] = [];
-  private syncInProgress: boolean = false;
-
-  constructor(
-    dailyBudgetUSD: number = 100,
-    supabaseUrl?: string,
-    supabaseKey?: string,
-    userId?: string
-  ) {
-    super(dailyBudgetUSD);
-    this.supabaseUrl = supabaseUrl;
-    this.supabaseKey = supabaseKey;
-    this.userId = userId;
-  }
-
-  /**
-   * Record and sync transaction
-   */
-  async recordTransactionAndSync(
-    model: string,
-    intent: string,
-    inputTokens: number,
-    outputTokens: number,
-    costUSD: number,
-    metadata?: Record<string, any>
-  ): Promise<{ success: boolean; synced: boolean; alert?: any }> {
-    const result = this.recordTransaction(model, intent, inputTokens, outputTokens, costUSD, metadata);
-
-    if (result.success && this.supabaseUrl && this.supabaseKey) {
-      const synced = await this.syncToSupabase();
-      return { ...result, synced };
-    }
-
-    return { ...result, synced: false };
-  }
-
-  /**
-   * Sync transactions to Supabase
-   */
-  async syncToSupabase(): Promise<boolean> {
-    if (!this.supabaseUrl || !this.supabaseKey || this.syncInProgress) {
-      return false;
-    }
-
-    try {
-      this.syncInProgress = true;
-
-      // In production, this would call Supabase API
-      // For now, just queue for future syncing
-      this.syncQueue = this.exportForSupabase();
-
-      return true;
-    } catch (error) {
-      console.error('Failed to sync to Supabase:', error);
-      return false;
-    } finally {
-      this.syncInProgress = false;
-    }
-  }
-
-  /**
-   * Load transactions from Supabase
-   */
-  async loadFromSupabase(): Promise<CostTransaction[]> {
-    if (!this.supabaseUrl || !this.supabaseKey) {
-      return [];
-    }
-
-    try {
-      // In production, this would query Supabase
-      // For now, return queued transactions
-      return this.syncQueue;
-    } catch (error) {
-      console.error('Failed to load from Supabase:', error);
-      return [];
-    }
+  public dispose(): void {
+    this.disposable.dispose();
   }
 }

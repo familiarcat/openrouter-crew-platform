@@ -131,14 +131,14 @@ export class CostOptimizer {
       if (smallRequests.length < 5) continue;
 
       // Sort by timestamp
-      smallRequests.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      smallRequests.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
       // Check for bursts: multiple requests within 1 minute
       let burstCount = 0;
-      let burstStart = new Date(smallRequests[0].timestamp).getTime();
+      let burstStart = new Date(smallRequests[0].created_at).getTime();
       
       for (let i = 1; i < smallRequests.length; i++) {
-        const current = new Date(smallRequests[i].timestamp).getTime();
+        const current = new Date(smallRequests[i].created_at).getTime();
         if (current - burstStart < 60000) { // 1 minute window
           burstCount++;
         } else {

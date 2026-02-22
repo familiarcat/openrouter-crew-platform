@@ -38,11 +38,11 @@ optimizeCommand
         if (isNaN(cutoff.getTime())) {
           throw new Error('Invalid date format for --since. Please use YYYY-MM-DD.');
         }
-        events = events.filter(e => new Date(e.timestamp as string) >= cutoff);
+        events = events.filter(e => new Date(e.created_at) >= cutoff);
       } else if (options.days) {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - parseInt(options.days));
-        events = events.filter(e => new Date(e.timestamp as string) >= cutoff);
+        events = events.filter(e => new Date(e.created_at) >= cutoff);
       }
 
       if (events.length === 0) {

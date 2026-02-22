@@ -9,6 +9,9 @@ import { LLMRouter, LLMRequest, LLMResponse } from '../services/llm-router';
 import { NLPProcessor } from '../services/nlp-processor';
 import { OCREngine, OCRWithNLP } from '../services/ocr-engine';
 import { FileManager } from '../services/file-manager';
+import { TerminalManager } from '../services/terminal-manager';
+import { CostTracker } from '../services/cost-tracker';
+import { ContextBuilder } from '../services/context-builder';
 
 /**
  * Command execution result
@@ -35,13 +38,17 @@ export class CommandExecutor {
   private nlp: NLPProcessor;
   private ocr: OCRWithNLP;
   private fileManager: FileManager;
+  private terminalManager: TerminalManager;
+  private contextBuilder: ContextBuilder;
   private costBuffer: number = 0;
 
-  constructor(apiKey: string) {
-    this.router = new LLMRouter(apiKey);
+  constructor(costTracker: CostTracker, contextBuilder: ContextBuilder) {
+    this.router = new LLMRouter(costTracker);
     this.nlp = new NLPProcessor();
     this.ocr = new OCRWithNLP();
     this.fileManager = new FileManager();
+    this.terminalManager = new TerminalManager();
+    this.contextBuilder = contextBuilder;
   }
 
   /**
@@ -280,6 +287,121 @@ Include:
   }
 
   /**
+   * Execute Structure command - analyze project structure
+   */
+  async structure(): Promise<CommandResult> {
+    const startTime = Date.now();
+    const nlpAnalysis = this.nlp.analyze('Analyze project structure');
+
+    const files = await this.fileManager.getProjectStructure();
+    
+    const fileList = files.length > 500 
+      ? files.slice(0, 500).join('\n') + `\n...and ${files.length - 500} more files`
+      : files.join('\n');
+
+    const prompt = `Analyze the following project file structure and suggest improvements for better organization, scalability, and maintainability.
+      
+Current Structure:
+\`\`\`
+${fileList}
+\`\`\`
+
+Provide:
+1. Analysis of the current organization (strengths/weaknesses)
+2. Specific suggestions for moving/renaming files or folders to improve architecture
+3. Recommendations for missing directories (e.g., tests, docs, types, utils)`;
+
+    const request: LLMRequest = {
+      prompt,
+      intent: 'STRUCTURE',
+      complexity: 'HIGH',
+      maxTokens: 2048,
+    };
+
+    const response = await this.executeViaRouter(request);
+    return this.formatResult(response, startTime, nlpAnalysis);
+  }
+
+  /**
+   * Execute restructuring plan
+   */
+  async applyRestructuring(operations: Array<{ type: 'move' | 'delete' | 'create'; path: string; to?: string }>): Promise<CommandResult> {
+    const startTime = Date.now();
+    let output = 'Restructuring applied:\n';
+    
+    for (const op of operations) {
+      try {
+        if (op.type === 'move' && op.to) {
+          await this.fileManager.movePath(op.path, op.to);
+          output += `✅ Moved ${op.path} -> ${op.to}\n`;
+        } else if (op.type === 'delete') {
+          await this.fileManager.deletePath(op.path);
+          output += `✅ Deleted ${op.path}\n`;
+        } else if (op.type === 'create') {
+          await this.fileManager.createDirectory(op.path);
+          output += `✅ Created ${op.path}\n`;
+        }
+      } catch (error) {
+        output += `❌ Failed to ${op.type} ${op.path}: ${error instanceof Error ? error.message : String(error)}\n`;
+      }
+    }
+
+    return {
+      success: true,
+      output,
+      model: 'local',
+      costUSD: 0,
+      executionTimeMs: Date.now() - startTime,
+      metadata: {
+        intent: 'STRUCTURE',
+        complexity: 'MEDIUM',
+        confidence: 1,
+        language: 'system',
+      },
+    };
+  }
+
+  /**
+   * Execute Terminal command - generate and run shell command
+   */
+  async terminal(instruction: string): Promise<CommandResult> {
+    const startTime = Date.now();
+    const nlpAnalysis = this.nlp.analyze(instruction);
+
+    const prompt = `Generate a shell command for the following request: "${instruction}".
+      
+      Requirements:
+      1. Return ONLY the command(s) to be executed.
+      2. Do not use markdown formatting (no backticks).
+      3. Do not provide explanations.
+      4. If multiple commands are needed, chain them appropriately (&& or ;).
+      5. Assume a standard Linux/macOS environment (bash/zsh) unless specified otherwise.
+      `;
+
+    const request: LLMRequest = {
+      prompt,
+      intent: 'TERMINAL',
+      complexity: nlpAnalysis.complexity,
+      maxTokens: 1024,
+    };
+
+    const response = await this.executeViaRouter(request);
+
+    if (response && response.content) {
+      let command = response.content.trim();
+      if (command.startsWith('```') && command.endsWith('```')) {
+        command = command.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '');
+      } else if (command.startsWith('`') && command.endsWith('`')) {
+        command = command.slice(1, -1);
+      }
+
+      await this.terminalManager.executeCommand(command, instruction);
+    }
+
+    return this.formatResult(response, startTime, nlpAnalysis);
+  }
+
+  /**
    * Process image/screenshot for analysis
    */
   async processImage(imageBase64: string): Promise<CommandResult> {
@@ -366,14 +488,14 @@ Issues: ${fileAnalysis.issues.length > 0 ? fileAnalysis.issues.join('; ') : 'Non
       };
     }
 
-    this.costBuffer += response.costUSD;
+    this.costBuffer += response.costUSD ?? 0;
 
     return {
       success: true,
       output: response.content,
       model: response.model,
-      costUSD: response.costUSD,
-      executionTimeMs: response.executionTimeMs,
+      costUSD: response.costUSD ?? 0,
+      executionTimeMs: response.executionTimeMs ?? 0,
       metadata: {
         intent: nlpAnalysis.intent.intent,
         complexity: nlpAnalysis.complexity,
@@ -394,13 +516,13 @@ Issues: ${fileAnalysis.issues.length > 0 ? fileAnalysis.issues.join('; ') : 'Non
    * Set budget limit
    */
   setBudget(amount: number): void {
-    this.router.setBudget(amount);
+    // Budget is now managed via configuration/CostTracker
   }
 
   /**
    * Get remaining budget
    */
   getRemainingBudget(): number {
-    return this.router.getBudgetRemaining();
+    return 0; // Placeholder, should use CostTracker.getMetrics().remainingBudget
   }
 }

@@ -20,7 +20,10 @@ function getClient() {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
-  const client = new CrewAPIClient(supabase);
+  const client = new CrewAPIClient({
+    baseUrl: process.env.API_URL || 'http://localhost:3000/api',
+    apiKey: process.env.API_KEY
+  });
   const decayService = new MemoryDecayService(supabase);
 
   return {

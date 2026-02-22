@@ -337,7 +337,7 @@ export class FileManager {
   }
 
   /**
-   * Generate refactored code
+   * Generate refactoring
    */
   generateRefactoring(
     original: string,
@@ -409,6 +409,42 @@ export class FileManager {
     }
 
     return graph;
+  }
+
+  /**
+   * Create a directory
+   */
+  async createDirectory(path: string): Promise<void> {
+    const uri = vscode.Uri.file(path);
+    await vscode.workspace.fs.createDirectory(uri);
+  }
+
+  /**
+   * Delete a file or directory
+   */
+  async deletePath(path: string, recursive: boolean = false): Promise<void> {
+    const uri = vscode.Uri.file(path);
+    await vscode.workspace.fs.delete(uri, { recursive });
+  }
+
+  /**
+   * Rename or move a file/directory
+   */
+  async movePath(oldPath: string, newPath: string): Promise<void> {
+    const oldUri = vscode.Uri.file(oldPath);
+    const newUri = vscode.Uri.file(newPath);
+    await vscode.workspace.fs.rename(oldUri, newUri, { overwrite: false });
+  }
+
+  /**
+   * Get project file structure
+   * Returns a list of all files in the workspace (excluding gitignored/node_modules)
+   */
+  async getProjectStructure(): Promise<string[]> {
+    // Find all files, excluding node_modules and .git
+    const files = await vscode.workspace.findFiles('**/*', '**/{node_modules,.git,dist,out,build}/**');
+    // Return relative paths
+    return files.map(uri => vscode.workspace.asRelativePath(uri));
   }
 
   /**

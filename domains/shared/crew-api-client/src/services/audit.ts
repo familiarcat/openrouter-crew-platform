@@ -3,6 +3,7 @@
  * All operations are logged to immutable audit trail
  */
 
+/// <reference types="node" />
 import { v4 as uuidv4 } from 'uuid';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AuditLogEntry, Intent, Surface, AuthContext } from '../types';
@@ -168,7 +169,7 @@ export class AuditService {
 
     // Count by surface
     entries.forEach((entry) => {
-      report.by_surface[entry.surface] = (report.by_surface[entry.surface] || 0) + 1;
+      report.by_surface[entry.surface as Surface] = (report.by_surface[entry.surface as Surface] || 0) + 1;
     });
 
     // Count by action

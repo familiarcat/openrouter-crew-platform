@@ -134,7 +134,7 @@ export class NLPProcessor {
   /**
    * Analyze a prompt for intent, entities, and other NLP features
    */
-  analyze(prompt: string, context?: { selectedCode?: string }): NLPAnalysis {
+  analyze(prompt: string, context?: { selectedCode?: string | undefined }): NLPAnalysis {
     const lowerPrompt = prompt.toLowerCase();
 
     // Detect intent

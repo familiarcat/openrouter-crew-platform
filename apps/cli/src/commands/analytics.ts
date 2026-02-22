@@ -1,11 +1,24 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { createClient } from '@supabase/supabase-js';
 import { MemoryAnalyticsService, MemoryService } from '@openrouter-crew/crew-api-client';
 import { formatCost } from '../lib/formatters';
 import { enforceFeatureAccess } from '../lib/tier-limits';
 
-const analyticsService = new MemoryAnalyticsService();
-const memoryService = new MemoryService();
+function getServices() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('SUPABASE_URL and SUPABASE_KEY environment variables required');
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  return {
+    analyticsService: new MemoryAnalyticsService(),
+    memoryService: new MemoryService(supabase)
+  };
+}
 
 export const analyticsCommand = new Command('analytics')
   .description('View basic analytics (Starter Tier)');
@@ -19,6 +32,7 @@ analyticsCommand
     
     try {
       const crewId = options.crew || 'default';
+      const { memoryService, analyticsService } = getServices();
       
       // Fetch real memories
       const memories = await memoryService.getRecentMemories(crewId, 1000);
@@ -52,6 +66,7 @@ analyticsCommand
     try {
       enforceFeatureAccess('advancedAnalytics');
       
+      const { memoryService, analyticsService } = getServices();
       const crewId = options.crew || 'default';
       console.log(chalk.blue(`🧠 Generating insights for crew: ${crewId}...`));
       

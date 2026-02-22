@@ -5,6 +5,7 @@
  * Based on openrouter-ai-milestone pattern
  */
 
+/// <reference types="node" />
 import { UsageEvent } from './types';
 import { LLMUsageEvent } from '@openrouter-crew/shared-schemas';
 
@@ -88,7 +89,7 @@ export class UsageTracker {
    */
   async fetchEvents(limit: number = 1000): Promise<LLMUsageEvent[]> {
     const response = await fetch(
-      `${this.config.supabaseUrl}/rest/v1/${this.config.tableName}?select=*&order=timestamp.desc&limit=${limit}`,
+      `${this.config.supabaseUrl}/rest/v1/${this.config.tableName}?select=*&order=created_at.desc&limit=${limit}`,
       {
         method: 'GET',
         headers: {
@@ -107,7 +108,7 @@ export class UsageTracker {
 
     // The data from Supabase is in snake_case, which matches the LLMUsageEvent type.
     // The optimizer expects this format.
-    const events: LLMUsageEvent[] = data;
+    const events: LLMUsageEvent[] = data as unknown as LLMUsageEvent[];
 
     // Note: We are not updating the in-memory `this.events` cache here because it has a
     // different type (camelCase `UsageEvent`). This fetch is a direct-to-consumer method

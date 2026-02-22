@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'path';

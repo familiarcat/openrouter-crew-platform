@@ -13,6 +13,7 @@
  * For production use, integrate with Tesseract.js or cloud OCR APIs.
  */
 
+import { createWorker } from 'tesseract.js';
 import { NLPProcessor } from './nlp-processor';
 
 /**
@@ -42,38 +43,32 @@ export class OCREngine {
 
   /**
    * Process an image and extract text
-   * In production, this would call Tesseract.js or cloud OCR API
-   * For now, we provide pattern-based extraction from base64 data
+   * Uses Tesseract.js for OCR extraction
    */
   async processImage(imageBase64: string): Promise<OCRResult> {
-    // In a real implementation, you would:
-    // 1. Decode base64 to image data
-    // 2. Call OCR library (Tesseract.js, Google Vision API, etc.)
-    // 3. Post-process results
-
-    // For now, return a structured result that can be enhanced
-    const result: OCRResult = {
-      success: false,
-      extractedText: '',
-      confidence: 0,
-      contentType: 'text',
-      codeBlocks: [],
-      summary: 'OCR requires integration with Tesseract.js or cloud API',
-      isErrorMessage: false,
-    };
-
     try {
-      // Extract metadata from base64
-      const metadata = this.extractImageMetadata(imageBase64);
+      const worker = await createWorker('eng');
+      const buffer = Buffer.from(imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+      
+      const { data: { text, confidence } } = await worker.recognize(buffer);
+      await worker.terminate();
 
-      result.confidence = metadata.quality;
-
-      // In production: const text = await tesseract.recognize(imageBase64);
-      // For now, we provide the framework for integrating real OCR
-
+      const result = this.analyzeText(text);
+      // Adjust confidence based on OCR engine confidence (0-100)
+      result.confidence = (result.confidence + (confidence / 100)) / 2;
+      
       return result;
     } catch (error) {
-      return result;
+      console.error('OCR Error:', error);
+      return {
+        success: false,
+        extractedText: '',
+        confidence: 0,
+        contentType: 'text',
+        codeBlocks: [],
+        summary: `OCR failed: ${error instanceof Error ? error.message : String(error)}`,
+        isErrorMessage: false,
+      };
     }
   }
 

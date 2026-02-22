@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { CostOptimizationService } from '@openrouter-crew/shared-cost-tracking';
+import { CostOptimizationService } from '@openrouter-crew/crew-api-client';
 import { formatCost } from '../lib/formatters';
 
 // In a real app, this would be initialized with a proper config,

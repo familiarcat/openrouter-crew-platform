@@ -228,27 +228,6 @@ export class MemoryService {
   }
 
   /**
-   * Get recent memories for a crew
-   */
-  async getRecentMemories(
-    crewId: string,
-    limit: number = 20
-  ): Promise<Memory[]> {
-    const { data, error } = await this.supabase
-      .from('crew_memory_vectors')
-      .select('*')
-      .eq('crew_id', crewId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      throw new Error(`Failed to fetch recent memories: ${error.message}`);
-    }
-
-    return (data || []) as Memory[];
-  }
-
-  /**
    * Calculate relevance between content and query
    */
   private calculateRelevance(content: string, query: string): number {

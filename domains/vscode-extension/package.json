@@ -1,185 +1,231 @@
 {
-  "name": "@openrouter-crew/vscode-extension",
-  "displayName": "OpenRouter Crew Platform",
-  "description": "AI-powered development with real-time cost tracking and crew coordination",
-  "version": "1.0.0",
+  "name": "openrouter-crew-vscode",
+  "displayName": "OpenRouter Crew AI",
+  "description": "Cost-optimized AI coding assistant using OpenRouter",
+  "version": "0.1.0",
   "publisher": "openrouter-crew",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "AI",
-    "Chat",
-    "Productivity",
     "Programming Languages"
   ],
-  "keywords": [
-    "ai",
-    "crew",
-    "openrouter",
-    "llm",
-    "cost-tracking",
-    "assistant",
-    "code-generation",
-    "refactoring",
-    "cost-optimization"
-  ],
   "activationEvents": [
-    "onStartupFinished",
-    "onCommand:openrouter-crew.ask",
-    "onCommand:openrouter-crew.review"
+    "onStartupFinished"
   ],
-  "main": "./dist/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
+        "command": "openrouter-crew.resetCost",
+        "title": "OpenRouter Crew: Reset Daily Cost Tracker",
+        "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.updateDailyBudget",
+        "title": "OpenRouter Crew: Update Daily Budget",
+        "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.clearRateLimit",
+        "title": "OpenRouter Crew: Clear Rate Limit History",
+        "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.analyzeComplexity",
+        "title": "OpenRouter Crew: Analyze Text Complexity"
+      },
+      {
+        "command": "openrouter-crew.previewCost",
+        "title": "OpenRouter Crew: Preview Cost for Command"
+      },
+      {
+        "command": "openrouter-crew.exportCostReportJson",
+        "title": "OpenRouter Crew: Export Cost Report (JSON)",
+        "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.chat",
+        "title": "Open Crew Chat (AI)"
+      },
+      {
+        "command": "openrouter-crew.review",
+        "title": "Review Code (AI)"
+      },
+      {
+        "command": "openrouter-crew.explain",
+        "title": "Explain Code (AI)"
+      },
+      {
+        "command": "openrouter-crew.generate",
+        "title": "Generate Code (AI)"
+      },
+      {
+        "command": "openrouter-crew.refactor",
+        "title": "Refactor Code (AI)"
+      },
+      {
+        "command": "openrouter-crew.quickFix",
+        "title": "Quick Fix Error (AI)"
+      },
+      {
+        "command": "openrouter-crew.structure",
+        "title": "Analyze Project Structure (AI)"
+      },
+      {
+        "command": "openrouter-crew.terminal",
+        "title": "Run Terminal Command (AI)"
+      },
+      {
+        "command": "openrouter-crew.test",
+        "title": "Generate Tests (AI)"
+      },
+      {
+        "command": "openrouter-crew.debug",
+        "title": "Debug Code (AI)"
+      },
+      {
+        "command": "openrouter-crew.optimize",
+        "title": "Optimize Code (AI)"
+      },
+      {
+        "command": "openrouter-crew.document",
+        "title": "Generate Docs (AI)"
+      },
+      {
+        "command": "openrouter-crew.showCostReport",
+        "title": "Show Cost Report"
+      },
+      {
         "command": "openrouter-crew.crew.roster",
-        "title": "Show Crew Roster",
-        "category": "Crew"
+        "title": "Show Crew Roster"
       },
       {
         "command": "openrouter-crew.crew.consult",
-        "title": "Consult Crew Member",
-        "category": "Crew"
-      },
-      {
-        "command": "openrouter-crew.crew.execute",
-        "title": "Execute Crew",
-        "category": "Crew"
+        "title": "Consult Crew Member"
       },
       {
         "command": "openrouter-crew.memory.create",
-        "title": "Create Memory",
-        "category": "Memory"
+        "title": "Create Memory"
       },
       {
         "command": "openrouter-crew.memory.search",
-        "title": "Search Memories",
-        "category": "Memory"
+        "title": "Search Memories"
       },
       {
         "command": "openrouter-crew.memory.compliance",
-        "title": "Check Compliance Status",
-        "category": "Memory"
+        "title": "Check Memory Compliance"
       },
       {
-        "command": "openrouter-crew.memory.forecast",
-        "title": "Forecast Memory Expiration",
-        "category": "Memory"
+        "command": "openrouter-crew.explain-terminal",
+        "title": "Explain Terminal Error (AI)"
       },
       {
-        "command": "openrouter-crew.project.create",
-        "title": "Create Project",
-        "category": "Project"
+        "command": "openrouter-crew.history",
+        "title": "Show Interaction History"
       },
       {
-        "command": "openrouter-crew.project.feature",
-        "title": "Create Feature",
-        "category": "Project"
-      },
-      {
-        "command": "openrouter-crew.cost.report",
-        "title": "Show Cost Report",
-        "category": "Cost"
-      },
-      {
-        "command": "openrouter-crew.cost.optimize",
-        "title": "Optimize Costs",
-        "category": "Cost"
-      }
-    ],
-    "views": {
-      "openrouter-crew-sidebar": [
-        {
-          "id": "openrouter-crew.crew-view",
-          "name": "Crew Status",
-          "when": "true"
-        },
-        {
-          "id": "openrouter-crew.cost-view",
-          "name": "Cost Breakdown",
-          "when": "true"
-        },
-        {
-          "id": "openrouter-crew.project-view",
-          "name": "Projects",
-          "when": "true"
-        }
-      ]
-    },
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "openrouter-crew-sidebar",
-          "title": "Crew Platform",
-          "icon": "media/crew-icon.svg"
-        }
-      ]
-    },
-    "statusBarItems": [
-      {
-        "id": "openrouter-crew.cost-meter",
-        "alignment": "left",
-        "priority": 100
+        "command": "openrouter-crew.settings",
+        "title": "Open Extension Settings"
       }
     ],
     "configuration": {
-      "title": "OpenRouter Crew Platform",
+      "title": "OpenRouter Crew",
       "properties": {
-        "openrouter-crew.cliPath": {
+        "openrouterCrew.apiKey": {
           "type": "string",
-          "default": "crew",
-          "description": "Path to the crew CLI executable"
+          "description": "OpenRouter API Key"
         },
-        "openrouter-crew.supabaseUrl": {
+        "openrouterCrew.model.simple": {
           "type": "string",
-          "description": "Supabase project URL"
+          "default": "anthropic/claude-3-haiku-20240307",
+          "description": "Model for simple, low-complexity tasks (e.g., short questions)."
         },
-        "openrouter-crew.n8nUrl": {
+        "openrouterCrew.model.default": {
           "type": "string",
-          "description": "n8n base URL"
+          "default": "anthropic/claude-3-sonnet",
+          "description": "Default model for medium-complexity tasks."
         },
-        "openrouter-crew.budgetLimit": {
+        "openrouterCrew.model.complex": {
+          "type": "string",
+          "default": "anthropic/claude-3-sonnet",
+          "description": "Model for complex tasks like debugging, refactoring, or optimization."
+        },
+        "openrouterCrew.model.review": {
+          "type": "string",
+          "default": "openai/gpt-4-turbo",
+          "description": "Specialized model for code reviews, often requiring deeper analysis."
+        },
+        "openrouterCrew.model.premium": {
+          "type": "string",
+          "default": "anthropic/claude-3-opus",
+          "description": "Premium model for high-complexity tasks and reasoning."
+        },
+        "openrouterCrew.budget.monthly": {
           "type": "number",
-          "default": 100,
-          "description": "Daily budget limit in USD"
+          "default": 10.0,
+          "description": "Monthly budget limit in USD"
         },
-        "openrouter-crew.refreshInterval": {
+        "openrouterCrew.budget.daily": {
           "type": "number",
-          "default": 5000,
-          "description": "Status refresh interval in milliseconds"
+          "default": 1.0,
+          "description": "Daily budget limit in USD. The cost meter will track usage against this limit."
         }
       }
     }
   },
+  "keybindings": [
+    {
+      "command": "openrouter-crew.chat",
+      "key": "ctrl+shift+c",
+      "when": "editorTextFocus"
+    },
+    {
+      "command": "openrouter-crew.review",
+      "key": "ctrl+shift+r",
+      "when": "editorTextFocus"
+    },
+    {
+      "command": "openrouter-crew.explain",
+      "key": "ctrl+shift+e",
+      "when": "editorTextFocus"
+    },
+    {
+      "command": "openrouter-crew.generate",
+      "key": "ctrl+shift+g",
+      "when": "editorTextFocus"
+    },
+    {
+      "command": "openrouter-crew.refactor",
+      "key": "ctrl+shift+f",
+      "when": "editorTextFocus"
+    },
+    {
+      "command": "openrouter-crew.quickFix",
+      "key": "ctrl+shift+q",
+      "when": "editorTextFocus"
+    }
+  ],
   "scripts": {
-    "dev": "tsc -watch",
-    "build": "tsc",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "package": "vsce package",
-    "publish": "vsce publish",
-    "lint": "eslint src --ext .ts"
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "npx @vscode/vsce package"
   },
   "dependencies": {
     "@openrouter-crew/crew-api-client": "workspace:*",
-    "@openrouter-crew/shared-cost-tracking": "workspace:*",
-    "@openrouter-crew/shared-crew-coordination": "workspace:*",
-    "@supabase/supabase-js": "^2.38.0",
-    "axios": "^1.6.5"
+    "@supabase/supabase-js": "^2.39.0"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.8",
-    "@types/node": "^20.10.0",
     "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^6.13.2",
-    "@typescript-eslint/parser": "^6.13.2",
-    "@vscode/vsce": "^3.7.1",
-    "eslint": "^8.54.0",
-    "jest": "^29.7.0",
-    "jest-mock-axios": "^4.6.1",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.3.2"
+    "@types/node": "20.x",
+    "typescript": "^5.3.3",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.24.0",
+    "@types/mocha": "^10.0.6"
   }
 }

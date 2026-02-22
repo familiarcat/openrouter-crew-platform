@@ -1,22 +1,22 @@
 {
-  "extends": "../../tsconfig.extension.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
     "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "composite": true,
-    "incremental": true,
-    "target": "ES2022"
+    "target": "ES2020",
+    "outDir": "out",
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
+    "sourceMap": true,
+    "rootDir": "src",
+    "strict": true,
+    "types": [
+      "node"
+    ],
+    "ignoreDeprecations": "5.0",
+    "moduleResolution": "Bundler"
   },
-  "include": [
-    "src/**/*"
-  ],
   "exclude": [
-    "node_modules",
-    "dist",
-    "tests",
-    "**/*.test.ts"
-  ],
-  "ignoreDeprecations": "6.0"
+    "node_modules"
+  ]
 }

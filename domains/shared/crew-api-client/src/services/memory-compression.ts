@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { gzipSync, gunzipSync } from 'zlib';
 
 /**
