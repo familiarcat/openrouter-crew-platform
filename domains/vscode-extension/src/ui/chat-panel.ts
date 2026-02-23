@@ -1,547 +1,201 @@
 import * as vscode from 'vscode';
-import { LLMRouter } from '../services/llm-router';
-import { CostTracker } from '../services/cost-tracker';
-import { ContextBuilder } from '../services/context-builder';
-
-/**
- * Chat Panel UI
- *
- * Webview-based chat interface for AI interactions.
- * Handles messages, cost display, and result rendering.
- */
-
-
-/**
- * Chat message
- */
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-  metadata?: {
-    intent?: string;
-    language?: string;
-    cost?: number;
-    executionTimeMs?: number;
-    model?: string;
-  };
-}
-
-/**
- * Chat panel state
- */
-export interface ChatPanelState {
-  messages: ChatMessage[];
-  isLoading: boolean;
-  currentBudget: number;
-  budgetRemaining: number;
-  totalCost: number;
-}
+import * as fs from 'fs';
+import * as path from 'path';
+import { LLMRouter } from '../services/llm-router.js';
+import { CostTracker } from '../services/cost-tracker.js';
+import { NLPProcessor } from '../services/nlp-processor.js';
+import { ContextBuilder } from '../services/context-builder.js';
 
 /**
  * Chat Panel Controller
  */
 export class ChatPanel {
-  private messages: ChatMessage[] = [];
-  private isLoading: boolean = false;
-  private currentBudget: number = 100;
-  private budgetRemaining: number = 100;
-  private totalCost: number = 0;
-  private messageId: number = 0;
+  public static currentPanel: ChatPanel | undefined;
+  public static readonly viewType = 'openRouterCrewChat';
 
-  /**
-   * Add message to chat
-   */
-  addMessage(role: 'user' | 'assistant', content: string, metadata?: any): ChatMessage {
-    const message: ChatMessage = {
-      id: `msg-${++this.messageId}`,
-      role,
-      content,
-      timestamp: Date.now(),
-      metadata,
-    };
+  private readonly _panel: vscode.WebviewPanel;
+  private readonly _extensionUri: vscode.Uri;
+  private readonly _llmRouter: LLMRouter;
+  private readonly _costTracker: CostTracker;
+  private readonly _nlpProcessor: NLPProcessor;
+  private readonly _contextBuilder: ContextBuilder;
+  private _disposables: vscode.Disposable[] = [];
 
-    this.messages.push(message);
+  public static createOrShow(
+    extensionUri: vscode.Uri,
+    llmRouter: LLMRouter,
+    costTracker: CostTracker,
+    nlpProcessor: NLPProcessor,
+    contextBuilder: ContextBuilder
+  ) {
+    const column = vscode.window.activeTextEditor
+      ? vscode.window.activeTextEditor.viewColumn
+      : undefined;
 
-    // Update cost tracking
-    if (metadata?.cost) {
-      this.totalCost += metadata.cost;
-      this.budgetRemaining -= metadata.cost;
+    // If we already have a panel, show it.
+    if (ChatPanel.currentPanel) {
+      ChatPanel.currentPanel._panel.reveal(column);
+      return;
     }
 
-    return message;
+    // Otherwise, create a new panel.
+    const panel = vscode.window.createWebviewPanel(
+      ChatPanel.viewType,
+      'OpenRouter Crew Chat',
+      column || vscode.ViewColumn.Beside,
+      {
+        // Enable javascript in the webview
+        enableScripts: true,
+        // And restrict the webview to only loading content from our extension's `webview` directory.
+        localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'webview')]
+      }
+    );
+
+    ChatPanel.currentPanel = new ChatPanel(panel, extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder);
   }
 
-  /**
-   * Get chat history
-   */
-  getHistory(limit: number = 50): ChatMessage[] {
-    return this.messages.slice(-limit);
+  public static revive(
+    panel: vscode.WebviewPanel,
+    extensionUri: vscode.Uri,
+    llmRouter: LLMRouter,
+    costTracker: CostTracker,
+    nlpProcessor: NLPProcessor,
+    contextBuilder: ContextBuilder
+  ) {
+    ChatPanel.currentPanel = new ChatPanel(panel, extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder);
   }
 
-  /**
-   * Clear chat
-   */
-  clearChat(): void {
-    this.messages = [];
+  private constructor(
+    panel: vscode.WebviewPanel,
+    extensionUri: vscode.Uri,
+    llmRouter: LLMRouter,
+    costTracker: CostTracker,
+    nlpProcessor: NLPProcessor,
+    contextBuilder: ContextBuilder
+  ) {
+    this._panel = panel;
+    this._extensionUri = extensionUri;
+    this._llmRouter = llmRouter;
+    this._costTracker = costTracker;
+    this._nlpProcessor = nlpProcessor;
+    this._contextBuilder = contextBuilder;
+
+    // Set the webview's initial html content
+    this._update();
+
+    // Listen for when the panel is disposed
+    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+    // Update the content based on view changes
+    this._panel.onDidChangeViewState(
+      e => {
+        if (this._panel.visible) {
+          this._update();
+        }
+      },
+      null,
+      this._disposables
+    );
+
+    // Handle messages from the webview
+    this._panel.webview.onDidReceiveMessage(
+      message => {
+        switch (message.command) {
+          case 'sendMessage':
+            // Fire and forget; error handling is inside the async method
+            this._handleUserMessage(message.text);
+            return;
+        }
+      },
+      null,
+      this._disposables
+    );
   }
 
-  /**
-   * Generate HTML for chat panel
-   */
-  generateHTML(): string {
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OpenRouter Crew Chat</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+  private async _handleUserMessage(text: string) {
+    this._panel.webview.postMessage({ command: 'showLoading' });
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: var(--vscode-editor-background);
-      color: var(--vscode-editor-foreground);
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+    try {
+      const nlpAnalysis = this._nlpProcessor.analyze(text);
+      const contextString = await this._contextBuilder.buildContext(text);
 
-    .header {
-      padding: 16px;
-      border-bottom: 1px solid var(--vscode-list-hoverBackground);
-      background: var(--vscode-sideBar-background);
-    }
-
-    .title {
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .cost-meter {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-    }
-
-    .cost-bar {
-      flex: 1;
-      height: 4px;
-      background: var(--vscode-list-hoverBackground);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .cost-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #4ec9b0, #ce9178, #d7ba7d);
-      transition: width 0.3s ease;
-    }
-
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .message {
-      display: flex;
-      gap: 8px;
-    }
-
-    .message.user {
-      justify-content: flex-end;
-    }
-
-    .message-content {
-      max-width: 80%;
-      padding: 10px 12px;
-      border-radius: 6px;
-      line-height: 1.5;
-    }
-
-    .message.user .message-content {
-      background: var(--vscode-button-background);
-      color: var(--vscode-button-foreground);
-    }
-
-    .message.assistant .message-content {
-      background: var(--vscode-list-hoverBackground);
-      color: var(--vscode-editor-foreground);
-    }
-
-    .message-metadata {
-      font-size: 11px;
-      color: var(--vscode-descriptionForeground);
-      margin-top: 4px;
-    }
-
-    .input-area {
-      padding: 12px 16px;
-      border-top: 1px solid var(--vscode-list-hoverBackground);
-      background: var(--vscode-sideBar-background);
-      display: flex;
-      gap: 8px;
-    }
-
-    .input-field {
-      flex: 1;
-      background: var(--vscode-input-background);
-      color: var(--vscode-input-foreground);
-      border: 1px solid var(--vscode-input-border);
-      border-radius: 4px;
-      padding: 8px 12px;
-      font-family: inherit;
-      font-size: 14px;
-    }
-
-    .input-field:focus {
-      outline: none;
-      border-color: var(--vscode-focusBorder);
-    }
-
-    .send-button {
-      padding: 8px 16px;
-      background: var(--vscode-button-background);
-      color: var(--vscode-button-foreground);
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    .send-button:hover {
-      background: var(--vscode-button-hoverBackground);
-    }
-
-    .code-block {
-      background: var(--vscode-terminal-background);
-      border: 1px solid var(--vscode-list-hoverBackground);
-      border-radius: 4px;
-      margin: 8px 0;
-      overflow: hidden;
-    }
-
-    .code-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 4px 12px;
-      background: var(--vscode-editor-inactiveSelectionBackground);
-      border-bottom: 1px solid var(--vscode-list-hoverBackground);
-      font-size: 11px;
-      color: var(--vscode-descriptionForeground);
-    }
-
-    .copy-button {
-      background: transparent;
-      border: none;
-      color: var(--vscode-textLink-foreground);
-      cursor: pointer;
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 2px;
-    }
-
-    .copy-button:hover {
-      background: var(--vscode-list-hoverBackground);
-    }
-
-    .code-content {
-      padding: 12px;
-      overflow-x: auto;
-    }
-
-    .code-content code {
-      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-      font-size: 12px;
-    }
-
-    .loading {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--vscode-descriptionForeground);
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid var(--vscode-descriptionForeground);
-      border-top: 2px solid var(--vscode-button-background);
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="title">🤖 OpenRouter Crew Assistant</div>
-    <div class="cost-meter">
-      <span id="budget-text">Budget: $0.00</span>
-      <div class="cost-bar">
-        <div class="cost-fill" id="cost-fill" style="width: 0%"></div>
-      </div>
-      <span id="cost-text">0%</span>
-    </div>
-  </div>
-
-  <div class="messages" id="messages">
-    <div class="message assistant">
-      <div class="message-content">
-        <p>Hi! I'm your AI coding companion. I can help you:</p>
-        <ul style="margin: 8px 0 0 20px;">
-          <li>Review and analyze code</li>
-          <li>Generate new code</li>
-          <li>Explain complex concepts</li>
-          <li>Debug errors</li>
-          <li>Refactor for improvements</li>
-          <li>Generate tests</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="input-area">
-    <input
-      type="text"
-      class="input-field"
-      id="input"
-      placeholder="Ask anything about your code..."
-      autocomplete="off"
-    />
-    <button class="send-button" id="send">Send</button>
-  </div>
-
-  <script>
-    const input = document.getElementById('input');
-    const sendBtn = document.getElementById('send');
-    const messagesDiv = document.getElementById('messages');
-    const costFill = document.getElementById('cost-fill');
-    const costText = document.getElementById('cost-text');
-    const budgetText = document.getElementById('budget-text');
-
-    // Send message on click or Enter
-    function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-
-      addMessage('user', text);
-      input.value = '';
-
-      // Signal to VSCode extension
-      acquireVsCodeApi().postMessage({
-        command: 'executeCommand',
-        text: text,
+      const response = await this._llmRouter.route({
+        prompt: text,
+        context: contextString,
+        intent: nlpAnalysis.intent.intent,
+        complexity: nlpAnalysis.complexity,
       });
 
-      // Show loading
-      showLoading();
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        sendMessage();
-      }
-    });
-
-    function addMessage(role, content) {
-      const message = document.createElement('div');
-      message.className = 'message ' + role;
-
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'message-content';
-      contentDiv.innerHTML = formatContent(content);
-
-      message.appendChild(contentDiv);
-      messagesDiv.appendChild(message);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function copyCode(button) {
-      const codeBlock = button.closest('.code-block');
-      const code = codeBlock.querySelector('code').innerText;
-      
-      navigator.clipboard.writeText(code).then(() => {
-        const originalText = button.innerText;
-        button.innerText = 'Copied!';
-        setTimeout(() => {
-          button.innerText = originalText;
-        }, 2000);
+      this._panel.webview.postMessage({
+        command: 'receiveMessage',
+        text: response.content,
+        role: 'assistant',
+        meta: {
+          model: response.model,
+          cost: response.costUSD,
+          executionTimeMs: response.executionTimeMs,
+        },
+      });
+    } catch (error: any) {
+      this._panel.webview.postMessage({
+        command: 'receiveMessage',
+        text: `Sorry, an error occurred: ${error.message}`,
+        role: 'assistant',
+        meta: { model: 'error-handler', cost: 0 },
       });
     }
-
-    function formatContent(text) {
-      // Simple markdown rendering
-      text = text.replace(/\`\`\`(.*?)\n([\s\S]*?)\`\`\`/g, function(match, lang, code) {
-        return '<div class="code-block"><div class="code-header"><span>' + (lang || 'text') + '</span><button class="copy-button" onclick="copyCode(this)">Copy</button></div><div class="code-content"><code>' + code + '</code></div></div>';
-      });
-      text = text.replace(/\`([^\`]+)\`/g, '<code style="background: var(--vscode-list-hoverBackground); padding: 2px 4px; border-radius: 2px;">$1</code>');
-      text = text.replace(/\n/g, '<br>');
-      return text;
-    }
-
-    function showLoading() {
-      const loading = document.createElement('div');
-      loading.className = 'message assistant';
-      loading.id = 'loading';
-      loading.innerHTML = '<div class="message-content loading"><span class="spinner"></span> Thinking...</div>';
-      messagesDiv.appendChild(loading);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function updateBudget(remaining, total, limit) {
-      const percent = Math.min(((limit - remaining) / limit) * 100, 100);
-      costFill.style.width = percent + '%';
-      costText.textContent = Math.round(percent) + '%';
-      budgetText.textContent = '$' + remaining.toFixed(2) + ' / $' + limit.toFixed(2);
-
-      // Change color based on usage
-      if (percent > 95) {
-        costFill.style.background = '#d7534a';
-      } else if (percent > 75) {
-        costFill.style.background = '#dcdcaa';
-      } else {
-        costFill.style.background = '#4ec9b0';
-      }
-    }
-
-    // Listen for messages from VSCode
-    window.addEventListener('message', (e) => {
-      const message = e.data;
-
-      if (message.command === 'addMessage') {
-        const loading = document.getElementById('loading');
-        if (loading) loading.remove();
-        addMessage(message.role, message.content);
-      }
-
-      if (message.command === 'updateBudget') {
-        updateBudget(message.remaining, message.total, message.limit);
-      }
-    });
-  </script>
-</body>
-</html>`;
   }
 
-  /**
-   * Get current state
-   */
-  getState(): ChatPanelState {
-    return {
-      messages: this.messages,
-      isLoading: this.isLoading,
-      currentBudget: this.currentBudget,
-      budgetRemaining: this.budgetRemaining,
-      totalCost: this.totalCost,
-    };
+  public dispose() {
+    ChatPanel.currentPanel = undefined;
+
+    // Clean up our resources
+    this._panel.dispose();
+
+    while (this._disposables.length) {
+      const x = this._disposables.pop();
+      if (x) {
+        x.dispose();
+      }
+    }
   }
 
-  /**
-   * Set budget
-   */
-  setBudget(budget: number): void {
-    this.currentBudget = budget;
-    this.budgetRemaining = budget;
+  private _update() {
+    const webview = this._panel.webview;
+    this._panel.webview.html = this._getHtmlForWebview(webview);
   }
 
-  /**
-   * Update budget remaining
-   */
-  updateBudget(remaining: number): void {
-    this.budgetRemaining = remaining;
+  private _getHtmlForWebview(webview: vscode.Webview) {
+    // Local path to main script run in the webview
+    const scriptPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'webview', 'chat.js');
+    const scriptUri = webview.asWebviewUri(scriptPathOnDisk);
+
+    // Local path to css styles
+    const stylePathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'webview', 'chat.css');
+    const styleUri = webview.asWebviewUri(stylePathOnDisk);
+
+    // Local path to html template
+    const htmlPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'webview', 'chat.html');
+    let htmlContent = fs.readFileSync(htmlPathOnDisk.fsPath, 'utf8');
+
+    // Use a nonce to whitelist which scripts can be run
+    const nonce = getNonce();
+
+    // Replace placeholders
+    htmlContent = htmlContent.replace(/\${nonce}/g, nonce);
+    htmlContent = htmlContent.replace(/\${webview.cspSource}/g, webview.cspSource);
+    htmlContent = htmlContent.replace(/\${scriptUri}/g, scriptUri.toString());
+    htmlContent = htmlContent.replace(/\${styleUri}/g, styleUri.toString());
+
+    return htmlContent;
   }
 }
 
-/**
- * ChatViewProvider for the sidebar webview.
- */
-export class ChatViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'openrouter-crew.chat';
-
-    private _view?: vscode.WebviewView;
-    private chatModel: ChatPanel;
-
-    constructor(
-        private readonly extensionUri: vscode.Uri,
-        private llmRouter: LLMRouter,
-        private costTracker: CostTracker,
-        private contextBuilder: ContextBuilder
-    ) {
-        this.chatModel = new ChatPanel();
-        // Listen to cost updates to update budget in webview
-        this.costTracker.onDidUpdateCost(() => this.updateBudget());
-    }
-
-    public resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken,
-    ) {
-        this._view = webviewView;
-
-        webviewView.webview.options = {
-            enableScripts: true,
-            localResourceRoots: [this.extensionUri]
-        };
-
-        webviewView.webview.html = this.chatModel.generateHTML();
-
-        webviewView.webview.onDidReceiveMessage(async (message) => {
-            if (message.command === 'executeCommand') {
-                await this.handleUserMessage(message.text);
-            }
-        });
-
-        // Initial budget update
-        this.updateBudget();
-    }
-
-    public async handleUserMessage(prompt: string) {
-        if (!this._view) {
-            return;
-        }
-
-        this.chatModel.addMessage('user', prompt);
-
-        try {
-            const contextString = await this.contextBuilder.buildContext(prompt);
-            const response = await this.llmRouter.route({
-                prompt,
-                context: contextString,
-                intent: 'ASK',
-            });
-
-            const assistantMessage = this.chatModel.addMessage('assistant', response.content, { model: response.model, cost: response.cost, executionTimeMs: response.executionTimeMs });
-            this._view.webview.postMessage({ command: 'addMessage', ...assistantMessage });
-        } catch (error: any) {
-            const errorMessage = this.chatModel.addMessage('assistant', `Sorry, an error occurred: ${error.message}`);
-            this._view.webview.postMessage({ command: 'addMessage', ...errorMessage });
-        }
-    }
-
-    private updateBudget() {
-        if (!this._view) return;
-        const metrics = this.costTracker.getMetrics();
-        const dailyBudget = this.costTracker.getDailyBudget();
-        this.chatModel.updateBudget(metrics.remainingBudget);
-        this._view.webview.postMessage({ command: 'updateBudget', remaining: metrics.remainingBudget, total: metrics.todayCost, limit: dailyBudget });
-    }
+function getNonce() {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
 }

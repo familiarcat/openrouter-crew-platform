@@ -1,140 +1,214 @@
 import * as vscode from 'vscode';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-export interface CostTransaction {
+export interface UsageRecord {
   timestamp: number;
+  command: string;
+  promptLength: number;
   model: string;
-  intent: string;
-  inputTokens: number;
-  outputTokens: number;
   costUSD: number;
-  complexity?: string;
+  executionTimeMs: number;
+  cached: boolean;
+  intent?: string;
 }
 
 export interface CostMetrics {
-  todayCost: number;
-  thisMonthCost: number;
-  remainingBudget: number;
-  requestCount: number;
-  averageCost: number;
-  rateLimitHits: number;
+  totalCost: number;
+  budgetLimit: number;
+  remaining: number;
+  percentUsed: number;
+  averagePerDay: number;
+  byModel: Record<string, number>;
+  byCommand: Record<string, number>;
+}
+
+export interface BudgetConfig {
+  limit: number;
+  period: 'daily' | 'weekly' | 'monthly';
+  alertThreshold: number; // 0.0 to 1.0 (e.g. 0.8 for 80%)
 }
 
 export class CostTracker implements vscode.Disposable {
   private context: vscode.ExtensionContext;
-  private _onDidUpdateCost = new vscode.EventEmitter<void>();
-  public readonly onDidUpdateCost = this._onDidUpdateCost.event;
-  private disposable: vscode.Disposable;
-  private transactions: CostTransaction[] = [];
-  private rateLimitHits: { timestamp: number }[] = [];
-
-  private static readonly KEY_DAILY_USAGE = 'openrouter-crew.dailyUsage';
-  private static readonly KEY_LAST_RESET = 'openrouter-crew.lastResetDate';
-  private static readonly KEY_MONTHLY_USAGE = 'openrouter-crew.monthlyUsage';
-  private static readonly KEY_LAST_MONTH_RESET = 'openrouter-crew.lastMonthResetDate';
-  private static readonly KEY_FILTER_START = 'openrouter-crew.filterStartDate';
-  private static readonly KEY_FILTER_END = 'openrouter-crew.filterEndDate';
+  private supabase: SupabaseClient | null = null;
+  
+  private readonly KEY_USAGE_HISTORY = 'openrouter-crew.cost.history';
+  private readonly KEY_BUDGET_CONFIG = 'openrouter-crew.cost.budget';
+  
+  private readonly DEFAULT_BUDGET: BudgetConfig = {
+    limit: 10.0,
+    period: 'monthly',
+    alertThreshold: 0.8
+  };
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
-    this.checkAndResetDaily();
-    this.checkAndResetMonthly();
+    this.initSupabase();
+  }
 
-    const configListener = vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('openrouter-crew.budget.daily')) {
-        this._onDidUpdateCost.fire();
+  private initSupabase() {
+    const config = vscode.workspace.getConfiguration('openrouterCrew');
+    const url = config.get<string>('supabaseUrl');
+    const key = config.get<string>('supabaseAnonKey');
+    
+    if (url && key) {
+      try {
+        this.supabase = createClient(url, key);
+      } catch (e) {
+        console.error('Failed to initialize Supabase client for cost tracking:', e);
       }
+    }
+  }
+
+  public async getBudgetConfig(): Promise<BudgetConfig> {
+    const config = this.context.globalState.get<BudgetConfig>(this.KEY_BUDGET_CONFIG);
+    return config || this.DEFAULT_BUDGET;
+  }
+
+  public async setBudgetConfig(config: BudgetConfig): Promise<void> {
+    await this.context.globalState.update(this.KEY_BUDGET_CONFIG, config);
+  }
+
+  public async recordUsage(record: UsageRecord): Promise<void> {
+    // 1. Save locally
+    const history = this.getLocalHistory();
+    history.push(record);
+    
+    // Prune history (keep last 90 days)
+    const prunedHistory = this.pruneHistory(history);
+    await this.context.globalState.update(this.KEY_USAGE_HISTORY, prunedHistory);
+
+    // 2. Sync to Supabase if available
+    if (this.supabase) {
+      this.syncToSupabase(record).catch(err => console.error('Failed to sync cost to Supabase:', err));
+    }
+
+    // 3. Check budget alerts
+    await this.checkAndAlertBudget();
+  }
+
+  public getLocalHistory(): UsageRecord[] {
+    return this.context.globalState.get<UsageRecord[]>(this.KEY_USAGE_HISTORY) || [];
+  }
+
+  private pruneHistory(history: UsageRecord[]): UsageRecord[] {
+    const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000); // 90 days
+    return history.filter(r => r.timestamp > cutoff);
+  }
+
+  private async syncToSupabase(record: UsageRecord) {
+    if (!this.supabase) return;
+    
+    // Assumes 'extension_usage_logs' table exists in Supabase
+    const { error } = await this.supabase.from('extension_usage_logs').insert({
+      timestamp: new Date(record.timestamp).toISOString(),
+      command: record.command,
+      model: record.model,
+      cost_usd: record.costUSD,
+      execution_time_ms: record.executionTimeMs,
+      cached: record.cached,
+      intent: record.intent,
+      metadata: { prompt_length: record.promptLength }
     });
 
-    this.disposable = vscode.Disposable.from(configListener);
+    if (error) throw error;
   }
 
-  private checkAndResetDaily() {
-    const lastReset = this.context.globalState.get<string>(CostTracker.KEY_LAST_RESET);
-    const today = new Date().toDateString();
-
-    if (lastReset !== today) {
-      this.resetDailyUsage(true);
+  public async getCostMetrics(period: 'daily' | 'weekly' | 'monthly' = 'monthly'): Promise<CostMetrics> {
+    const history = this.getLocalHistory();
+    const budget = await this.getBudgetConfig();
+    
+    const now = Date.now();
+    let startTime = 0;
+    let days = 30;
+    
+    switch (period) {
+      case 'daily':
+        startTime = now - (24 * 60 * 60 * 1000);
+        days = 1;
+        break;
+      case 'weekly':
+        startTime = now - (7 * 24 * 60 * 60 * 1000);
+        days = 7;
+        break;
+      case 'monthly':
+      default:
+        startTime = now - (30 * 24 * 60 * 60 * 1000);
+        days = 30;
+        break;
     }
-  }
 
-  private checkAndResetMonthly() {
-    const lastReset = this.context.globalState.get<string>(CostTracker.KEY_LAST_MONTH_RESET);
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const periodRecords = history.filter(r => r.timestamp >= startTime);
+    const totalCost = periodRecords.reduce((sum, r) => sum + r.costUSD, 0);
+    
+    const byModel: Record<string, number> = {};
+    const byCommand: Record<string, number> = {};
 
-    if (lastReset !== currentMonth) {
-      this.resetMonthlyUsage(true);
+    periodRecords.forEach(r => {
+      byModel[r.model] = (byModel[r.model] || 0) + r.costUSD;
+      byCommand[r.command] = (byCommand[r.command] || 0) + r.costUSD;
+    });
+
+    // Normalize budget limit to the requested period if needed
+    let effectiveLimit = budget.limit;
+    if (budget.period !== period) {
+      const budgetDays = budget.period === 'daily' ? 1 : (budget.period === 'weekly' ? 7 : 30);
+      const dailyBudget = budget.limit / budgetDays;
+      effectiveLimit = dailyBudget * days;
     }
-  }
 
-  public async recordTransaction(model: string, intent: string, inputTokens: number, outputTokens: number, cost: number, complexity?: string): Promise<void> {
-    const tx: CostTransaction = {
-      timestamp: Date.now(),
-      model,
-      intent,
-      inputTokens,
-      outputTokens,
-      costUSD: cost,
-      complexity: complexity || 'UNKNOWN'
+    return {
+      totalCost,
+      budgetLimit: effectiveLimit,
+      remaining: Math.max(0, effectiveLimit - totalCost),
+      percentUsed: (totalCost / effectiveLimit) * 100,
+      averagePerDay: totalCost / days,
+      byModel,
+      byCommand
     };
-    this.transactions.push(tx);
-    await this.trackCost(cost);
   }
 
-  public async recordRateLimitHit(): Promise<void> {
-    this.rateLimitHits.push({ timestamp: Date.now() });
-    this._onDidUpdateCost.fire(); // Refresh views
-  }
-
-  public async clearRateLimitHistory(): Promise<void> {
-    this.rateLimitHits = [];
-    this._onDidUpdateCost.fire();
-  }
-
-  public async trackCost(amount: number): Promise<void> {
-    this.checkAndResetDaily();
-    this.checkAndResetMonthly();
+  public async checkBudget(estimatedCost: number): Promise<{ allowed: boolean; reason?: string }> {
+    const budget = await this.getBudgetConfig();
+    // Check against the configured period metrics
+    const metrics = await this.getCostMetrics(budget.period);
     
-    const current = this.getDailyUsage();
-    await this.context.globalState.update(CostTracker.KEY_DAILY_USAGE, current + amount);
-
-    const currentMonthly = this.getMonthlyUsage();
-    await this.context.globalState.update(CostTracker.KEY_MONTHLY_USAGE, currentMonthly + amount);
-
-    this._onDidUpdateCost.fire();
-  }
-
-  public getDailyUsage(): number {
-    return this.context.globalState.get<number>(CostTracker.KEY_DAILY_USAGE) || 0;
-  }
-
-  public getMonthlyUsage(): number {
-    return this.context.globalState.get<number>(CostTracker.KEY_MONTHLY_USAGE) || 0;
-  }
-
-  public async resetDailyUsage(isAutoReset: boolean = false): Promise<void> {
-    await this.context.globalState.update(CostTracker.KEY_DAILY_USAGE, 0);
-    
-    if (isAutoReset) {
-      await this.context.globalState.update(CostTracker.KEY_LAST_RESET, new Date().toDateString());
+    if (metrics.totalCost + estimatedCost > budget.limit) {
+      return { 
+        allowed: false, 
+        reason: `Budget limit of $${budget.limit.toFixed(2)} exceeded. Current usage: $${metrics.totalCost.toFixed(4)}` 
+      };
     }
-    
-    this._onDidUpdateCost.fire();
+
+    return { allowed: true };
   }
 
-  public async resetMonthlyUsage(isAutoReset: boolean = false): Promise<void> {
-    await this.context.globalState.update(CostTracker.KEY_MONTHLY_USAGE, 0);
+  private async checkAndAlertBudget() {
+    const budget = await this.getBudgetConfig();
+    const metrics = await this.getCostMetrics(budget.period);
     
-    if (isAutoReset) {
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      await this.context.globalState.update(CostTracker.KEY_LAST_MONTH_RESET, currentMonth);
+    if (metrics.percentUsed >= (budget.alertThreshold * 100)) {
+      const msg = `OpenRouter Crew: Budget usage at ${metrics.percentUsed.toFixed(1)}% ($${metrics.totalCost.toFixed(2)} / $${budget.limit.toFixed(2)})`;
+      if (metrics.percentUsed >= 100) {
+        vscode.window.showErrorMessage(msg);
+      } else {
+        vscode.window.showWarningMessage(msg);
+      }
     }
-    
-    this._onDidUpdateCost.fire();
   }
 
-  public getDailyBudget(): number {
-    const config = vscode.workspace.getConfiguration('openrouterCrew');
-    return config.get<number>('budget.daily') || 1.00;
+  public async getModelDistribution(): Promise<{model: string, cost: number, count: number}[]> {
+    const history = this.getLocalHistory();
+    const map = new Map<string, {cost: number, count: number}>();
+    
+    history.forEach(r => {
+      const current = map.get(r.model) || { cost: 0, count: 0 };
+      map.set(r.model, { cost: current.cost + r.costUSD, count: current.count + 1 });
+    });
+    
+    return Array.from(map.entries())
+      .map(([model, stats]) => ({ model, ...stats }))
+      .sort((a, b) => b.cost - a.cost);
   }
 
   /**
@@ -167,39 +241,14 @@ export class CostTracker implements vscode.Disposable {
     return cost;
   }
 
-  public getFilterState(): { startDate: Date | undefined; endDate: Date | undefined } {
-    const start = this.context.globalState.get<string>(CostTracker.KEY_FILTER_START);
-    const end = this.context.globalState.get<string>(CostTracker.KEY_FILTER_END);
-    return {
-      startDate: start ? new Date(start) : undefined,
-      endDate: end ? new Date(end) : undefined
-    };
-  }
-
-  public async updateFilterState(startDate: Date | undefined, endDate: Date | undefined): Promise<void> {
-    await this.context.globalState.update(CostTracker.KEY_FILTER_START, startDate?.toISOString());
-    await this.context.globalState.update(CostTracker.KEY_FILTER_END, endDate?.toISOString());
-  }
-
-  public getHistory(): CostTransaction[] {
-    return this.transactions;
-  }
-
-  public getMetrics(): CostMetrics {
-    const dailyUsage = this.getDailyUsage();
-    const monthlyUsage = this.getMonthlyUsage();
-    const dailyBudget = this.getDailyBudget();
-    return {
-      todayCost: dailyUsage,
-      thisMonthCost: monthlyUsage,
-      remainingBudget: Math.max(0, dailyBudget - dailyUsage),
-      requestCount: this.transactions.length,
-      averageCost: this.transactions.length > 0 ? dailyUsage / this.transactions.length : 0,
-      rateLimitHits: this.rateLimitHits.length,
-    };
+  /**
+   * Resets the daily usage history.
+   */
+  public async resetDailyUsage(): Promise<void> {
+    await this.context.globalState.update(this.KEY_USAGE_HISTORY, []);
   }
 
   public dispose(): void {
-    this.disposable.dispose();
+    // Cleanup if needed
   }
 }

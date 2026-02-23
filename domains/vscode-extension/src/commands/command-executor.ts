@@ -5,13 +5,13 @@
  * Provides unified interface for VSCode extension commands.
  */
 
-import { LLMRouter, LLMRequest, LLMResponse } from '../services/llm-router';
-import { NLPProcessor } from '../services/nlp-processor';
-import { OCREngine, OCRWithNLP } from '../services/ocr-engine';
-import { FileManager } from '../services/file-manager';
-import { TerminalManager } from '../services/terminal-manager';
-import { CostTracker } from '../services/cost-tracker';
-import { ContextBuilder } from '../services/context-builder';
+import { LLMRouter, LLMRequest, LLMResponse } from '../services/llm-router.js';
+import { NLPProcessor } from '../services/nlp-processor.js';
+import { OCREngine, OCRWithNLP } from '../services/ocr-engine.js';
+import { FileManager } from '../services/file-manager.js';
+import { TerminalManager } from '../services/terminal-manager.js';
+import { CostTracker } from '../services/cost-tracker.js';
+import { ContextBuilder } from '../services/context-builder.js';
 
 /**
  * Command execution result
@@ -287,6 +287,73 @@ Include:
   }
 
   /**
+   * Execute Document command - generate documentation for code
+   */
+  async document(code: string, file: string): Promise<CommandResult> {
+    const startTime = Date.now();
+
+    const nlpAnalysis = this.nlp.analyze('Generate documentation for this code', { selectedCode: code });
+    const fileAnalysis = this.fileManager.analyzeFile(file, code);
+    const docStyle = (fileAnalysis.language === 'javascript' || fileAnalysis.language === 'typescript') ? 'JSDoc' : 'docstring';
+
+    const documentPrompt = `Generate a comprehensive ${docStyle} for the following ${fileAnalysis.language} code.
+
+Code to document:
+\`\`\`${fileAnalysis.language}
+${code}
+\`\`\`
+
+Requirements:
+1. Describe the function's purpose.
+2. Document all parameters with their types and descriptions.
+3. Document the return value.
+4. Include an example of usage if applicable.
+5. Return ONLY the **complete, updated code block** with the new documentation inserted. Do not provide any other text, explanations, or markdown formatting.`;
+
+    const request: LLMRequest = {
+      prompt: documentPrompt,
+      intent: 'DOCUMENT',
+      complexity: nlpAnalysis.complexity,
+      language: fileAnalysis.language,
+      context: { selectedCode: code },
+      maxTokens: 2048,
+    };
+
+    const response = await this.executeViaRouter(request);
+    if (response) {
+        response.content = this.cleanCodeBlock(response.content);
+    }
+    return this.formatResult(response, startTime, nlpAnalysis);
+  }
+
+  /**
+   * Explain Terminal command - explain terminal output/error
+   */
+  async explainTerminal(terminalOutput: string): Promise<CommandResult> {
+    const startTime = Date.now();
+    const nlpAnalysis = this.nlp.analyze(`Explain this terminal output: ${terminalOutput}`);
+
+    const prompt = `Explain the following terminal output or error.
+If it's an error, identify the root cause and suggest a fix.
+If it's a command's output, explain what it means.
+
+Output:
+\`\`\`
+${terminalOutput}
+\`\`\`
+`;
+
+    const request: LLMRequest = {
+      prompt,
+      intent: 'EXPLAIN_TERMINAL',
+      complexity: nlpAnalysis.complexity,
+    };
+
+    const response = await this.executeViaRouter(request);
+    return this.formatResult(response, startTime, nlpAnalysis);
+  }
+
+  /**
    * Execute Structure command - analyze project structure
    */
   async structure(): Promise<CommandResult> {
@@ -463,6 +530,19 @@ File: ${fileAnalysis.filePath}
 Language: ${fileAnalysis.language}
 Complexity: ${fileAnalysis.complexity}
 Issues: ${fileAnalysis.issues.length > 0 ? fileAnalysis.issues.join('; ') : 'None detected'}`;
+  }
+
+  /**
+   * Cleans a string to extract code from a markdown block.
+   */
+  private cleanCodeBlock(content: string): string {
+    if (!content) return '';
+    const codeBlockMatch = content.match(/```[\w]*\n([\s\S]*?)```/s);
+    if (codeBlockMatch && codeBlockMatch[1]) {
+      return codeBlockMatch[1].trim();
+    }
+    // Fallback for content that might just be the code itself without markdown
+    return content.trim();
   }
 
   /**

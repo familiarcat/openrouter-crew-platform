@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { CostTracker } from '../services/cost-tracker';
+import { CostTracker } from '../services/cost-tracker.js';
 import { TextEncoder } from 'util';
 
 export async function exportCostReportJsonCommand(costTracker: CostTracker): Promise<void> {
-  const history = costTracker.getHistory();
+  const history = costTracker.getLocalHistory();
   if (history.length === 0) {
     vscode.window.showInformationMessage('No cost history to export.');
     return;

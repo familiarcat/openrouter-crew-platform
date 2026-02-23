@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CostTracker, CostTransaction } from '../services/cost-tracker';
+import { CostTracker, UsageRecord } from '../services/cost-tracker.js';
 
 export class HistoryView {
   private panel: vscode.WebviewPanel | undefined;
@@ -25,29 +25,33 @@ export class HistoryView {
       });
     }
 
-    const history = this.costTracker.getHistory();
+    const history = this.costTracker.getLocalHistory();
     this.panel.webview.html = this.getHtmlContent(history);
   }
 
-  private getHtmlContent(history: CostTransaction[]): string {
+  private getHtmlContent(history: UsageRecord[]): string {
     const rows = history.slice().reverse().map(tx => `
       <div class="history-item">
         <div class="header">
-          <span class="intent">${tx.intent}</span>
+          <span class="intent">${tx.intent || tx.command}</span>
           <span class="time">${new Date(tx.timestamp).toLocaleString()}</span>
         </div>
         <div class="details">
           <div class="detail-item">
             <span class="label">Model:</span>
-            <span class="value">${tx.model}</span>
+            <span class="value">${tx.model}${tx.cached ? ' (cached)' : ''}</span>
           </div>
           <div class="detail-item">
             <span class="label">Cost:</span>
             <span class="value">$${tx.costUSD.toFixed(6)}</span>
           </div>
           <div class="detail-item">
-            <span class="label">Tokens:</span>
-            <span class="value">${tx.inputTokens} in / ${tx.outputTokens} out</span>
+            <span class="label">Duration:</span>
+            <span class="value">${tx.executionTimeMs} ms</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Prompt Length:</span>
+            <span class="value">${tx.promptLength} chars</span>
           </div>
         </div>
       </div>

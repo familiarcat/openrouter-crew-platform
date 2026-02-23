@@ -211,6 +211,50 @@ export class CrewAPIService {
   }
 
   /**
+   * Consult a crew member
+   */
+  async consultCrew(member: string, task: string, async_: boolean = false): Promise<void> {
+    try {
+      const client = await this.initializeClient();
+      const context = this.getAuthContext();
+
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Consulting ${member}...`,
+          cancellable: false,
+        },
+        async () => {
+          const result = await (client as any).crew_consult(
+            {
+              member: member,
+              task: task,
+              async: async_,
+            }
+          );
+
+          if (result) {
+            this.outputChannel.appendLine(`✓ Consulted ${member}: ${JSON.stringify(result)}`);
+            vscode.window.showInformationMessage(`Response from ${member}: ${JSON.stringify(result)}`);
+          } else {
+            this.outputChannel.appendLine(`✗ Failed to consult ${member}: null result`);
+            vscode.window.showErrorMessage(`Failed to consult ${member}: null result`);
+          }
+        }
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.outputChannel.appendLine(`✗ Failed to consult crew: ${message}`);
+      vscode.window.showErrorMessage(`Failed to consult crew: ${message}`);
+    }
+  }
+
+
+
+
+
+
+  /**
    * Get compliance status
    */
   async getComplianceStatus(): Promise<void> {

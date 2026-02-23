@@ -4,7 +4,7 @@ import { CLIExecutor } from '../services/cli-executor';
 /**
  * Tree Item for Projects and Features
  */
-class ProjectTreeItem extends vscode.TreeItem {
+export class ProjectTreeItem extends vscode.TreeItem {
   constructor(
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
@@ -81,10 +81,7 @@ export class ProjectTreeViewProvider implements vscode.TreeDataProvider<ProjectT
   }
 
   private async getFeatures(projectName: string): Promise<ProjectTreeItem[]> {
-    // In a real implementation, we might call cliExecutor.listFeatures(projectName)
-    // For now, we'll return placeholder features or fetch if available
-    
-    // Placeholder logic
+    // Placeholder logic for features until CLI supports listing features per project
     return [
       new ProjectTreeItem('Core Implementation', vscode.TreeItemCollapsibleState.None, 'feature', 'In Progress'),
       new ProjectTreeItem('Documentation', vscode.TreeItemCollapsibleState.None, 'feature', 'Pending'),

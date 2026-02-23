@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { CLIExecutor } from '../services/cli-executor';
-import { ProjectTreeViewProvider } from '../providers/project-tree-provider';
+import { CLIExecutor } from '../services/cli-executor.js';
+import { ProjectTreeViewProvider } from '../providers/project-tree-provider.js';
 
 export async function createProjectCommand(cliExecutor: CLIExecutor, projectProvider: ProjectTreeViewProvider): Promise<void> {
   const name = await vscode.window.showInputBox({

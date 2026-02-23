@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { CostTracker } from '../services/cost-tracker';
-import { CrewAPIService } from '../services/crew-api-service';
+import { CostTracker } from '../services/cost-tracker.js';
+import { CrewAPIService } from '../services/crew-api-service.js';
 
 /**
  * Tree Item for Crew Members
@@ -99,47 +99,44 @@ export class CostTreeProvider implements vscode.TreeDataProvider<CostTreeItem> {
       return [];
     }
 
-    const metrics = this.costTracker.getMetrics();
-    const config = vscode.workspace.getConfiguration('openrouterCrew');
-    const monthlyBudget = config.get<number>('budget.monthly') || 10.0;
-    const percentUsed = (metrics.thisMonthCost / monthlyBudget) * 100;
+    const dailyMetrics = await this.costTracker.getCostMetrics('daily');
+    const monthlyMetrics = await this.costTracker.getCostMetrics('monthly');
+    const history = this.costTracker.getLocalHistory();
+    
+    const totalRequests = history.length;
+    const totalCostAllTime = history.reduce((sum, r) => sum + r.costUSD, 0);
+    const avgCost = totalRequests > 0 ? totalCostAllTime / totalRequests : 0;
 
     return [
       new CostTreeItem(
         "Today's Cost",
         vscode.TreeItemCollapsibleState.None,
-        `$${metrics.todayCost.toFixed(4)}`,
+        `$${dailyMetrics.totalCost.toFixed(4)}`,
         new vscode.ThemeIcon('graph')
       ),
       new CostTreeItem(
         "Month to Date",
         vscode.TreeItemCollapsibleState.None,
-        `$${metrics.thisMonthCost.toFixed(4)}`,
+        `$${monthlyMetrics.totalCost.toFixed(4)}`,
         new vscode.ThemeIcon('calendar')
       ),
       new CostTreeItem(
         "Remaining Budget",
         vscode.TreeItemCollapsibleState.None,
-        `$${metrics.remainingBudget.toFixed(2)} (${(100 - percentUsed).toFixed(1)}%)`,
+        `$${monthlyMetrics.remaining.toFixed(2)} (${(100 - monthlyMetrics.percentUsed).toFixed(1)}%)`,
         new vscode.ThemeIcon('pie-chart')
       ),
       new CostTreeItem(
         "Total Requests",
         vscode.TreeItemCollapsibleState.None,
-        `${metrics.requestCount}`,
+        `${totalRequests}`,
         new vscode.ThemeIcon('symbol-event')
       ),
       new CostTreeItem(
         "Avg Cost/Request",
         vscode.TreeItemCollapsibleState.None,
-        `$${metrics.averageCost.toFixed(5)}`,
+        `$${avgCost.toFixed(5)}`,
         new vscode.ThemeIcon('calculator')
-      ),
-      new CostTreeItem(
-        "Rate Limit Hits",
-        vscode.TreeItemCollapsibleState.None,
-        `${metrics.rateLimitHits}`,
-        new vscode.ThemeIcon('zap')
       )
     ];
   }

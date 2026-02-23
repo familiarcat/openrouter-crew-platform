@@ -1,55 +1,56 @@
 import * as vscode from 'vscode';
-import { LLMRouter } from '../services/llm-router';
-import { ContextProvider } from '../services/context-provider';
-import { OutputLogger } from '../ui/output-logger';
-import { executeAICommand } from './command-runner';
+import { CommandExecutor } from './command-executor.js';
+import { ContextProvider } from '../services/context-provider.js';
+import { OutputLogger } from '../ui/output-logger.js';
 
-export async function debugCommand(llmRouter: LLMRouter, contextProvider: ContextProvider, outputLogger: OutputLogger): Promise<void> {
-  const editorContext = contextProvider.getEditorContext();
-  if (!editorContext) {
-    vscode.window.showErrorMessage('No active editor found.');
-    return;
-  }
-
-  const language = editorContext.languageId;
-  // Prioritize selection, fallback to file content
-  const codeToAnalyze = editorContext.selectedCode || editorContext.fileContent;
-  const contextType = editorContext.selectedCode ? 'selected code' : 'current file';
-
-  const prompt = `Analyze the following ${language} code for potential bugs, logical errors, and runtime issues.
-
-Code context (${contextType}):
-\`\`\`${language}
-${codeToAnalyze}
-\`\`\`
-
-If you find any issues:
-1. Explain the bug and why it occurs.
-2. Provide a corrected version of the code.
-3. Suggest prevention strategies.
-
-If no bugs are found, confirm the code looks correct and suggest any defensive programming improvements.`;
-
-  const response = await executeAICommand(
-    llmRouter,
-    'OpenRouter Crew: Debugging code...',
-    {
-      prompt,
-      context: codeToAnalyze,
-      intent: 'DEBUG',
+export async function debugCommand(
+    commandExecutor: CommandExecutor,
+    contextProvider: ContextProvider,
+    outputLogger: OutputLogger
+): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showErrorMessage('No active editor found.');
+        return;
     }
-  );
 
-  if (response) {
-    outputLogger.logExchange({
-      title: `Debug Analysis (${language})`,
-      model: response.model,
-      cost: response.cost,
-      content: response.content,
-      contextCode: {
-        language: language,
-        code: codeToAnalyze,
-      },
+    const context = contextProvider.getEditorContext();
+    if (!context) {
+        vscode.window.showWarningMessage('No code selected or file is empty');
+        return;
+    }
+
+    const codeToAnalyze = context.selectedCode || context.fileContent;
+    const filePath = editor.document.fileName;
+
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'Debugging code...',
+        cancellable: false
+    }, async () => {
+        try {
+            // We pass a general instruction as the "error" since we are doing a proactive debug analysis
+            const result = await commandExecutor.debug(
+                "Analyze this code for potential bugs, logical errors, and runtime issues.",
+                { code: codeToAnalyze, file: filePath }
+            );
+
+            if (!result.success) {
+                throw new Error(result.output);
+            }
+
+            outputLogger.logExchange({
+                title: `Debug Analysis (${context.languageId})`,
+                model: result.model,
+                cost: result.costUSD,
+                content: result.output,
+                contextCode: {
+                    language: context.languageId,
+                    code: codeToAnalyze
+                }
+            });
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Debug analysis failed: ${error.message}`);
+        }
     });
-  }
 }

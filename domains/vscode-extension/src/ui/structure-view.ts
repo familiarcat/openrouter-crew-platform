@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { LLMResponse } from '../services/llm-router';
+import { LLMResponse } from '../services/llm-router.js';
 
 /**
  * Structure View

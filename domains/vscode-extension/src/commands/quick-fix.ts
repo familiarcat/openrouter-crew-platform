@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
-import { LLMRouter } from '../services/llm-router';
-import { ContextProvider } from '../services/context-provider';
-import { OutputLogger } from '../ui/output-logger';
-import { executeAICommand } from './command-runner';
+import { CommandExecutor } from './command-executor.js';
+import { ContextProvider } from '../services/context-provider.js';
+import { OutputLogger } from '../ui/output-logger.js';
 
-export async function quickFixCommand(llmRouter: LLMRouter, contextProvider: ContextProvider, outputLogger: OutputLogger): Promise<void> {
+export async function quickFixCommand(
+    commandExecutor: CommandExecutor,
+    contextProvider: ContextProvider,
+    outputLogger: OutputLogger
+): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showErrorMessage('No active editor found.');
@@ -47,36 +50,37 @@ export async function quickFixCommand(llmRouter: LLMRouter, contextProvider: Con
   ));
 
   const language = document.languageId;
-  const prompt = `Fix the following ${targetDiagnostic.severity === vscode.DiagnosticSeverity.Error ? 'error' : 'issue'} in ${language}:
-"${targetDiagnostic.message}"
+  const filePath = document.fileName;
 
-Code context:
-\`\`\`${language}
-${codeContext}
-\`\`\`
+  await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'OpenRouter Crew: Analyzing error...',
+      cancellable: false
+  }, async () => {
+      try {
+          const errorDescription = `Fix the following ${targetDiagnostic!.severity === vscode.DiagnosticSeverity.Error ? 'error' : 'issue'}: "${targetDiagnostic!.message}"`;
 
-Provide the fixed code and a brief explanation.`;
+          const result = await commandExecutor.debug(
+              errorDescription,
+              { code: codeContext, file: filePath }
+          );
 
-  const response = await executeAICommand(
-    llmRouter,
-    'OpenRouter Crew: Analyzing error...',
-    {
-      prompt,
-      context: document.getText(), // Provide full file content as context
-      intent: 'DEBUG',
-    }
-  );
+          if (!result.success) {
+              throw new Error(result.output);
+          }
 
-  if (response) {
-    outputLogger.logExchange({
-      title: `Quick Fix: ${targetDiagnostic?.message}`,
-      model: response.model,
-      cost: response.cost,
-      content: response.content,
-      contextCode: {
-        language,
-        code: codeContext,
-      },
-    });
-  }
+          outputLogger.logExchange({
+              title: `Quick Fix: ${targetDiagnostic!.message}`,
+              model: result.model,
+              cost: result.costUSD,
+              content: result.output,
+              contextCode: {
+                  language,
+                  code: codeContext,
+              },
+          });
+      } catch (error: any) {
+          vscode.window.showErrorMessage(`Quick fix failed: ${error.message}`);
+      }
+  });
 }

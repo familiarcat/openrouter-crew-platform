@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { CostTracker } from './cost-tracker';
-import { ResponseCache } from './cache';
+import { CostTracker } from './cost-tracker.js';
+import { ResponseCache } from './cache.js';
 
 /**
  * LLM Router Service
@@ -121,9 +121,6 @@ export class LLMRouter {
 
       // Retry on 429 (Rate Limit) or 5xx (Server Error)
       if (retries > 0 && (response.status === 429 || response.status >= 500)) {
-        if (response.status === 429) {
-          await this.costTracker.recordRateLimitHit();
-        }
         const jitter = Math.random() * 200; // Add 0-200ms jitter to prevent thundering herd
         const waitTime = delay + jitter;
         await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -166,10 +163,9 @@ export class LLMRouter {
     }
 
     // Check Budget
-    const dailyUsage = this.costTracker.getDailyUsage();
-    const dailyBudget = this.costTracker.getDailyBudget();
-    if (dailyUsage >= dailyBudget) {
-      throw new Error(`Daily budget limit of $${dailyBudget.toFixed(2)} exceeded. Current usage: $${dailyUsage.toFixed(2)}.`);
+    const metrics = await this.costTracker.getCostMetrics('daily');
+    if (metrics.totalCost >= metrics.budgetLimit) {
+      throw new Error(`Daily budget limit of $${metrics.budgetLimit.toFixed(2)} exceeded. Current usage: $${metrics.totalCost.toFixed(2)}.`);
     }
 
     const complexity = this.estimateComplexity(request);
@@ -217,14 +213,16 @@ export class LLMRouter {
       
       const cost = this.costTracker.estimateCost(usage.prompt_tokens, usage.completion_tokens, model);
 
-      await this.costTracker.recordTransaction(
-        data.model || model,
-        (request.intent || 'ASK') as string,
-        usage.prompt_tokens,
-        usage.completion_tokens,
-        cost,
-        complexity
-      );
+      await this.costTracker.recordUsage({
+        timestamp: Date.now(),
+        command: (request.intent || 'ASK') as string,
+        promptLength: request.prompt.length,
+        model: data.model || model,
+        costUSD: cost,
+        executionTimeMs,
+        cached: false,
+        intent: (request.intent || 'ASK') as string
+      });
 
       const responseData = {
         content,

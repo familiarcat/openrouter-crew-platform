@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CrewAPIService } from '../services/crew-api-service';
+import { CrewAPIService } from '../services/crew-api-service.js';
 
 interface MemoryQuickPickItem extends vscode.QuickPickItem {
     label: string;

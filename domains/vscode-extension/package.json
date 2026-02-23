@@ -28,11 +28,6 @@
         "category": "OpenRouter Crew"
       },
       {
-        "command": "openrouter-crew.clearRateLimit",
-        "title": "OpenRouter Crew: Clear Rate Limit History",
-        "category": "OpenRouter Crew"
-      },
-      {
         "command": "openrouter-crew.analyzeComplexity",
         "title": "OpenRouter Crew: Analyze Text Complexity"
       },
@@ -218,7 +213,8 @@
   },
   "dependencies": {
     "@openrouter-crew/crew-api-client": "workspace:*",
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "tesseract.js": "^5.0.0"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
@@ -226,6 +222,8 @@
     "typescript": "^5.3.3",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^2.24.0",
-    "@types/mocha": "^10.0.6"
+    "@types/mocha": "^10.0.6",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0"
   }
 }

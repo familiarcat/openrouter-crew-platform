@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { LLMRouter, LLMRequest, LLMResponse } from '../services/llm-router';
+import { LLMRouter, LLMRequest, LLMResponse } from '../services/llm-router.js';
 
 /**
  * A unified function to execute AI commands, handling progress UI and errors.

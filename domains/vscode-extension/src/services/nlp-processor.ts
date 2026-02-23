@@ -12,7 +12,7 @@
  * This enables automatic routing without explicit intent specification.
  */
 
-import { Intent, Complexity } from './llm-router';
+import { Intent, Complexity } from './llm-router.js';
 
 /**
  * Detected intent with confidence score

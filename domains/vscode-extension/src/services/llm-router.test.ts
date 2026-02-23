@@ -1,9 +1,8 @@
 /// <reference types="mocha" />
-/// <reference types="mocha" />
 import * as assert from 'assert';
-import { LLMRouter, LLMRequest } from '../services/llm-router';
-import { CostTracker } from '../services/cost-tracker';
-import { ResponseCache } from '../services/cache';
+import { LLMRouter, LLMRequest } from './llm-router.js';
+import { CostTracker } from './cost-tracker.js';
+import { ResponseCache } from './cache.js';
 
 // Mock dependencies since we are only testing the complexity logic
 class MockCostTracker {}

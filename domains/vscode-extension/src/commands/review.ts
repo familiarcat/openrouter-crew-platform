@@ -1,27 +1,52 @@
 import * as vscode from 'vscode';
-import { ChatViewProvider } from '../ui/chat-panel';
+import { CommandExecutor } from './command-executor.js';
+import { ContextProvider } from '../services/context-provider.js';
+import { OutputLogger } from '../ui/output-logger.js';
 
-export async function reviewCommand(chatProvider: ChatViewProvider) {
+export async function reviewCommand(
+    commandExecutor: CommandExecutor,
+    contextProvider: ContextProvider,
+    outputLogger: OutputLogger
+): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showErrorMessage('No active editor found');
         return;
     }
 
-    const document = editor.document;
-    const selection = editor.selection;
-    const text = selection.isEmpty ? document.getText() : document.getText(selection);
-    const language = document.languageId;
-
-    if (!text.trim()) {
-        vscode.window.showErrorMessage('No code found to review');
+    const context = contextProvider.getEditorContext();
+    if (!context) {
+        vscode.window.showWarningMessage('No code selected or file is empty');
         return;
     }
 
-    // Focus the chat view
-    await vscode.commands.executeCommand('openrouter-crew.chat');
+    const codeToReview = context.selectedCode || context.fileContent;
+    const filePath = editor.document.fileName;
 
-    const prompt = `Review the following ${language} code:\n\n\`\`\`${language}\n${text}\n\`\`\``;
-    
-    await chatProvider.handleUserMessage(prompt);
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'Reviewing code...',
+        cancellable: false
+    }, async () => {
+        try {
+            const result = await commandExecutor.review(codeToReview, filePath);
+
+            if (!result.success) {
+                throw new Error(result.output);
+            }
+
+            outputLogger.logExchange({
+                title: 'Code Review',
+                model: result.model,
+                cost: result.costUSD,
+                content: result.output,
+                contextCode: {
+                    language: context.languageId,
+                    code: codeToReview
+                }
+            });
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Review failed: ${error.message}`);
+        }
+    });
 }

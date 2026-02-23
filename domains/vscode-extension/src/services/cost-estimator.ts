@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { Intent, ExtendedIntent, LLMRouter, Complexity } from './llm-router';
-import { CostTracker } from './cost-tracker';
+import { Intent, ExtendedIntent, LLMRouter, Complexity } from './llm-router.js';
+import { CostTracker } from './cost-tracker.js';
 
 export class CostEstimator {
   constructor(private llmRouter: LLMRouter, private costTracker: CostTracker) {}

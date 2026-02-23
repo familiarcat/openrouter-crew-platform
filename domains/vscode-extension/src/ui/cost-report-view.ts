@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CostTracker, CostTransaction, CostMetrics } from '../services/cost-tracker';
+import { CostTracker, UsageRecord, CostMetrics } from '../services/cost-tracker.js';
 import { TextEncoder } from 'util';
 
 export class CostReportView {
@@ -7,11 +7,7 @@ export class CostReportView {
   private filterStartDate: Date | undefined;
   private filterEndDate: Date | undefined;
 
-  constructor(private context: vscode.ExtensionContext, private costTracker: CostTracker) {
-    const { startDate, endDate } = this.costTracker.getFilterState();
-    this.filterStartDate = startDate;
-    this.filterEndDate = endDate;
-  }
+  constructor(private context: vscode.ExtensionContext, private costTracker: CostTracker) {}
 
   public async show() {
     if (this.panel) {
@@ -30,9 +26,6 @@ export class CostReportView {
       this.panel.webview.onDidReceiveMessage(
         message => {
           switch (message.command) {
-            case 'clearRateLimit':
-              vscode.commands.executeCommand('openrouter-crew.clearRateLimit');
-              return;
             case 'exportCSV':
               this.exportToCSV();
               return;
@@ -42,7 +35,6 @@ export class CostReportView {
             case 'filterDateRange':
               this.filterStartDate = message.startDate ? new Date(message.startDate) : undefined;
               this.filterEndDate = message.endDate ? new Date(message.endDate) : undefined;
-              this.costTracker.updateFilterState(this.filterStartDate, this.filterEndDate);
               this.updateView();
               return;
           }
@@ -51,38 +43,32 @@ export class CostReportView {
         this.context.subscriptions
       );
 
-      const changeSubscription = this.costTracker.onDidUpdateCost(() => {
-        if (this.panel && this.panel.visible) {
-          this.updateView();
-        }
-      });
-
       this.panel.onDidDispose(() => {
         this.panel = undefined;
-        changeSubscription.dispose();
       });
     }
 
     this.updateView();
   }
 
-  private updateView() {
+  private async updateView() {
     if (!this.panel) return;
-    const history = this.costTracker.getHistory();
-    const metrics = this.costTracker.getMetrics();
-    this.panel.webview.html = this.getHtmlContent(metrics, history);
+    const history = this.costTracker.getLocalHistory();
+    const dailyMetrics = await this.costTracker.getCostMetrics('daily');
+    const monthlyMetrics = await this.costTracker.getCostMetrics('monthly');
+    this.panel.webview.html = this.getHtmlContent(dailyMetrics, monthlyMetrics, history);
   }
 
   private async exportToCSV() {
-    const history = this.getFilteredHistory(this.costTracker.getHistory());
+    const history = this.getFilteredHistory(this.costTracker.getLocalHistory());
     if (history.length === 0) {
       vscode.window.showInformationMessage('No cost history to export.');
       return;
     }
 
-    const header = 'Timestamp,Intent,Model,Input Tokens,Output Tokens,Cost (USD)';
-    const rows = history.map(tx => 
-      `"${new Date(tx.timestamp).toISOString()}","${tx.intent}","${tx.model}",${tx.inputTokens},${tx.outputTokens},${tx.costUSD}`
+    const header = 'Timestamp,Command,Intent,Model,Prompt Length,Execution Time (ms),Cost (USD),Cached';
+    const rows = history.map(tx =>
+      `"${new Date(tx.timestamp).toISOString()}","${tx.command}","${tx.intent || ''}","${tx.model}",${tx.promptLength},${tx.executionTimeMs},${tx.costUSD},${tx.cached}`
     );
     const csvContent = [header, ...rows].join('\n');
 
@@ -105,7 +91,7 @@ export class CostReportView {
     }
   }
 
-  private getFilteredHistory(history: CostTransaction[]): CostTransaction[] {
+  private getFilteredHistory(history: UsageRecord[]): UsageRecord[] {
     if (!this.filterStartDate && !this.filterEndDate) return history;
 
     return history.filter(tx => {
@@ -120,16 +106,16 @@ export class CostReportView {
     });
   }
 
-  private getHtmlContent(metrics: CostMetrics, history: CostTransaction[]): string {
+  private getHtmlContent(dailyMetrics: CostMetrics, monthlyMetrics: CostMetrics, history: UsageRecord[]): string {
     const filteredHistory = this.getFilteredHistory(history);
     const historyRows = filteredHistory.slice().reverse().slice(0, 50).map(tx => `
       <tr>
         <td>${new Date(tx.timestamp).toLocaleString()}</td>
-        <td>${tx.intent}</td>
-        <td>${tx.model}</td>
-        <td>${tx.complexity || 'N/A'}</td>
-        <td>${tx.inputTokens} / ${tx.outputTokens}</td>
+        <td>${tx.command}</td>
+        <td>${tx.intent || 'N/A'}</td>
+        <td>${tx.model}${tx.cached ? ' (cached)' : ''}</td>
         <td>$${tx.costUSD.toFixed(6)}</td>
+        <td>${tx.executionTimeMs} ms</td>
       </tr>
     `).join('');
 
@@ -153,9 +139,6 @@ export class CostReportView {
     <script>
         // Note: Chart.js is included at the end of the body
         const vscode = acquireVsCodeApi();
-        function clearRateLimit() {
-            vscode.postMessage({ command: 'clearRateLimit' });
-        }
         function exportCSV() {
             vscode.postMessage({ command: 'exportCSV' });
         }
@@ -248,24 +231,19 @@ export class CostReportView {
     <div class="metrics-grid">
         <div class="metric-card">
             <div class="metric-label">Today's Cost</div>
-            <div class="metric-value">$${metrics.todayCost.toFixed(4)}</div>
+            <div class="metric-value">$${dailyMetrics.totalCost.toFixed(4)}</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">Month to Date</div>
-            <div class="metric-value">$${metrics.thisMonthCost.toFixed(4)}</div>
+            <div class="metric-value">$${monthlyMetrics.totalCost.toFixed(4)}</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">Remaining Budget</div>
-            <div class="metric-value">$${metrics.remainingBudget.toFixed(2)}</div>
+            <div class="metric-value">$${monthlyMetrics.remaining.toFixed(2)}</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">Total Requests</div>
-            <div class="metric-value">${metrics.requestCount}</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Rate Limit Hits</div>
-            <div class="metric-value">${metrics.rateLimitHits}</div>
-            <button class="action-button" onclick="clearRateLimit()">Clear History</button>
+            <div class="metric-value">${filteredHistory.length}</div>
         </div>
     </div>
 
@@ -292,11 +270,11 @@ export class CostReportView {
         <thead>
             <tr>
                 <th>Time</th>
+                <th>Command</th>
                 <th>Intent</th>
                 <th>Model</th>
-                <th>Complexity</th>
-                <th>Tokens (In/Out)</th>
                 <th>Cost</th>
+                <th>Duration</th>
             </tr>
         </thead>
         <tbody>

@@ -1,21 +1,20 @@
 import * as vscode from 'vscode';
-import { LLMRouter } from '../services/llm-router';
-import { ContextProvider } from '../services/context-provider';
+import { LLMRouter } from '../services/llm-router.js';
+import { ContextProvider } from '../services/context-provider.js';
+import { NLPProcessor } from '../services/nlp-processor.js';
 
 export async function analyzeComplexityCommand(llmRouter: LLMRouter, contextProvider: ContextProvider): Promise<void> {
-  const editorContext = contextProvider.getEditorContext();
-  if (!editorContext) {
-    vscode.window.showErrorMessage('No active editor found.');
-    return;
-  }
-
-  const text = editorContext.selectedCode || editorContext.fileContent;
-  
-  // We don't specify an intent here to let the router estimate based purely on content
-  const complexity = llmRouter.estimateComplexity({
-    prompt: text,
-    context: editorContext.selectedCode ? undefined : 'Full file content'
-  });
-
-  vscode.window.showInformationMessage(`OpenRouter Crew: Text Complexity is ${complexity}`);
+    const editorContext = contextProvider.getEditorContext();
+    if (!editorContext || !editorContext.selectedCode) {
+        vscode.window.showWarningMessage('Please select code to analyze.');
+        return;
+    }
+    
+    // Per the architecture in `command-executor.ts`, complexity analysis should use the NLPProcessor.
+    // This command is being updated to reflect that pattern, moving away from the direct `llmRouter` method.
+    // In a future refactor, a single `CommandExecutor` instance would provide these services.
+    const nlpProcessor = new NLPProcessor();
+    const analysis = nlpProcessor.analyze(editorContext.selectedCode);
+ 
+    vscode.window.showInformationMessage(`Code Complexity: ${analysis.complexity}`);
 }
