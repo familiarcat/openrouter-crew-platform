@@ -67,7 +67,7 @@ export class FileManager {
     const nodes = this.extractNodes(content, language);
     const imports = this.extractImports(content, language);
     const exports = this.extractExports(content, language);
-    const complexity = this.calculateComplexity(content);
+    const complexity = this.calculateComplexity(content, language);
     const issues = this.detectIssues(content, nodes);
 
     return {
@@ -213,10 +213,11 @@ export class FileManager {
   /**
    * Calculate cyclomatic complexity
    */
-  private calculateComplexity(content: string): number {
+  private calculateComplexity(content: string, language: string = 'unknown'): number {
     let complexity = 1;
 
-    const patterns = [
+    // Common patterns (C-style languages: JS, TS, Java, C#, Rust, Go)
+    const commonPatterns = [
       /\bif\s*\(/g,
       /\belse\s+if\s*\(/g,
       /\belse\b/g,
@@ -226,6 +227,45 @@ export class FileManager {
       /\bcatch\s*\(/g,
       /\b\?\s*:/g,  // ternary
     ];
+
+    // Language-specific patterns
+    let patterns = commonPatterns;
+
+    if (language === 'python') {
+      patterns = [
+        /\bif\s+/g,
+        /\belif\s+/g,
+        /\belse:/g,
+        /\bfor\s+/g,
+        /\bwhile\s+/g,
+        /\bexcept\s+/g,
+        /\bwith\s+/g,
+        /\bassert\s+/g
+      ];
+    } else if (language === 'go') {
+      patterns = [
+        /\bif\s+/g,
+        /\belse\s+/g,
+        /\bfor\s+/g,
+        /\bcase\b/g,
+        /\bselect\s*{/g,
+        /\bdefer\s+/g,
+        /\bgo\s+/g, // goroutines add concurrency complexity
+        /\b&&\b/g,
+        /\b\|\|\b/g
+      ];
+    } else if (language === 'sql') {
+      patterns = [
+        /\bWHERE\b/gi,
+        /\bAND\b/gi,
+        /\bOR\b/gi,
+        /\bCASE\b/gi,
+        /\bWHEN\b/gi,
+        /\bJOIN\b/gi,
+        /\bUNION\b/gi,
+        /\bHAVING\b/gi
+      ];
+    }
 
     for (const pattern of patterns) {
       const matches = content.match(pattern);
@@ -295,7 +335,7 @@ export class FileManager {
     // High complexity functions
     for (const node of analysis.nodes) {
       if (node.type === 'function') {
-        const nodeComplexity = this.calculateComplexity(node.content);
+        const nodeComplexity = this.calculateComplexity(node.content, analysis.language);
         if (nodeComplexity > 10) {
           suggestions.push({
             location: `${node.name}:${node.startLine}`,

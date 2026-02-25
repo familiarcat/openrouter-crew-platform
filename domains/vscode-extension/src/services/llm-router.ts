@@ -7,8 +7,8 @@ import { ResponseCache } from './cache.js';
  * Routes prompts to the most cost-effective model based on complexity and intent.
  */
 
-export type Intent = 'ASK' | 'REVIEW' | 'GENERATE' | 'EXPLAIN' | 'REFACTOR' | 'DEBUG' | 'TEST' | 'OPTIMIZE' | 'DOCUMENT';
-export type ExtendedIntent = Intent | 'STRUCTURE' | 'TERMINAL' | 'COMPLETE';
+export type Intent = 'ASK' | 'REVIEW' | 'GENERATE' | 'EXPLAIN' | 'REFACTOR' | 'DEBUG' | 'TEST' | 'OPTIMIZE' | 'DOCUMENT' | 'TRANSLATE';
+export type ExtendedIntent = Intent | 'STRUCTURE' | 'TERMINAL' | 'COMPLETE' | 'EXPLAIN_TERMINAL';
 export type Complexity = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface LLMRequest {
@@ -86,6 +86,8 @@ export class LLMRouter {
             return modelReview;
         case 'STRUCTURE':
             return modelPremium;
+        case 'TRANSLATE':
+            return modelDefault;
         case 'DEBUG':
         case 'REFACTOR':
         case 'OPTIMIZE':

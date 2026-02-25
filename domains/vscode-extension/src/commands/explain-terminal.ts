@@ -6,12 +6,21 @@ export async function explainTerminalCommand(
     commandExecutor: CommandExecutor,
     outputLogger: OutputLogger
 ): Promise<void> {
+    let clipboardText = '';
+    try {
+        clipboardText = await vscode.env.clipboard.readText();
+    } catch {
+        // Ignore clipboard read errors
+    }
+
     const input = await vscode.window.showInputBox({
         prompt: 'Paste the terminal error or command output to explain',
-        placeHolder: 'Error message...'
+        placeHolder: 'Error message...',
+        value: clipboardText.trim(),
+        valueSelection: [0, clipboardText.trim().length]
     });
 
-    if (!input) return;
+    if (!input || !input.trim()) return;
     
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
@@ -19,7 +28,7 @@ export async function explainTerminalCommand(
         cancellable: false
     }, async () => {
         try {
-            const result = await commandExecutor.explainTerminal(input);
+            const result = await commandExecutor.explainTerminal(input.trim());
             
             if (!result.success) {
                 throw new Error(result.output);
@@ -31,8 +40,8 @@ export async function explainTerminalCommand(
                 cost: result.costUSD,
                 content: result.output
             });
-        } catch (error: any) {
-            vscode.window.showErrorMessage(`Terminal explanation failed: ${error.message}`);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Terminal explanation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     });
 }

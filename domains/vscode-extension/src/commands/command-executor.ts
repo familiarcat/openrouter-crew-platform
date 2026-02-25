@@ -5,13 +5,14 @@
  * Provides unified interface for VSCode extension commands.
  */
 
-import { LLMRouter, LLMRequest, LLMResponse } from '../services/llm-router.js';
+import { LLMRouter, LLMRequest, LLMResponse, ExtendedIntent } from '../services/llm-router.js';
 import { NLPProcessor } from '../services/nlp-processor.js';
 import { OCREngine, OCRWithNLP } from '../services/ocr-engine.js';
 import { FileManager } from '../services/file-manager.js';
-import { TerminalManager } from '../services/terminal-manager.js';
 import { CostTracker } from '../services/cost-tracker.js';
 import { ContextBuilder } from '../services/context-builder.js';
+import { CostEstimator, CostEstimate } from '../services/cost-estimator.js';
+import { AgentNetworkService } from '../services/agent-network.js';
 
 /**
  * Command execution result
@@ -38,8 +39,9 @@ export class CommandExecutor {
   private nlp: NLPProcessor;
   private ocr: OCRWithNLP;
   private fileManager: FileManager;
-  private terminalManager: TerminalManager;
   private contextBuilder: ContextBuilder;
+  private costEstimator: CostEstimator;
+  private agentNetwork: AgentNetworkService;
   private costBuffer: number = 0;
 
   constructor(costTracker: CostTracker, contextBuilder: ContextBuilder) {
@@ -47,8 +49,9 @@ export class CommandExecutor {
     this.nlp = new NLPProcessor();
     this.ocr = new OCRWithNLP();
     this.fileManager = new FileManager();
-    this.terminalManager = new TerminalManager();
     this.contextBuilder = contextBuilder;
+    this.costEstimator = new CostEstimator(this.router, costTracker);
+    this.agentNetwork = new AgentNetworkService(costTracker);
   }
 
   /**
@@ -75,26 +78,25 @@ export class CommandExecutor {
       context: context?.code ? { selectedCode: context.code } : undefined,
     };
 
-    // Step 4: Route and execute
-    const response = await this.executeViaRouter(request);
-
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
    * Execute Review command - code review
    */
-  async review(code: string, file: string): Promise<CommandResult> {
+  async review(code: string, file: string, targetName?: string): Promise<CommandResult> {
     const startTime = Date.now();
 
-    const nlpAnalysis = this.nlp.analyze(`Review this code for issues and improvements`, {
+    const targetDescription = targetName ? `the "${targetName}" function/class` : 'this code';
+
+    const nlpAnalysis = this.nlp.analyze(`Review ${targetDescription} for issues and improvements`, {
       selectedCode: code,
     });
 
     const fileAnalysis = this.fileManager.analyzeFile(file, code);
     const suggestions = this.fileManager.generateSuggestions(fileAnalysis);
 
-    const reviewPrompt = `Review this code and provide feedback on:
+    const reviewPrompt = `Review ${targetDescription} and provide feedback on:
 - Code quality and best practices
 - Potential bugs or issues
 - Performance optimizations
@@ -113,20 +115,21 @@ ${suggestions.slice(0, 3).map(s => `- ${s.issue}: ${s.suggestion}`).join('\n')}`
       context: { selectedCode: code },
     };
 
-    const response = await this.executeViaRouter(request);
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
    * Execute Explain command - explain code
    */
-  async explain(code: string, file: string): Promise<CommandResult> {
+  async explain(code: string, file: string, targetName?: string): Promise<CommandResult> {
     const startTime = Date.now();
 
-    const nlpAnalysis = this.nlp.analyze('Explain what this code does', { selectedCode: code });
+    const targetDescription = targetName ? `the "${targetName}" function/class` : 'this code';
+
+    const nlpAnalysis = this.nlp.analyze(`Explain what ${targetDescription} does`, { selectedCode: code });
     const fileAnalysis = this.fileManager.analyzeFile(file, code);
 
-    const explainPrompt = `Explain what this code does in detail:
+    const explainPrompt = `Explain what ${targetDescription} does in detail:
 - What is the purpose?
 - How does it work?
 - What are the key components?
@@ -145,8 +148,7 @@ Main functions: ${fileAnalysis.nodes.filter(n => n.type === 'function').map(n =>
       context: { selectedCode: code },
     };
 
-    const response = await this.executeViaRouter(request);
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
@@ -176,8 +178,7 @@ Requirements:
       maxTokens: 2048,
     };
 
-    const response = await this.executeViaRouter(request);
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
@@ -215,8 +216,7 @@ Provide:
       maxTokens: 2048,
     };
 
-    const response = await this.executeViaRouter(request);
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
@@ -248,24 +248,27 @@ Please:
       context: context?.code ? { selectedCode: context.code } : undefined,
     };
 
-    const response = await this.executeViaRouter(request);
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
    * Execute Test Generation command
    */
-  async generateTests(code: string, file: string): Promise<CommandResult> {
+  async generateTests(code: string, file: string, targetName?: string): Promise<CommandResult> {
     const startTime = Date.now();
 
     const nlpAnalysis = this.nlp.analyze('Generate unit tests for this code', { selectedCode: code });
     const fileAnalysis = this.fileManager.analyzeFile(file, code);
 
-    const testPrompt = `Generate comprehensive unit tests for this code:
+    const targetDescription = targetName ? `the "${targetName}" function/class` : 'this code';
+
+    const testPrompt = `Generate comprehensive unit tests for ${targetDescription}:
 ${code}
 
 Language: ${fileAnalysis.language}
-Functions to test: ${fileAnalysis.nodes.filter(n => n.type === 'function').map(n => n.name).join(', ')}
+Functions to test: ${targetName 
+    ? targetName 
+    : fileAnalysis.nodes.filter(n => n.type === 'function').map(n => n.name).join(', ')}
 
 Include:
 - Happy path tests
@@ -282,21 +285,28 @@ Include:
       maxTokens: 2048,
     };
 
-    const response = await this.executeViaRouter(request);
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
    * Execute Document command - generate documentation for code
    */
-  async document(code: string, file: string): Promise<CommandResult> {
+  async document(code: string, file: string, targetNodeName?: string): Promise<CommandResult> {
     const startTime = Date.now();
 
     const nlpAnalysis = this.nlp.analyze('Generate documentation for this code', { selectedCode: code });
     const fileAnalysis = this.fileManager.analyzeFile(file, code);
     const docStyle = (fileAnalysis.language === 'javascript' || fileAnalysis.language === 'typescript') ? 'JSDoc' : 'docstring';
 
-    const documentPrompt = `Generate a comprehensive ${docStyle} for the following ${fileAnalysis.language} code.
+    const promptTarget = targetNodeName
+      ? `the function/class named "${targetNodeName}" within the following code`
+      : `the following ${fileAnalysis.language} code`;
+    
+    const returnInstruction = targetNodeName
+      ? "Return ONLY the **complete, updated file content** with the new documentation inserted."
+      : "Return ONLY the **complete, updated code block** with the new documentation inserted.";
+
+    const documentPrompt = `Generate a comprehensive ${docStyle} for ${promptTarget}.
 
 Code to document:
 \`\`\`${fileAnalysis.language}
@@ -308,7 +318,7 @@ Requirements:
 2. Document all parameters with their types and descriptions.
 3. Document the return value.
 4. Include an example of usage if applicable.
-5. Return ONLY the **complete, updated code block** with the new documentation inserted. Do not provide any other text, explanations, or markdown formatting.`;
+5. ${returnInstruction} Do not provide any other text, explanations, or markdown formatting.`;
 
     const request: LLMRequest = {
       prompt: documentPrompt,
@@ -319,11 +329,42 @@ Requirements:
       maxTokens: 2048,
     };
 
-    const response = await this.executeViaRouter(request);
-    if (response) {
-        response.content = this.cleanCodeBlock(response.content);
+    const result = await this.execute(request, startTime, nlpAnalysis);
+    if (result.success) {
+        const extracted = this.extractCode(result.output, false);
+        result.output = extracted || result.output;
     }
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return result;
+  }
+
+  /**
+   * Execute Translate command - translate comments
+   */
+  async translate(code: string, targetLanguage: string): Promise<CommandResult> {
+    const startTime = Date.now();
+
+    const prompt = `Translate all comments and documentation strings in the following code to ${targetLanguage}.
+
+Rules:
+1. Do NOT translate variable names, function names, classes, or logic.
+2. ONLY translate comments (// ...), multi-line comments (/* ... */), and JSDoc/docstrings.
+3. Preserve the original code structure and indentation exactly.
+4. Return ONLY the code block with translated comments.
+
+Code:
+\`\`\`
+${code}
+\`\`\`
+`;
+
+    const request: LLMRequest = {
+      prompt,
+      intent: 'TRANSLATE',
+      complexity: 'LOW',
+      context: { selectedCode: code },
+    };
+
+    return this.execute(request, startTime, { intent: { intent: 'TRANSLATE' }, complexity: 'LOW', confidence: 1.0 });
   }
 
   /**
@@ -345,29 +386,75 @@ ${terminalOutput}
 
     const request: LLMRequest = {
       prompt,
-      intent: 'EXPLAIN_TERMINAL',
+      intent: 'EXPLAIN_TERMINAL' as ExtendedIntent,
       complexity: nlpAnalysis.complexity,
     };
 
-    const response = await this.executeViaRouter(request);
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
+
+  /**
+   * Analyze Code Complexity command - local analysis
+   */
+  async analyzeComplexity(code: string, filePath?: string): Promise<CommandResult> {
+    const startTime = Date.now();
+    const nlpAnalysis = this.nlp.analyze(code, { selectedCode: code });
+
+    let output = `Estimated Complexity: ${nlpAnalysis.complexity}`;
+    let complexityLevel = nlpAnalysis.complexity;
+
+    if (filePath) {
+      const fileAnalysis = this.fileManager.analyzeFile(filePath, code);
+      const cyclomatic = fileAnalysis.complexity;
+      
+      if (cyclomatic > 20) complexityLevel = 'HIGH';
+      else if (cyclomatic > 10) complexityLevel = 'MEDIUM';
+      else complexityLevel = 'LOW';
+
+      output = `Complexity Level: ${complexityLevel}\nCyclomatic Complexity: ${cyclomatic}\nLanguage: ${fileAnalysis.language}\nIssues Detected: ${fileAnalysis.issues.length}`;
+      
+      if (fileAnalysis.issues.length > 0) {
+        output += `\n\nIssues:\n- ${fileAnalysis.issues.slice(0, 3).join('\n- ')}`;
+      }
+    }
+
+    return {
+      success: true,
+      output,
+      model: 'local-analysis',
+      costUSD: 0,
+      executionTimeMs: Date.now() - startTime,
+      metadata: {
+        intent: nlpAnalysis.intent.intent,
+        complexity: complexityLevel,
+        confidence: nlpAnalysis.confidence,
+        language: nlpAnalysis.language,
+      },
+    };
+  }
+
 
   /**
    * Execute Structure command - analyze project structure
    */
-  async structure(): Promise<CommandResult> {
+  async structure(focus?: string): Promise<CommandResult> {
     const startTime = Date.now();
     const nlpAnalysis = this.nlp.analyze('Analyze project structure');
 
     const files = await this.fileManager.getProjectStructure();
     
-    const fileList = files.length > 500 
+    const fileList = files.length > 500
       ? files.slice(0, 500).join('\n') + `\n...and ${files.length - 500} more files`
       : files.join('\n');
 
+    const focusPrompt = focus
+        ? `The user has a specific focus for this analysis: "${focus}". Prioritize your answer around this focus.`
+        : `Provide a general analysis of the project structure.`;
+
     const prompt = `Analyze the following project file structure and suggest improvements for better organization, scalability, and maintainability.
       
+${focusPrompt}
+
 Current Structure:
 \`\`\`
 ${fileList}
@@ -385,8 +472,7 @@ Provide:
       maxTokens: 2048,
     };
 
-    const response = await this.executeViaRouter(request);
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
@@ -439,7 +525,7 @@ Provide:
       
       Requirements:
       1. Return ONLY the command(s) to be executed.
-      2. Do not use markdown formatting (no backticks).
+      2. Wrap the command in a markdown code block (e.g. \`\`\`bash ... \`\`\`).
       3. Do not provide explanations.
       4. If multiple commands are needed, chain them appropriately (&& or ;).
       5. Assume a standard Linux/macOS environment (bash/zsh) unless specified otherwise.
@@ -452,20 +538,7 @@ Provide:
       maxTokens: 1024,
     };
 
-    const response = await this.executeViaRouter(request);
-
-    if (response && response.content) {
-      let command = response.content.trim();
-      if (command.startsWith('```') && command.endsWith('```')) {
-        command = command.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '');
-      } else if (command.startsWith('`') && command.endsWith('`')) {
-        command = command.slice(1, -1);
-      }
-
-      await this.terminalManager.executeCommand(command, instruction);
-    }
-
-    return this.formatResult(response, startTime, nlpAnalysis);
+    return this.execute(request, startTime, nlpAnalysis);
   }
 
   /**
@@ -477,7 +550,7 @@ Provide:
     // Step 1: OCR + NLP analysis
     const analysis = await this.ocr.analyzeImage(imageBase64);
 
-    // Step 2: Route based on detected intent
+    // Step 2: Build request for LLM router
     const request: LLMRequest = {
       prompt: analysis.codeContext.prompt,
       intent: analysis.combined.intent,
@@ -486,22 +559,76 @@ Provide:
       context: { selectedCode: analysis.codeContext.selectedCode },
     };
 
-    // Step 3: Execute
-    const response = await this.executeViaRouter(request);
+    // Step 3: Create a compatible analysis object for the formatter
+    const nlpAnalysisForFormatting = {
+        intent: { intent: analysis.combined.intent },
+        complexity: analysis.nlp.complexity,
+        confidence: analysis.combined.confidence,
+        language: analysis.combined.detectedLanguage,
+    };
+
+    // Step 4: Execute using the centralized method
+    return this.execute(request, startTime, nlpAnalysisForFormatting);
+  }
+
+  /**
+   * Estimate cost for an image analysis before processing
+   */
+  async estimateImageCost(imageBase64: string): Promise<CostEstimate> {
+    // Step 1: OCR to get text context. This is required to understand what's in the image.
+    const analysis = await this.ocr.analyzeImage(imageBase64);
+    
+    // The prompt from OCR is the text we need to estimate
+    const textForEstimation = analysis.codeContext.prompt;
+    const intent = analysis.combined.intent;
+
+    // Step 2: Use CostEstimator to get a cost projection without executing the LLM call
+    // The type for intent is string, which is compatible.
+    return this.costEstimator.estimateRequestCost(textForEstimation, intent as ExtendedIntent);
+  }
+
+  /**
+   * Execute Consult Network command - Uses the modern Agent Network (No n8n)
+   * This activates the "Central Mind" architecture where agents form sub-teams.
+   */
+  async consultNetwork(instruction: string, department: string = 'data'): Promise<CommandResult> {
+    const startTime = Date.now();
+    
+    // 1. Get the Department Lead (Crew Member)
+    const leadAgent = this.agentNetwork.getDepartment(department);
+
+    // 2. Execute the task (Agent will decide to spawn sub-teams or act directly)
+    const output = await leadAgent.executeTask(instruction);
+
+    // 3. Calculate theoretical cost (since we are mocking the actual API call in this step)
+    // In production, the AgentNetwork would return actual usage metrics.
+    const estimatedCost = 0.01; 
 
     return {
-      success: response ? true : false,
-      output: response?.content || 'Failed to process image',
-      model: response?.model || 'unknown',
-      costUSD: response?.costUSD || 0,
+      success: true,
+      output: output,
+      model: leadAgent.profile.model,
+      costUSD: estimatedCost,
       executionTimeMs: Date.now() - startTime,
       metadata: {
-        intent: analysis.combined.intent,
-        complexity: analysis.nlp.complexity,
-        language: analysis.combined.detectedLanguage,
-        confidence: analysis.combined.confidence,
-      },
+        intent: 'CONSULT_NETWORK',
+        complexity: 'HIGH', // Network tasks are assumed complex
+        confidence: 1.0,
+        language: 'natural-language'
+      }
     };
+  }
+
+  /**
+   * Centralized execution method combining routing and result formatting
+   */
+  private async execute(
+    request: LLMRequest,
+    startTime: number,
+    nlpAnalysis: any
+  ): Promise<CommandResult> {
+    const response = await this.executeViaRouter(request);
+    return this.formatResult(response, startTime, nlpAnalysis);
   }
 
   /**
@@ -533,16 +660,26 @@ Issues: ${fileAnalysis.issues.length > 0 ? fileAnalysis.issues.join('; ') : 'Non
   }
 
   /**
-   * Cleans a string to extract code from a markdown block.
+   * Helper to extract code from a response.
+   * @param content The full response string
+   * @param requireMarkdown If true, returns null if no markdown blocks are found.
    */
-  private cleanCodeBlock(content: string): string {
-    if (!content) return '';
-    const codeBlockMatch = content.match(/```[\w]*\n([\s\S]*?)```/s);
+  public extractCode(content: string, requireMarkdown: boolean = false): string | null {
+    if (!content) return requireMarkdown ? null : '';
+    
+    // Match code blocks
+    const codeBlockMatch = content.match(/```[\w\s]*\n?([\s\S]*?)```/s);
     if (codeBlockMatch && codeBlockMatch[1]) {
       return codeBlockMatch[1].trim();
     }
-    // Fallback for content that might just be the code itself without markdown
-    return content.trim();
+    
+    // Match single backticks (often used for short commands)
+    const singleBacktickMatch = content.match(/^`([^`]+)`$/);
+    if (singleBacktickMatch && singleBacktickMatch[1]) {
+        return singleBacktickMatch[1].trim();
+    }
+
+    return requireMarkdown ? null : content.trim();
   }
 
   /**
@@ -579,7 +716,7 @@ Issues: ${fileAnalysis.issues.length > 0 ? fileAnalysis.issues.join('; ') : 'Non
       metadata: {
         intent: nlpAnalysis.intent.intent,
         complexity: nlpAnalysis.complexity,
-        language: response.model,
+        language: nlpAnalysis.language,
         confidence: nlpAnalysis.confidence,
       },
     };

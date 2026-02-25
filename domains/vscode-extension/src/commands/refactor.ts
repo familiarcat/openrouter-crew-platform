@@ -26,10 +26,33 @@ export async function refactorCommand(
         return;
     }
 
-    const instruction = await vscode.window.showInputBox({
-        prompt: 'Refactor Code',
-        placeHolder: 'Enter refactoring instructions (e.g., "Extract method", "Improve variable names")'
+    const quickPickItems = [
+        { label: 'Improve readability and clarity', detail: 'Focus on variable names, comments, and structure.' },
+        { label: 'Reduce complexity', detail: 'Simplify logic, break down large functions.' },
+        { label: 'Add type hints', detail: 'Ensure all variables, parameters, and returns are typed.' },
+        { label: 'Convert to async/await', detail: 'Modernize promise-based code.' },
+        { label: 'Custom instruction...', detail: 'Enter your own refactoring prompt.' }
+    ];
+
+    const selected = await vscode.window.showQuickPick(quickPickItems, {
+        placeHolder: 'Select a refactoring goal or enter a custom one',
+        title: 'Refactor Code'
     });
+
+    if (!selected) return;
+
+    let instruction = selected.label;
+    if (instruction === 'Custom instruction...') {
+        const customInstruction = await vscode.window.showInputBox({
+            prompt: 'Custom Refactoring Instruction',
+            placeHolder: 'e.g., "Extract the loop into a separate function"'
+        });
+        if (!customInstruction) {
+            // User cancelled the input box
+            return;
+        }
+        instruction = customInstruction;
+    }
 
     if (!instruction) return;
 
@@ -47,7 +70,10 @@ export async function refactorCommand(
                 throw new Error(result.output);
             }
 
-            outputLogger.logExchange({
+            // Extract code from the result to make it apply-able
+            const refactoredCode = commandExecutor.extractCode(result.output, true);
+
+            const logData: any = {
                 title: `Refactor Request: ${instruction}`,
                 model: result.model,
                 cost: result.costUSD,
@@ -56,9 +82,23 @@ export async function refactorCommand(
                     language: context.languageId,
                     code: context.selectedCode!
                 }
-            });
-        } catch (error: any) {
-            vscode.window.showErrorMessage(`Refactoring failed: ${error.message}`);
+            };
+
+            if (refactoredCode) {
+                await editor.edit(editBuilder => {
+                    editBuilder.replace(context.selectionRange, refactoredCode);
+                });
+
+                logData.applyCommand = {
+                    command: 'openrouter-crew.applyRefactoring',
+                    args: [refactoredCode, context.selectionRange]
+                };
+            } else {
+                vscode.window.showWarningMessage('No code block found in refactoring response.');
+            }
+            outputLogger.logExchange(logData);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Refactoring failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     });
 }

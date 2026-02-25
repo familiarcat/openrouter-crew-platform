@@ -76,4 +76,28 @@ suite('LLMRouter Complexity Estimation', () => {
     const result = router.estimateComplexity(request);
     assert.strictEqual(result, 'HIGH');
   });
+
+  test('selectModel: TRANSLATE intent uses default model', () => {
+    const configMock = {
+      get: (key: string) => {
+        const map: any = {
+          'model.simple': 'simple-model',
+          'model.default': 'default-model',
+          'model.complex': 'complex-model',
+          'model.review': 'review-model',
+          'model.premium': 'premium-model'
+        };
+        return map[key];
+      }
+    };
+
+    const request: LLMRequest = { 
+      prompt: 'translate', 
+      intent: 'TRANSLATE',
+      complexity: 'LOW' 
+    };
+    
+    const model = router.selectModel(request, configMock as any);
+    assert.strictEqual(model, 'default-model');
+  });
 });

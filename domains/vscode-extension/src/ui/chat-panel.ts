@@ -105,6 +105,10 @@ export class ChatPanel {
             // Fire and forget; error handling is inside the async method
             this._handleUserMessage(message.text);
             return;
+          case 'applyRefactoring':
+            // Execute the apply refactoring command with arguments from the webview
+            vscode.commands.executeCommand('openrouter-crew.applyRefactoring', message.code, message.range);
+            return;
         }
       },
       null,
@@ -136,10 +140,10 @@ export class ChatPanel {
           executionTimeMs: response.executionTimeMs,
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       this._panel.webview.postMessage({
         command: 'receiveMessage',
-        text: `Sorry, an error occurred: ${error.message}`,
+        text: `Sorry, an error occurred: ${error instanceof Error ? error.message : String(error)}`,
         role: 'assistant',
         meta: { model: 'error-handler', cost: 0 },
       });

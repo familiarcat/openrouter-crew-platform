@@ -36,6 +36,11 @@
         "title": "OpenRouter Crew: Preview Cost for Command"
       },
       {
+        "command": "openrouter-crew.previewImageCost",
+        "title": "OpenRouter Crew: Preview Image Cost (AI)",
+        "category": "OpenRouter Crew"
+      },
+      {
         "command": "openrouter-crew.exportCostReportJson",
         "title": "OpenRouter Crew: Export Cost Report (JSON)",
         "category": "OpenRouter Crew"

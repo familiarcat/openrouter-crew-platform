@@ -27,15 +27,38 @@ export async function quickFixCommand(
   let targetDiagnostic: vscode.Diagnostic | undefined;
   
   const relevantDiagnostics = diagnostics.filter(d => d.range.intersection(selection));
+  let candidates: vscode.Diagnostic[] = [];
 
   if (relevantDiagnostics.length > 0) {
-    targetDiagnostic = relevantDiagnostics[0]; // Pick first relevant
+    candidates = relevantDiagnostics;
   } else {
     // Find closest diagnostic to cursor
     const cursorLine = selection.active.line;
-    targetDiagnostic = diagnostics.sort((a, b) => {
+    candidates = diagnostics.sort((a, b) => {
       return Math.abs(a.range.start.line - cursorLine) - Math.abs(b.range.start.line - cursorLine);
-    })[0];
+    });
+  }
+
+  if (candidates.length === 1) {
+    targetDiagnostic = candidates[0];
+  } else if (candidates.length > 1) {
+    const items = candidates.map(d => {
+      const icon = d.severity === vscode.DiagnosticSeverity.Error ? '$(error)' : '$(warning)';
+      return {
+        label: `${icon} ${d.message}`,
+        description: `Line ${d.range.start.line + 1}`,
+        detail: d.source,
+        diagnostic: d
+      };
+    });
+
+    const selected = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Select an issue to fix',
+      title: 'Quick Fix Selection'
+    });
+
+    if (!selected) return;
+    targetDiagnostic = selected.diagnostic;
   }
 
   if (!targetDiagnostic) {
@@ -44,10 +67,10 @@ export async function quickFixCommand(
   }
 
   const errorRange = targetDiagnostic.range;
-  const codeContext = document.getText(new vscode.Range(
-      Math.max(0, errorRange.start.line - 5), 0,
-      Math.min(document.lineCount - 1, errorRange.end.line + 5), 1000
-  ));
+  const startLine = Math.max(0, errorRange.start.line - 5);
+  const endLine = Math.min(document.lineCount - 1, errorRange.end.line + 5);
+  const contextRange = new vscode.Range(startLine, 0, endLine, document.lineAt(endLine).range.end.character);
+  const codeContext = document.getText(contextRange);
 
   const language = document.languageId;
   const filePath = document.fileName;
@@ -58,29 +81,48 @@ export async function quickFixCommand(
       cancellable: false
   }, async () => {
       try {
-          const errorDescription = `Fix the following ${targetDiagnostic!.severity === vscode.DiagnosticSeverity.Error ? 'error' : 'issue'}: "${targetDiagnostic!.message}"`;
+          const instruction = `Fix the following ${targetDiagnostic!.severity === vscode.DiagnosticSeverity.Error ? 'error' : 'issue'}: "${targetDiagnostic!.message}"`;
 
-          const result = await commandExecutor.debug(
-              errorDescription,
-              { code: codeContext, file: filePath }
+          // Use refactor instead of debug to get a replaceable code block
+          const result = await commandExecutor.refactor(
+              codeContext,
+              filePath,
+              instruction
           );
 
           if (!result.success) {
               throw new Error(result.output);
           }
 
-          outputLogger.logExchange({
+          const fixedCode = commandExecutor.extractCode(result.output, true);
+
+          const logData: any = {
               title: `Quick Fix: ${targetDiagnostic!.message}`,
               model: result.model,
               cost: result.costUSD,
               content: result.output,
               contextCode: {
                   language,
-                  code: codeContext,
-              },
-          });
-      } catch (error: any) {
-          vscode.window.showErrorMessage(`Quick fix failed: ${error.message}`);
+                  code: codeContext
+              }
+          };
+
+          if (fixedCode) {
+              await editor.edit(editBuilder => {
+                  editBuilder.replace(contextRange, fixedCode);
+              });
+
+              logData.applyCommand = {
+                  command: 'openrouter-crew.applyRefactoring',
+                  args: [fixedCode, contextRange]
+              };
+          } else {
+              vscode.window.showWarningMessage('No code block found in quick fix response.');
+          }
+
+          outputLogger.logExchange(logData);
+      } catch (error) {
+          vscode.window.showErrorMessage(`Quick fix failed: ${error instanceof Error ? error.message : String(error)}`);
       }
   });
 }

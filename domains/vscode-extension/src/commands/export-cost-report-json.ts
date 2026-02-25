@@ -24,7 +24,7 @@ export async function exportCostReportJsonCommand(costTracker: CostTracker): Pro
       await vscode.workspace.fs.writeFile(uri, encoder.encode(jsonContent));
       vscode.window.showInformationMessage('Cost report exported successfully (JSON).');
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to export cost report: ${error}`);
+      vscode.window.showErrorMessage(`Failed to export cost report: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

@@ -2,11 +2,13 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
+import { FileManager } from '../services/file-manager.js';
 
 export async function reviewCommand(
     commandExecutor: CommandExecutor,
     contextProvider: ContextProvider,
-    outputLogger: OutputLogger
+    outputLogger: OutputLogger,
+    fileManager?: FileManager
 ): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -20,8 +22,45 @@ export async function reviewCommand(
         return;
     }
 
-    const codeToReview = context.selectedCode || context.fileContent;
+    let codeToReview = context.selectedCode;
     const filePath = editor.document.fileName;
+    let targetName: string | undefined;
+
+    // If no code selected, try to find reviewable units
+    if (!codeToReview && fileManager) {
+        const analysis = fileManager.analyzeFile(filePath, context.fileContent);
+        const reviewableNodes = analysis.nodes.filter(n => n.type === 'function' || n.type === 'class');
+
+        if (reviewableNodes.length > 0) {
+            const items = reviewableNodes.map(node => ({
+                label: `$(symbol-${node.type}) ${node.name}`,
+                description: `Line ${node.startLine}`,
+                node: node
+            }));
+
+            // Add option for full file review
+            items.unshift({
+                label: '$(file) Review Entire File',
+                description: 'Analyze the full file content',
+                node: { content: context.fileContent, name: 'Entire File' } as any
+            });
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select a function, class, or the entire file to review',
+                title: 'Code Review'
+            });
+
+            if (!selected) return;
+
+            codeToReview = selected.node.content;
+            targetName = selected.node.name !== 'Entire File' ? selected.node.name : undefined;
+        }
+    }
+
+    // Fallback to file content if still no code selected (e.g. no fileManager or no nodes found)
+    if (!codeToReview) {
+        codeToReview = context.fileContent;
+    }
 
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
@@ -29,7 +68,7 @@ export async function reviewCommand(
         cancellable: false
     }, async () => {
         try {
-            const result = await commandExecutor.review(codeToReview, filePath);
+            const result = await commandExecutor.review(codeToReview!, filePath, targetName);
 
             if (!result.success) {
                 throw new Error(result.output);
@@ -42,11 +81,11 @@ export async function reviewCommand(
                 content: result.output,
                 contextCode: {
                     language: context.languageId,
-                    code: codeToReview
+                    code: codeToReview!
                 }
             });
-        } catch (error: any) {
-            vscode.window.showErrorMessage(`Review failed: ${error.message}`);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Review failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     });
 }

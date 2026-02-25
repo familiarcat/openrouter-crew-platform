@@ -79,7 +79,9 @@ export class NLPProcessor {
     ],
     TEST: [
       'test', 'unit test', 'test case', 'testing', 'coverage',
-      'write test', 'generate test', 'test for', 'test this'
+      'write test', 'generate test', 'test for', 'test this',
+      'jest', 'mocha', 'vitest', 'spec', 'assertion', 'assert',
+      'mock', 'stub', 'spy', 'e2e', 'integration test'
     ],
     EXPLAIN: [
       'explain', 'what does', 'how does', 'clarify', 'understand',
@@ -87,11 +89,17 @@ export class NLPProcessor {
     ],
     DOCUMENT: [
       'document', 'docstring', 'comment', 'document this',
-      'add documentation', 'add comments', 'describe'
+      'add documentation', 'add comments', 'describe',
+      'jsdoc', 'tsdoc', 'javadoc', 'xml comment', 'readme',
+      'markdown', 'annotate', 'explain parameters'
     ],
     OPTIMIZE: [
       'optimize', 'faster', 'performance', 'efficiency', 'speed up',
       'improve speed', 'reduce memory', 'complexity'
+    ],
+    TRANSLATE: [
+      'translate', 'convert', 'localize', 'internationalize', 'i18n',
+      'translation', 'port to', 'rewrite in', 'change language'
     ],
     ASK: [
       'what', 'how', 'why', 'question', 'help', 'tell me',
@@ -192,6 +200,7 @@ export class NLPProcessor {
       EXPLAIN: 0,
       DOCUMENT: 0,
       OPTIMIZE: 0,
+      TRANSLATE: 0,
     };
 
     // Score each intent based on keyword matches

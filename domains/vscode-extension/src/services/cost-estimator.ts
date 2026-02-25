@@ -2,6 +2,14 @@ import * as vscode from 'vscode';
 import { Intent, ExtendedIntent, LLMRouter, Complexity } from './llm-router.js';
 import { CostTracker } from './cost-tracker.js';
 
+export interface CostEstimate {
+  cost: number;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  complexity: Complexity;
+}
+
 export class CostEstimator {
   constructor(private llmRouter: LLMRouter, private costTracker: CostTracker) {}
 
@@ -11,7 +19,7 @@ export class CostEstimator {
    * @param intent The intended action.
    * @returns An object with the estimated cost, model, and token counts.
    */
-  public estimateRequestCost(text: string, intent: ExtendedIntent): { cost: number; model: string; inputTokens: number; outputTokens: number; complexity: Complexity } {
+  public estimateRequestCost(text: string, intent: ExtendedIntent): CostEstimate {
     const contextLength = text.length;
 
     // 0. Estimate Complexity
@@ -46,6 +54,7 @@ export class CostEstimator {
       case 'DEBUG': outputTokens = 1000; break;
       case 'OPTIMIZE': outputTokens = Math.ceil(inputTokens * 1.0); break;
       case 'EXPLAIN': outputTokens = 800; break;
+      case 'TRANSLATE': outputTokens = Math.ceil(inputTokens * 1.0); break;
     }
 
     // Adjust for complexity

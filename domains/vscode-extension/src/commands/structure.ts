@@ -8,13 +8,21 @@ export async function structureCommand(
     outputLogger: OutputLogger,
     structureView: StructureView
 ): Promise<void> {
+    const focus = await vscode.window.showInputBox({
+        prompt: 'Project Structure Analysis',
+        placeHolder: 'Optional: Specify a focus area or question (e.g., "review the services directory")'
+    });
+
+    // If the user cancels, focus is undefined. If they enter only whitespace, treat it as no focus.
+    const trimmedFocus = focus?.trim() ? focus.trim() : undefined;
+
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: 'OpenRouter Crew: Analyzing project structure...',
         cancellable: false
     }, async () => {
         try {
-            const result = await commandExecutor.structure();
+            const result = await commandExecutor.structure(trimmedFocus);
 
             if (!result.success) {
                 throw new Error(result.output);
@@ -37,8 +45,8 @@ export async function structureCommand(
                 cost: result.costUSD,
                 content: result.output,
             });
-        } catch (error: any) {
-            vscode.window.showErrorMessage(`Structure analysis failed: ${error.message}`);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Structure analysis failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     });
 }
