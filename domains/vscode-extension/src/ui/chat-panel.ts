@@ -1,33 +1,50 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-import { LLMRouter } from '../services/llm-router.js';
-import { CostTracker } from '../services/cost-tracker.js';
-import { NLPProcessor } from '../services/nlp-processor.js';
-import { ContextBuilder } from '../services/context-builder.js';
+import { CommandExecutor } from '../commands/command-executor.js';
 
 /**
- * Chat Panel Controller
+ * Manages the Webview UI for the Chat Panel
  */
 export class ChatPanel {
   public static currentPanel: ChatPanel | undefined;
-  public static readonly viewType = 'openRouterCrewChat';
-
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
-  private readonly _llmRouter: LLMRouter;
-  private readonly _costTracker: CostTracker;
-  private readonly _nlpProcessor: NLPProcessor;
-  private readonly _contextBuilder: ContextBuilder;
   private _disposables: vscode.Disposable[] = [];
+  private _executor: CommandExecutor;
+  private _abortController: AbortController | undefined;
 
-  public static createOrShow(
-    extensionUri: vscode.Uri,
-    llmRouter: LLMRouter,
-    costTracker: CostTracker,
-    nlpProcessor: NLPProcessor,
-    contextBuilder: ContextBuilder
-  ) {
+  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, executor: CommandExecutor) {
+    this._panel = panel;
+    this._extensionUri = extensionUri;
+    this._executor = executor;
+
+    // Set the webview's initial html content
+    this._update();
+
+    // Listen for when the panel is disposed
+    // This happens when the user closes the panel or when the panel is closed programmatically
+    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+    // Handle messages from the webview
+    this._panel.webview.onDidReceiveMessage(
+      async (message) => {
+        switch (message.command) {
+          case 'sendMessage':
+            await this._handleUserMessage(message.text);
+            return;
+          case 'stopGeneration':
+            if (this._abortController) {
+              this._abortController.abort();
+              this._abortController = undefined;
+            }
+            return;
+        }
+      },
+      null,
+      this._disposables
+    );
+  }
+
+  public static createOrShow(extensionUri: vscode.Uri, executor: CommandExecutor) {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
@@ -40,9 +57,9 @@ export class ChatPanel {
 
     // Otherwise, create a new panel.
     const panel = vscode.window.createWebviewPanel(
-      ChatPanel.viewType,
-      'OpenRouter Crew Chat',
-      column || vscode.ViewColumn.Beside,
+      'openrouterCrewChat',
+      'OpenRouter Crew',
+      column || vscode.ViewColumn.One,
       {
         // Enable javascript in the webview
         enableScripts: true,
@@ -51,107 +68,15 @@ export class ChatPanel {
       }
     );
 
-    ChatPanel.currentPanel = new ChatPanel(panel, extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder);
-  }
-
-  public static revive(
-    panel: vscode.WebviewPanel,
-    extensionUri: vscode.Uri,
-    llmRouter: LLMRouter,
-    costTracker: CostTracker,
-    nlpProcessor: NLPProcessor,
-    contextBuilder: ContextBuilder
-  ) {
-    ChatPanel.currentPanel = new ChatPanel(panel, extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder);
-  }
-
-  private constructor(
-    panel: vscode.WebviewPanel,
-    extensionUri: vscode.Uri,
-    llmRouter: LLMRouter,
-    costTracker: CostTracker,
-    nlpProcessor: NLPProcessor,
-    contextBuilder: ContextBuilder
-  ) {
-    this._panel = panel;
-    this._extensionUri = extensionUri;
-    this._llmRouter = llmRouter;
-    this._costTracker = costTracker;
-    this._nlpProcessor = nlpProcessor;
-    this._contextBuilder = contextBuilder;
-
-    // Set the webview's initial html content
-    this._update();
-
-    // Listen for when the panel is disposed
-    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-
-    // Update the content based on view changes
-    this._panel.onDidChangeViewState(
-      e => {
-        if (this._panel.visible) {
-          this._update();
-        }
-      },
-      null,
-      this._disposables
-    );
-
-    // Handle messages from the webview
-    this._panel.webview.onDidReceiveMessage(
-      message => {
-        switch (message.command) {
-          case 'sendMessage':
-            // Fire and forget; error handling is inside the async method
-            this._handleUserMessage(message.text);
-            return;
-          case 'applyRefactoring':
-            // Execute the apply refactoring command with arguments from the webview
-            vscode.commands.executeCommand('openrouter-crew.applyRefactoring', message.code, message.range);
-            return;
-        }
-      },
-      null,
-      this._disposables
-    );
-  }
-
-  private async _handleUserMessage(text: string) {
-    this._panel.webview.postMessage({ command: 'showLoading' });
-
-    try {
-      const nlpAnalysis = this._nlpProcessor.analyze(text);
-      const contextString = await this._contextBuilder.buildContext(text);
-
-      const response = await this._llmRouter.route({
-        prompt: text,
-        context: contextString,
-        intent: nlpAnalysis.intent.intent,
-        complexity: nlpAnalysis.complexity,
-      });
-
-      this._panel.webview.postMessage({
-        command: 'receiveMessage',
-        text: response.content,
-        role: 'assistant',
-        meta: {
-          model: response.model,
-          cost: response.costUSD,
-          executionTimeMs: response.executionTimeMs,
-        },
-      });
-    } catch (error) {
-      this._panel.webview.postMessage({
-        command: 'receiveMessage',
-        text: `Sorry, an error occurred: ${error instanceof Error ? error.message : String(error)}`,
-        role: 'assistant',
-        meta: { model: 'error-handler', cost: 0 },
-      });
-    }
+    ChatPanel.currentPanel = new ChatPanel(panel, extensionUri, executor);
   }
 
   public dispose() {
     ChatPanel.currentPanel = undefined;
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = undefined;
+    }
 
     // Clean up our resources
     this._panel.dispose();
@@ -161,6 +86,52 @@ export class ChatPanel {
       if (x) {
         x.dispose();
       }
+    }
+  }
+
+  private async _handleUserMessage(text: string) {
+    this._abortController = new AbortController();
+    // 1. Send user message back to UI to display immediately
+    this._panel.webview.postMessage({ command: 'addMessage', role: 'user', text });
+    this._panel.webview.postMessage({ command: 'setLoading', value: true });
+
+    try {
+      // 2. Execute task via CommandExecutor. This returns the final string result.
+      // The executor also logs the full exchange to the 'OpenRouter Crew' output channel.
+      const result = await this._executor.executeTask(text, undefined, this._abortController.signal); 
+      
+      this._panel.webview.postMessage({ command: 'setLoading', value: false });
+      this._panel.webview.postMessage({ 
+        command: 'addMessage', 
+        role: 'assistant', 
+        text: result.output,
+        meta: {
+            model: result.model,
+            cost: result.cost,
+            time: result.executionTimeMs
+        }
+      });
+
+    } catch (error: any) {
+      this._panel.webview.postMessage({ command: 'setLoading', value: false });
+      
+      if (error.name === 'AbortError' || error.message === 'Aborted') {
+        this._panel.webview.postMessage({ 
+          command: 'addMessage', 
+          role: 'assistant', 
+          text: '🛑 Generation stopped by user.' 
+        });
+      } else {
+        this._panel.webview.postMessage({ 
+          command: 'addMessage', 
+          role: 'assistant', 
+          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          isError: true,
+          retryText: text
+        });
+      }
+    } finally {
+      this._abortController = undefined;
     }
   }
 
@@ -175,23 +146,46 @@ export class ChatPanel {
     const scriptUri = webview.asWebviewUri(scriptPathOnDisk);
 
     // Local path to css styles
-    const stylePathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'webview', 'chat.css');
-    const styleUri = webview.asWebviewUri(stylePathOnDisk);
+    const styleResetPath = vscode.Uri.joinPath(this._extensionUri, 'webview', 'reset.css');
+    const stylesPathMainPath = vscode.Uri.joinPath(this._extensionUri, 'webview', 'chat.css');
 
-    // Local path to html template
-    const htmlPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'webview', 'chat.html');
-    let htmlContent = fs.readFileSync(htmlPathOnDisk.fsPath, 'utf8');
+    const stylesResetUri = webview.asWebviewUri(styleResetPath);
+    const stylesMainUri = webview.asWebviewUri(stylesPathMainPath);
 
-    // Use a nonce to whitelist which scripts can be run
+    // Use a nonce to only allow specific scripts to be run
     const nonce = getNonce();
 
-    // Replace placeholders
-    htmlContent = htmlContent.replace(/\${nonce}/g, nonce);
-    htmlContent = htmlContent.replace(/\${webview.cspSource}/g, webview.cspSource);
-    htmlContent = htmlContent.replace(/\${scriptUri}/g, scriptUri.toString());
-    htmlContent = htmlContent.replace(/\${styleUri}/g, styleUri.toString());
-
-    return htmlContent;
+    // Read HTML content from disk would be better, but for now we inline the template structure
+    // and inject the URIs.
+    // Note: In a real extension, reading from a separate .html file is cleaner.
+    // For this scaffold, we will assume the existence of the files in the `webview/` folder 
+    // and load them, or construct the HTML string here. 
+    // To keep it simple and self-contained in this class for now:
+    
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="${stylesResetUri}" rel="stylesheet">
+        <link href="${stylesMainUri}" rel="stylesheet">
+        <title>OpenRouter Crew Chat</title>
+    </head>
+    <body>
+        <div id="chat-container">
+            <div id="header">
+                <span>OpenRouter Crew</span>
+                <button id="clear-button" title="Clear Chat">Clear</button>
+            </div>
+            <div id="messages"></div>
+            <div id="input-area">
+                <textarea id="message-input" placeholder="Ask anything... (Cmd+Enter to send)"></textarea>
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+        <script nonce="${nonce}" src="${scriptUri}"></script>
+    </body>
+    </html>`;
   }
 }
 

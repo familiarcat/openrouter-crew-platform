@@ -6,7 +6,10 @@
  */
 
 import * as vscode from 'vscode';
+import * as ts from 'typescript';
 import { TextEncoder } from 'util';
+import Parser from 'web-tree-sitter';
+import * as path from 'path';
 
 /**
  * Represents a code node (function, class, variable, etc.)
@@ -59,12 +62,52 @@ export interface PatchOperation {
  * File Manager for code manipulation
  */
 export class FileManager {
+  private parserInitialized = false;
+  private languages: Map<string, Parser.Language> = new Map();
+
+  /**
+   * Initialize and get a Tree-sitter parser for the specific language
+   */
+  private async getParser(language: string): Promise<Parser | undefined> {
+    if (!this.parserInitialized) {
+      await Parser.init();
+      this.parserInitialized = true;
+    }
+
+    const langMap: Record<string, string> = {
+      'python': 'python',
+      'go': 'go',
+      'rust': 'rust',
+      'java': 'java',
+      'csharp': 'c_sharp'
+    };
+
+    const treeSitterLang = langMap[language];
+    if (!treeSitterLang) return undefined;
+
+    if (!this.languages.has(language)) {
+      try {
+        // Assumes .wasm files are bundled in a 'parsers' directory
+        const wasmPath = path.join(__dirname, '..', 'parsers', `tree-sitter-${treeSitterLang}.wasm`);
+        const lang = await Parser.Language.load(wasmPath);
+        this.languages.set(language, lang);
+      } catch (e) {
+        console.warn(`Failed to load tree-sitter language for ${language}`, e);
+        return undefined;
+      }
+    }
+
+    const parser = new Parser();
+    parser.setLanguage(this.languages.get(language));
+    return parser;
+  }
+
   /**
    * Parse file and extract code nodes
    */
-  analyzeFile(filePath: string, content: string): FileAnalysis {
+  async analyzeFile(filePath: string, content: string): Promise<FileAnalysis> {
     const language = this.detectLanguage(filePath);
-    const nodes = this.extractNodes(content, language);
+    const nodes = await this.extractNodes(content, language);
     const imports = this.extractImports(content, language);
     const exports = this.extractExports(content, language);
     const complexity = this.calculateComplexity(content, language);
@@ -104,55 +147,105 @@ export class FileManager {
   /**
    * Extract code nodes (functions, classes, etc.)
    */
-  private extractNodes(content: string, language: string): CodeNode[] {
+  private async extractNodes(content: string, language: string): Promise<CodeNode[]> {
     const nodes: CodeNode[] = [];
-    const lines = content.split('\n');
 
     if (language === 'javascript' || language === 'typescript') {
-      // Extract functions
-      const funcPattern = /^[\s]*(async\s+)?function\s+(\w+)|^[\s]*(const|let|var)\s+(\w+)\s*=\s*(async\s*)?\(/gm;
-      let match;
-      while ((match = funcPattern.exec(content)) !== null) {
-        const name = match[2] || match[4];
-        const lineNum = content.substring(0, match.index).split('\n').length;
-        nodes.push({
-          type: 'function',
-          name,
-          startLine: lineNum,
-          endLine: lineNum + 10,
-          content: this.extractNodeContent(content, lineNum),
-          parameters: this.extractParameters(content, match.index),
-        });
-      }
+      const sourceFile = ts.createSourceFile(
+        'temp.ts', // Placeholder file name
+        content,
+        ts.ScriptTarget.ES2015,
+        true,
+        ts.ScriptKind.TS
+      );
 
-      // Extract classes
-      const classPattern = /^[\s]*class\s+(\w+)/gm;
-      while ((match = classPattern.exec(content)) !== null) {
-        const name = match[1];
-        const lineNum = content.substring(0, match.index).split('\n').length;
-        nodes.push({
-          type: 'class',
-          name,
-          startLine: lineNum,
-          endLine: lineNum + 20,
-          content: this.extractNodeContent(content, lineNum),
-        });
-      }
-    } else if (language === 'python') {
-      // Extract Python functions and classes
-      const defPattern = /^def\s+(\w+)|^class\s+(\w+)/gm;
-      let match;
-      while ((match = defPattern.exec(content)) !== null) {
-        const name = match[1] || match[2];
-        const type = match[1] ? 'function' : 'class';
-        const lineNum = content.substring(0, match.index).split('\n').length;
-        nodes.push({
-          type,
-          name,
-          startLine: lineNum,
-          endLine: lineNum + 10,
-          content: this.extractNodeContent(content, lineNum),
-        });
+      // Function to traverse the AST and extract information
+      const visit = (node: ts.Node) => {
+        if (ts.isFunctionDeclaration(node)) {
+          const name = node.name ? node.name.text : 'anonymous';
+          const startLine = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
+          const endLine = sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
+          const content = node.getText(sourceFile);
+
+          nodes.push({
+            type: 'function',
+            name,
+            startLine,
+            endLine,
+            content,
+          });
+        } else if (ts.isClassDeclaration(node)) {
+          const name = node.name ? node.name.text : 'anonymous';
+          const startLine = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
+          const endLine = sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
+          const content = node.getText(sourceFile);
+
+          nodes.push({
+            type: 'class',
+            name,
+            startLine,
+            endLine,
+            content,
+          });
+        }
+
+        ts.forEachChild(node, visit);
+      };
+
+      visit(sourceFile);
+
+    } else {
+      // Use Tree-sitter for other languages
+      const parser = await this.getParser(language);
+      
+      if (parser) {
+        const tree = parser.parse(content);
+        
+        // Define queries for supported languages
+        let queryString = '';
+        if (language === 'python') {
+          queryString = `
+            (function_definition name: (identifier) @name) @function
+            (class_definition name: (identifier) @name) @class
+          `;
+        } else if (language === 'go') {
+          queryString = `
+            (function_declaration name: (identifier) @name) @function
+            (method_declaration name: (field_identifier) @name) @function
+          `;
+        } else if (language === 'rust') {
+          queryString = `
+            (function_item name: (identifier) @name) @function
+          `;
+        }
+
+        if (queryString) {
+          try {
+            const query = parser.getLanguage().query(queryString);
+            const matches = query.matches(tree.rootNode);
+
+            for (const match of matches) {
+              const capture = match.captures[0]; // @name
+              const typeCapture = match.captures.find(c => c.name === 'function' || c.name === 'class');
+              const type = typeCapture ? (typeCapture.name as 'function' | 'class') : 'function';
+              
+              const node = capture.node;
+              const startLine = node.startPosition.row + 1;
+              const endLine = node.endPosition.row + 1;
+              
+              nodes.push({
+                type,
+                name: node.text,
+                startLine,
+                endLine,
+                content: content.split('\n').slice(startLine - 1, endLine).join('\n')
+              });
+            }
+          } catch (e) {
+            console.error(`Tree-sitter query failed for ${language}`, e);
+          }
+        }
+        tree.delete();
       }
     }
 
@@ -379,37 +472,79 @@ export class FileManager {
   /**
    * Generate refactoring
    */
-  generateRefactoring(
+  async generateRefactoring(
     original: string,
     refactorType: 'extract-function' | 'simplify-logic' | 'rename-variables',
     context: string
-  ): string {
-    // This is a framework for AI-powered refactoring
-    // The actual implementation would be done by the LLM
+  ): Promise<string> {
+    const config = vscode.workspace.getConfiguration('openrouterCrew');
+    const apiKey = config.get<string>('apiKey');
 
-    switch (refactorType) {
-      case 'extract-function':
-        return `// Extracted function created\n// Original code preserved as _original_...\n${original}`;
-      case 'simplify-logic':
-        return `// Simplified logic\n// Check suggestions above for details\n${original}`;
-      case 'rename-variables':
-        return `// Variables renamed for clarity\n${original}`;
-      default:
-        return original;
+    if (!apiKey) {
+      throw new Error('API Key missing. Please configure openrouterCrew.apiKey.');
+    }
+
+    const prompt = `You are an expert software engineer. Refactor the following code.
+Refactoring Pattern: ${refactorType}
+Context/Instructions: ${context}
+
+Original Code:
+\`\`\`
+${original}
+\`\`\`
+
+Return ONLY the refactored code. Do not include any explanations or markdown formatting outside the code block.`;
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://github.com/openrouter-crew/vscode-extension',
+          'X-Title': 'OpenRouter Crew VSCode',
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-4o',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Refactoring request failed: ${response.statusText}`);
+      }
+
+      const data = await response.json() as any;
+      const content = data.choices?.[0]?.message?.content;
+
+      if (!content) return original;
+
+      // Extract code from markdown block if present
+      const codeBlockMatch = content.match(/```(?:[\w\d]*)\n([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        return codeBlockMatch[1];
+      }
+
+      // Fallback: return content stripped of backticks if no block found but backticks exist
+      return content.replace(/^```[\w-]*\n|^```\n|```$/gm, '').trim();
+
+    } catch (error) {
+      console.error('Refactoring failed:', error);
+      throw error;
     }
   }
 
   /**
    * Multi-file analysis
    */
-  analyzeMultipleFiles(
+  async analyzeMultipleFiles(
     files: Array<{ path: string; content: string }>
-  ): {
+  ): Promise<{
     analyses: FileAnalysis[];
     crossFileDependencies: Map<string, string[]>;
     issues: string[];
-  } {
-    const analyses = files.map(f => this.analyzeFile(f.path, f.content));
+  }> {
+    const analyses = await Promise.all(files.map(f => this.analyzeFile(f.path, f.content)));
 
     // Find cross-file dependencies
     const crossFileDependencies = new Map<string, string[]>();
@@ -485,6 +620,15 @@ export class FileManager {
     const files = await vscode.workspace.findFiles('**/*', '**/{node_modules,.git,dist,out,build}/**');
     // Return relative paths
     return files.map(uri => vscode.workspace.asRelativePath(uri));
+  }
+
+   /**
+   * Get AST of file
+   */
+  getAST(content: string, language: string = 'typescript'): ts.SourceFile | null {
+    return ts.createSourceFile(
+      'temp.ts', content, ts.ScriptTarget.ES2015, true, ts.ScriptKind.TS
+    );
   }
 
   /**

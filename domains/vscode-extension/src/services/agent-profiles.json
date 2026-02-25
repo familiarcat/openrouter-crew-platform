@@ -1,0 +1,20 @@
+{
+    "picard": { 
+        "name": "Picard", 
+        "role": "Strategy & Leadership", 
+        "specialties": ["planning", "delegation"], 
+        "model": "claude-3-5-sonnet" 
+    },
+    "data": { 
+        "name": "Data", 
+        "role": "Technical Analysis", 
+        "specialties": ["code-analysis", "debugging"], 
+        "model": "gpt-4o" 
+    },
+    "riker": { 
+        "name": "Riker", 
+        "role": "Execution & Operations", 
+        "specialties": ["implementation", "refactoring"], 
+        "model": "claude-3-5-sonnet" 
+    }
+}

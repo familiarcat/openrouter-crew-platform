@@ -26,7 +26,7 @@ export class ContextBuilder {
       totalTokens += this.estimateTokens(content);
 
       // 2. Analyze imports to find related files
-      const analysis = this.fileManager.analyzeFile(activeEditor.document.fileName, content);
+      const analysis = await this.fileManager.analyzeFile(activeEditor.document.fileName, content);
       
       // Limit imports to avoid exploding context
       const importsToScan = analysis.imports.slice(0, 10);
