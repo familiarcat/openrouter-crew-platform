@@ -47,13 +47,14 @@ suite('Analyze Complexity Command Test Suite', () => {
         });
 
         // Mock file analysis
-        testContext.fileManager.analyzeFile = () => ({
+        testContext.fileManager.analyzeFile = async () => ({
             nodes: [
                 { type: 'function', name: 'func1', startLine: 1, content: 'func1 content' },
                 { type: 'class', name: 'Class1', startLine: 10, content: 'class1 content' }
             ],
             language: 'typescript',
-            issues: []
+            issues: [],
+            filePath: '/test/file.ts', imports: [], exports: [], complexity: 1
         });
 
         // Mock QuickPick selection
@@ -87,10 +88,11 @@ suite('Analyze Complexity Command Test Suite', () => {
         });
 
         // Mock file analysis to trigger QuickPick
-        testContext.fileManager.analyzeFile = () => ({
+        testContext.fileManager.analyzeFile = async () => ({
             nodes: [{ type: 'function', name: 'func1', startLine: 1, content: 'func1 content' }],
             language: 'typescript',
-            issues: []
+            issues: [],
+            filePath: '/test/file.ts', imports: [], exports: [], complexity: 1
         });
 
         // Mock QuickPick selection for "Entire File"

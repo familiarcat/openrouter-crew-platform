@@ -19,3 +19,17 @@ export interface AgentExecutionResult {
     cost: number;
     executionTimeMs: number;
 }
+
+export interface LLMRequest {
+    messages: any[];
+    tools?: any[];
+    hint?: 'speed' | 'quality' | 'code';
+}
+
+export interface LLMResponse {
+    content: string | null;
+    model: string;
+    usage: { prompt_tokens: number; completion_tokens: number };
+    tool_calls?: any[];
+    cached?: boolean;
+}

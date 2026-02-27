@@ -46,6 +46,12 @@ suite('Optimize Command Test Suite', () => {
             fileName: '/test/file.ts'
         });
 
+        testContext.fileManager.analyzeFile = async () => ({
+            nodes: [],
+            filePath: '/test/file.ts', language: 'typescript', imports: [], exports: [], complexity: 1,
+            issues: ['High complexity']
+        });
+
         testContext.fileManager.generateSuggestions = () => [{
             issue: 'High complexity',
             suggestion: 'Split function',

@@ -1,66 +1,56 @@
-/**
- * Status Bar UI
- *
- * Real-time cost meter in VSCode status bar.
- */
+import * as vscode from 'vscode';
+import { CostTracker } from '../services/cost-tracker';
 
-/**
- * Status Bar Item
- */
-export interface StatusBarItem {
-  text: string;
-  tooltip: string;
-  color?: string;
-  command?: string;
-}
+export class CostStatusBar implements vscode.Disposable {
+    private statusBarItem: vscode.StatusBarItem;
+    private costTracker: CostTracker;
+    private disposables: vscode.Disposable[] = [];
 
-/**
- * Status Bar Manager
- */
-export class StatusBarManager {
-  /**
-   * Format budget status for display
-   */
-  static formatBudgetStatus(remaining: number, total: number): StatusBarItem {
-    const percent = ((total - remaining) / total) * 100;
-    const status = percent > 95 ? '🔴' : percent > 75 ? '🟡' : '🟢';
+    constructor(costTracker: CostTracker) {
+        this.costTracker = costTracker;
+        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+        this.statusBarItem.command = 'openrouter-crew.cost.report';
+        this.disposables.push(this.statusBarItem);
 
-    return {
-      text: `${status} $${remaining.toFixed(2)} / $${total.toFixed(2)} (${Math.round(percent)}%)`,
-      tooltip: `Budget: $${remaining.toFixed(2)} remaining of $${total.toFixed(2)} daily limit`,
-      command: 'openrouter-crew.cost.report',
-    };
-  }
+        // Subscribe to updates
+        this.disposables.push(
+            this.costTracker.onDidCostUpdate(() => this.update())
+        );
 
-  /**
-   * Format session status
-   */
-  static formatSessionStatus(requestCount: number, totalCost: number): StatusBarItem {
-    return {
-      text: `📊 ${requestCount} requests • $${totalCost.toFixed(2)}`,
-      tooltip: `Session: ${requestCount} requests, $${totalCost.toFixed(2)} total cost`,
-    };
-  }
+        // Initial update
+        this.update();
+        this.statusBarItem.show();
+    }
 
-  /**
-   * Format error status
-   */
-  static formatErrorStatus(message: string): StatusBarItem {
-    return {
-      text: `⚠️ ${message}`,
-      tooltip: message,
-      color: 'error',
-    };
-  }
+    private async update() {
+        const metrics = await this.costTracker.getCostMetrics('daily');
+        
+        const percent = metrics.percentUsed.toFixed(1);
+        const used = metrics.totalCost.toFixed(2);
+        const budget = metrics.budget.toFixed(2);
 
-  /**
-   * Format ready status
-   */
-  static formatReadyStatus(): StatusBarItem {
-    return {
-      text: `✅ Alex AI Ready`,
-      tooltip: 'AI assistant is ready for commands',
-      color: 'success',
-    };
-  }
+        this.statusBarItem.text = `$(credit-card) $${used} / $${budget} (${percent}%)`;
+        
+        // Color coding based on budget usage
+        if (metrics.percentUsed >= 90) {
+            this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+        } else if (metrics.percentUsed >= 75) {
+            this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+        } else {
+            this.statusBarItem.backgroundColor = undefined; // Default
+        }
+
+        this.statusBarItem.tooltip = new vscode.MarkdownString(
+            `**Daily Budget**\n\n` +
+            `Used: $${used}\n` +
+            `Budget: $${budget}\n` +
+            `Remaining: $${metrics.remaining.toFixed(2)}\n` +
+            `\nClick to see full report`
+        );
+    }
+
+    dispose() {
+        this.disposables.forEach(d => d.dispose());
+        this.statusBarItem.dispose();
+    }
 }

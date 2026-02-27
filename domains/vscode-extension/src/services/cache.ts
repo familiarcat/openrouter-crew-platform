@@ -65,6 +65,18 @@ export class ResponseCache {
     await this.context.globalState.update(storageKey, undefined);
   }
 
+  /**
+   * Clears all cache entries
+   */
+  public async clearAll(): Promise<void> {
+    const keys = this.context.globalState.keys();
+    for (const key of keys) {
+      if (key.startsWith(ResponseCache.CACHE_PREFIX)) {
+        await this.context.globalState.update(key, undefined);
+      }
+    }
+  }
+
   private getStorageKey(key: string): string {
     return `${ResponseCache.CACHE_PREFIX}${key}`;
   }

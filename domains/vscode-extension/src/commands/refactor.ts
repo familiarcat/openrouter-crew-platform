@@ -58,47 +58,23 @@ export async function refactorCommand(
 
     const filePath = editor.document.fileName;
 
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'Refactoring code...',
-        cancellable: false
-    }, async () => {
-        try {
-            const result = await commandExecutor.refactor(context.selectedCode!, filePath, instruction);
+    // Construct the prompt
+    const prompt = `Refactor the following code in '${filePath}'.
+Instruction: ${instruction}
 
-            if (!result.success) {
-                throw new Error(result.output);
-            }
+Code:
+\`\`\`${context.languageId}
+${context.selectedCode}
+\`\`\`
+`;
 
-            // Extract code from the result to make it apply-able
-            const refactoredCode = commandExecutor.extractCode(result.output, true);
-
-            const logData: any = {
-                title: `Refactor Request: ${instruction}`,
-                model: result.model,
-                cost: result.costUSD,
-                content: result.output,
-                contextCode: {
-                    language: context.languageId,
-                    code: context.selectedCode!
-                }
-            };
-
-            if (refactoredCode) {
-                await editor.edit(editBuilder => {
-                    editBuilder.replace(context.selectionRange, refactoredCode);
-                });
-
-                logData.applyCommand = {
-                    command: 'openrouter-crew.applyRefactoring',
-                    args: [refactoredCode, context.selectionRange]
-                };
-            } else {
-                vscode.window.showWarningMessage('No code block found in refactoring response.');
-            }
-            outputLogger.logExchange(logData);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Refactoring failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    });
+    // Ensure Chat Panel is open
+    await vscode.commands.executeCommand('openrouter-crew.chat');
+    
+    // Send to Chat Panel
+    if (ChatPanel.currentPanel) {
+        ChatPanel.currentPanel.ask(prompt);
+    } else {
+        vscode.window.showErrorMessage('Failed to open Chat Panel.');
+    }
 }

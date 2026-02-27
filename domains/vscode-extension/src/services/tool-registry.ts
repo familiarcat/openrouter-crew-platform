@@ -9,11 +9,10 @@ import * as vscode from 'vscode';
 import { AgentNetworkService, CrewAgent } from './agent-network.js';
 import { CostTracker } from './cost-tracker.js';
 import { FileManager } from './file-manager.js';
-import { gitTools } from './git.js';
+import { ToolDefinition } from './types.js';
+import * as fs from 'fs';
+import * as path from 'path';
 import { fsTools } from './filesystem.js';
-import { analysisTools } from './analysis.js';
-import { opsTools } from './ops.js';
-import { utilityTools } from './utility.js';
 
 /**
  * A tool the agent can use (e.g., "readFile", "runTest")
@@ -30,13 +29,21 @@ export interface AgentTool {
 export class ToolRegistry {
     private tools: Map<string, AgentTool> = new Map();
     private toolDefinitions: any[] = [];
+    private isInitialized = false;
 
     constructor(
         private fileManager: FileManager,
         private costTracker: CostTracker,
         private network: AgentNetworkService
     ) {
-        this.registerAllTools();
+        // Initialization is now async and must be called separately.
+    }
+
+    public async initialize(): Promise<void> {
+        if (this.isInitialized) return;
+        this.registerTools(fsTools);
+        await this.registerAllTools();
+        this.isInitialized = true;
     }
 
     /**
@@ -70,21 +77,48 @@ export class ToolRegistry {
         });
     }
 
-    private registerAllTools() {
-        const allTools = [
-            ...gitTools,
-            ...fsTools,
-            ...analysisTools,
-            ...opsTools,
-            ...utilityTools
-        ];
-
-        allTools.forEach(tool => {
+    private registerTools(tools: ToolDefinition[]) {
+        tools.forEach(tool => {
             this.register(tool.schema, (args, agent) => tool.execute(args, agent, {
                 fileManager: this.fileManager,
                 costTracker: this.costTracker,
                 network: this.network
             }));
         });
+    }
+
+    private async registerAllTools() {
+        // Assumes tools are moved to a `tools` directory adjacent to `services`
+        const toolsDir = path.resolve(__dirname, '../tools');
+        
+        const allTools: ToolDefinition[] = [];
+        let toolFiles: string[] = [];
+
+        try {
+            toolFiles = fs.readdirSync(toolsDir).filter(file => file.endsWith('.js')); // .js because it runs after compilation
+
+            for (const file of toolFiles) {
+                const filePath = path.join(toolsDir, file);
+                const module = await import(`file://${filePath}`);
+
+                // Find exported tool arrays (e.g., gitTools, fsTools)
+                for (const exportName in module) {
+                    if (Array.isArray(module[exportName])) {
+                        const toolDefs = module[exportName] as ToolDefinition[];
+                        if (toolDefs.length > 0 && toolDefs.every(def => def.schema && def.execute)) {
+                            allTools.push(...toolDefs);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error dynamically loading tools:', error);
+            vscode.window.showErrorMessage('Failed to load agent tools. Some features may not work.');
+            return;
+        }
+
+        this.registerTools(allTools);
+
+        console.log(`[ToolRegistry] Registered ${allTools.length} tools from ${toolFiles.length} files.`);
     }
 }

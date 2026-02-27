@@ -2,7 +2,12 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
-import { FileManager } from '../services/file-manager.js';
+import { FileManager, CodeNode } from '../services/file-manager.js';
+import { ChatPanel } from '../ui/chat-panel.js';
+
+interface DocumentableNodeQuickPickItem extends vscode.QuickPickItem {
+    node: CodeNode;
+}
 
 export async function documentCommand(
     commandExecutor: CommandExecutor,
@@ -30,7 +35,7 @@ export async function documentCommand(
 
     // If no code is selected, analyze the file for undocumented functions/classes
     if (!codeToDocument) {
-        const analysis = fileManager.analyzeFile(filePath, context.fileContent);
+        const analysis = await fileManager.analyzeFile(filePath, context.fileContent);
         const nodes = analysis.nodes.filter(n => n.type === 'function' || n.type === 'class');
 
         const undocumentedNodes = nodes.filter(node => {
@@ -45,13 +50,13 @@ export async function documentCommand(
             return;
         }
 
-        const items = undocumentedNodes.map(node => ({
+        const items: DocumentableNodeQuickPickItem[] = undocumentedNodes.map(node => ({
             label: `$(symbol-${node.type}) ${node.name}`,
             description: `at line ${node.startLine}`,
             node: node
         }));
 
-        const selected = await vscode.window.showQuickPick(items, {
+        const selected = await vscode.window.showQuickPick<DocumentableNodeQuickPickItem>(items, {
             placeHolder: 'Select a function or class to document',
             title: 'Generate Documentation'
         });
@@ -77,43 +82,23 @@ export async function documentCommand(
         return;
     }
 
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'Generating documentation...',
-        cancellable: false
-    }, async () => {
-        try {
-            const result = await commandExecutor.document(
-                codeToDocument,
-                filePath,
-                targetNodeName
-            );
+    // Construct the prompt
+    const contextDescription = targetNodeName ? `function/class '${targetNodeName}'` : 'the selected code';
+    const prompt = `Generate comprehensive documentation (JSDoc/Docstring) for ${contextDescription} in '${filePath}'.
 
-            if (!result.success) {
-                throw new Error(result.output);
-            }
+Code to document:
+\`\`\`${context.languageId}
+${codeToDocument}
+\`\`\`
+`;
 
-            await editor.edit(editBuilder => {
-                editBuilder.replace(selectionRange, result.output);
-            });
-            await vscode.commands.executeCommand('editor.action.formatSelection');
-            
-            const logContent = targetNodeName
-                ? `Documentation generated for ${targetNodeName} and applied to file.`
-                : 'Documentation applied to the editor.';
-            
-            outputLogger.logExchange({
-                title: `Documentation Generation (${context.languageId})`,
-                model: result.model,
-                cost: result.costUSD,
-                content: logContent,
-                contextCode: {
-                    language: context.languageId,
-                    code: codeToDocument,
-                },
-            });
-        } catch (error) {
-            vscode.window.showErrorMessage(`Documentation generation failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    });
+    // Ensure Chat Panel is open
+    await vscode.commands.executeCommand('openrouter-crew.chat');
+    
+    // Send to Chat Panel
+    if (ChatPanel.currentPanel) {
+        ChatPanel.currentPanel.ask(prompt);
+    } else {
+        vscode.window.showErrorMessage('Failed to open Chat Panel.');
+    }
 }

@@ -2,7 +2,12 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
-import { FileManager } from '../services/file-manager.js';
+import { FileManager, CodeNode } from '../services/file-manager.js';
+import { ChatPanel } from '../ui/chat-panel.js';
+
+interface TestableNodeQuickPickItem extends vscode.QuickPickItem {
+    node: CodeNode;
+}
 
 export async function testCommand(
     commandExecutor: CommandExecutor,
@@ -28,17 +33,17 @@ export async function testCommand(
 
     // If no code selected, try to find testable units
     if (!codeToTest && fileManager) {
-        const analysis = fileManager.analyzeFile(filePath, context.fileContent);
+        const analysis = await fileManager.analyzeFile(filePath, context.fileContent);
         const testableNodes = analysis.nodes.filter(n => n.type === 'function' || n.type === 'class');
 
         if (testableNodes.length > 0) {
-            const items = testableNodes.map(node => ({
+            const items: TestableNodeQuickPickItem[] = testableNodes.map(node => ({
                 label: `$(symbol-${node.type}) ${node.name}`,
                 description: `Line ${node.startLine}`,
                 node: node
             }));
 
-            const selected = await vscode.window.showQuickPick(items, {
+            const selected = await vscode.window.showQuickPick<TestableNodeQuickPickItem>(items, {
                 placeHolder: 'Select a function or class to generate tests for',
                 title: 'Generate Unit Tests'
             });
@@ -57,30 +62,28 @@ export async function testCommand(
         return;
     }
 
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'Generating tests...',
-        cancellable: false
-    }, async () => {
-        try {
-            const result = await commandExecutor.generateTests(codeToTest!, filePath, targetName);
+    // Construct the prompt
+    const contextDescription = targetName ? `function/class '${targetName}'` : 'the selected code';
+    const prompt = `Generate comprehensive unit tests for ${contextDescription} in '${filePath}'.
+    
+Include:
+1. Happy path cases
+2. Edge cases and error handling
+3. Mocking of dependencies where appropriate
 
-            if (!result.success) {
-                throw new Error(result.output);
-            }
+Code to test:
+\`\`\`${context.languageId}
+${codeToTest}
+\`\`\`
+`;
 
-            outputLogger.logExchange({
-                title: `Unit Test Generation (${context.languageId})`,
-                model: result.model,
-                cost: result.costUSD,
-                content: result.output,
-                contextCode: {
-                    language: context.languageId,
-                    code: codeToTest!
-                }
-            });
-        } catch (error) {
-            vscode.window.showErrorMessage(`Test generation failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    });
+    // Ensure Chat Panel is open
+    await vscode.commands.executeCommand('openrouter-crew.chat');
+    
+    // Send to Chat Panel
+    if (ChatPanel.currentPanel) {
+        ChatPanel.currentPanel.ask(prompt);
+    } else {
+        vscode.window.showErrorMessage('Failed to open Chat Panel.');
+    }
 }

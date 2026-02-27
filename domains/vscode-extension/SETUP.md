@@ -37,7 +37,7 @@ DEBUG=false
 ### Step 1: Install Dependencies
 
 ```bash
-cd domains/alex-ai-universal/vscode-extension
+cd domains/vscode-extension
 npm install
 ```
 

@@ -28,7 +28,7 @@ export async function optimizeCommand(
 
     // If no specific code is selected, try to find optimization candidates
     if (!context.selectedCode && fileManager) {
-        const analysis = fileManager.analyzeFile(filePath, context.fileContent);
+        const analysis = await fileManager.analyzeFile(filePath, context.fileContent);
         const suggestions = fileManager.generateSuggestions(analysis);
         
         // Filter for complexity or performance related suggestions

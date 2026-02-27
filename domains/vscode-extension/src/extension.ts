@@ -1,96 +1,77 @@
 import * as vscode from 'vscode';
-import { AgentNetworkService } from './services/agent-network.js';
-import { CostTracker } from './services/cost-tracker.js';
-import { FileManager } from './services/file-manager.js';
-import { LLMRouter } from './services/llm-router.js';
-import { ToolRegistry } from './services/tool-registry.js';
-import { TerminalManager } from './services/terminal-manager.js';
-import { ContextProvider } from './services/context-provider.js';
-import { CommandExecutor } from './commands/command-executor.js';
-import { generateCommand } from './commands/generate.js';
-import { OutputLogger } from './ui/output-logger.js';
-import { ChatPanel } from './ui/chat-panel.js';
+import { CostTracker } from './services/cost-tracker';
+import { ChatPanel } from './ui/chat-panel';
+import { CostStatusBar } from './ui/status-bar';
+import { CostReportPanel } from './ui/cost-report-panel';
+import { LLMRouter } from './services/llm-router';
+import { NLPProcessor } from './services/nlp-processor';
+import { ContextBuilder } from './services/context-builder';
+import { ToolRegistry } from './services/tool-registry';
+import { FileManager } from './services/file-manager';
+import { AgentNetworkService } from './services/agent-network';
+import { CostEstimator } from './services/cost-estimator';
+import { ResponseCache } from './services/cache';
 
 export function activate(context: vscode.ExtensionContext) {
-    const outputChannel = vscode.window.createOutputChannel('OpenRouter Crew');
-    outputChannel.appendLine('Initializing OpenRouter Crew Extension...');
 
-    // 1. Initialize Core Services
+    console.log('Congratulations, your extension "openrouter-crew-vscode" is now active!');
+
+    // Initialize services
     const costTracker = new CostTracker(context);
+    const responseCache = new ResponseCache(context);
+    const costEstimator = new CostEstimator(costTracker);
+    const llmRouter = new LLMRouter(costTracker, costEstimator, responseCache);
     const fileManager = new FileManager();
-    const terminalManager = new TerminalManager();
-    const contextProvider = new ContextProvider();
-    const llmRouter = new LLMRouter(costTracker);
-
-    // 2. Initialize Agent Network
-    // The network orchestrates agents and needs the router for LLM calls
-    const agentNetwork = new AgentNetworkService(costTracker);
-
-    // 3. Initialize Tool Registry
-    // Tools need access to core services (FileManager, CostTracker, Network)
+    const nlpProcessor = new NLPProcessor();
+    const contextBuilder = new ContextBuilder(fileManager);
+    const agentNetwork = new AgentNetworkService(costTracker, llmRouter);
     const toolRegistry = new ToolRegistry(fileManager, costTracker, agentNetwork);
+    
+    toolRegistry.initialize();
 
-    // 4. Initialize Command Executor
-    // This acts as the controller, bridging VSCode commands to the agent network
-    const commandExecutor = new CommandExecutor(
-        agentNetwork,
-        toolRegistry,
-        terminalManager,
-        outputChannel
-    );
+    // Initialize UI components
+    const statusBar = new CostStatusBar(costTracker);
+    context.subscriptions.push(statusBar);
 
-    // 5. Setup Logger
-    const outputLogger: OutputLogger = {
-        logExchange: (exchange) => {
-            outputChannel.appendLine(`[${exchange.model}] Cost: $${exchange.cost.toFixed(6)}`);
-            outputChannel.appendLine('--- Output ---');
-            outputChannel.appendLine(exchange.content);
-            outputChannel.appendLine('--------------');
-        }
-    };
-
-    // 6. Register Commands
+    // Register Webview Panel Serializer for ChatPanel to persist it across sessions
     context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.chat', () => {
-            ChatPanel.createOrShow(context.extensionUri, commandExecutor);
-        }),
-        vscode.commands.registerCommand('openrouter-crew.generate', () => {
-            generateCommand(commandExecutor, contextProvider, outputLogger);
-        }),
-        
-        vscode.commands.registerCommand('openrouter-crew.analyzeComplexity', async () => {
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) {
-                vscode.window.showErrorMessage('No active editor found.');
-                return;
-            }
-            
-            const path = vscode.workspace.asRelativePath(editor.document.uri);
-            const content = editor.document.getText();
-            
-            try {
-                const analysis = await fileManager.analyzeFile(path, content);
-                const suggestions = fileManager.generateSuggestions(analysis);
-                
-                let message = `Complexity Score: ${analysis.complexity}`;
-                if (suggestions.length > 0) {
-                    message += `\n\nSuggestions:\n${suggestions.map(s => `- ${s.suggestion}`).join('\n')}`;
-                }
-                
-                vscode.window.showInformationMessage(message, { modal: true });
-            } catch (e: any) {
-                vscode.window.showErrorMessage(`Analysis failed: ${e.message}`);
+        vscode.window.registerWebviewPanelSerializer(ChatPanel.viewType, {
+            async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
+                // The state is persisted by VS Code, but we are using globalState for history.
+                // `revive` will handle loading the history from globalState.
+                ChatPanel.revive(webviewPanel, context.extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, context);
             }
         })
     );
 
-    // 7. Register Lifecycle Disposables
-    context.subscriptions.push(costTracker);
-    context.subscriptions.push(terminalManager);
+    // Register commands
+    const chatCommand = vscode.commands.registerCommand('openrouter-crew.chat', () => {
+        ChatPanel.createOrShow(
+            context.extensionUri, 
+            llmRouter, 
+            costTracker, 
+            nlpProcessor, 
+            contextBuilder, 
+            toolRegistry, 
+            context
+        );
+    });
+    context.subscriptions.push(chatCommand);
 
-    outputChannel.appendLine('OpenRouter Crew Extension is now active.');
+    const costReportCommand = vscode.commands.registerCommand('openrouter-crew.cost.report', () => {
+        CostReportPanel.createOrShow(context.extensionUri, costTracker);
+    });
+    context.subscriptions.push(costReportCommand);
+
+    // Example command to test cost tracking
+    const recordUsageCommand = vscode.commands.registerCommand('openrouter-crew.recordUsage', async () => {
+        const cost = await vscode.window.showInputBox({ prompt: 'Enter cost to record (e.g., 0.01)' });
+        if (cost) {
+            await costTracker.recordUsage(parseFloat(cost));
+            vscode.window.showInformationMessage(`Recorded cost of $${cost}`);
+        }
+    });
+    context.subscriptions.push(recordUsageCommand);
 }
 
-export function deactivate() {
-    // Cleanup logic if needed
-}
+export function deactivate() {}

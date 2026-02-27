@@ -1,20 +1,20 @@
 {
-    "picard": { 
-        "name": "Picard", 
-        "role": "Strategy & Leadership", 
-        "specialties": ["planning", "delegation"], 
-        "model": "claude-3-5-sonnet" 
+    "lead": {
+        "name": "Lead Developer",
+        "role": "Technical Lead",
+        "specialties": ["Architecture", "Code Review"],
+        "model": "gpt-4o"
     },
-    "data": { 
-        "name": "Data", 
-        "role": "Technical Analysis", 
-        "specialties": ["code-analysis", "debugging"], 
-        "model": "gpt-4o" 
+    "qa": {
+        "name": "QA Engineer",
+        "role": "Quality Assurance",
+        "specialties": ["Testing", "Validation"],
+        "model": "gpt-4o"
     },
-    "riker": { 
-        "name": "Riker", 
-        "role": "Execution & Operations", 
-        "specialties": ["implementation", "refactoring"], 
-        "model": "claude-3-5-sonnet" 
+    "devops": {
+        "name": "DevOps Engineer",
+        "role": "DevOps",
+        "specialties": ["Deployment", "CI/CD"],
+        "model": "gpt-4o"
     }
 }

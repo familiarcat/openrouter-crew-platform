@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { CLIExecutor } from '../services/cli-executor.js';
-import { ProjectTreeViewProvider } from '../providers/project-tree-provider.js';
 
-export async function createProjectCommand(cliExecutor: CLIExecutor, projectProvider: ProjectTreeViewProvider): Promise<void> {
+export async function createProjectCommand(cliExecutor: CLIExecutor): Promise<void> {
   const name = await vscode.window.showInputBox({
     placeHolder: 'Project name',
     title: 'Create Project',
@@ -25,10 +24,10 @@ export async function createProjectCommand(cliExecutor: CLIExecutor, projectProv
   vscode.window.showInformationMessage(`Creating project: ${name}`);
   
   // Refresh the project view
-  projectProvider.refresh();
+  vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
 }
 
-export async function createFeatureCommand(cliExecutor: CLIExecutor, projectProvider: ProjectTreeViewProvider): Promise<void> {
+export async function createFeatureCommand(cliExecutor: CLIExecutor): Promise<void> {
   const name = await vscode.window.showInputBox({
     placeHolder: 'Feature name',
     title: 'Create Feature',
@@ -63,7 +62,7 @@ export async function createFeatureCommand(cliExecutor: CLIExecutor, projectProv
 
   if (result.success) {
     vscode.window.showInformationMessage(`Feature created: ${name}`);
-    projectProvider.refresh();
+    vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
   } else {
     vscode.window.showErrorMessage(`Failed to create feature: ${result.error}`);
   }

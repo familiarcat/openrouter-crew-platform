@@ -42,6 +42,12 @@ window.addEventListener('message', event => {
         case 'addMessage':
             addMessage(message.role, message.text, message.meta, message.isError, message.retryText);
             break;
+        case 'setLoading':
+            setLoading(message.value);
+            break;
+        case 'updateStatus':
+            updateStatus(message.text);
+            break;
     }
 });
 
@@ -98,4 +104,27 @@ function addMessage(role, text, meta, isError, retryText) {
 
     // Scroll to the bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function setLoading(isLoading) {
+    const loaderId = 'loading-indicator';
+    const existingLoader = document.getElementById(loaderId);
+    
+    if (isLoading && !existingLoader) {
+        const loader = document.createElement('div');
+        loader.id = loaderId;
+        loader.className = 'message assistant loading';
+        loader.innerHTML = '<span>Thinking...</span>';
+        messagesContainer.appendChild(loader);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    } else if (!isLoading && existingLoader) {
+        existingLoader.remove();
+    }
+}
+
+function updateStatus(text) {
+    const loader = document.getElementById('loading-indicator');
+    if (loader) {
+        loader.querySelector('span').textContent = text;
+    }
 }

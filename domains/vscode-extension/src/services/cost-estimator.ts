@@ -1,69 +1,43 @@
-import * as vscode from 'vscode';
-import { Intent, ExtendedIntent, LLMRouter, Complexity } from './llm-router.js';
 import { CostTracker } from './cost-tracker.js';
+import { LLMRequest } from './types.js';
 
-export interface CostEstimate {
-  cost: number;
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-  complexity: Complexity;
-}
-
+/**
+ * Estimates the cost of LLM requests before they are sent.
+ * This service provides heuristics for token counting and cost prediction.
+ */
 export class CostEstimator {
-  constructor(private llmRouter: LLMRouter, private costTracker: CostTracker) {}
+    constructor(private costTracker: CostTracker) {}
 
-  /**
-   * Estimates the total cost for a hypothetical request.
-   * @param text The code/text context for the request.
-   * @param intent The intended action.
-   * @returns An object with the estimated cost, model, and token counts.
-   */
-  public estimateRequestCost(text: string, intent: ExtendedIntent): CostEstimate {
-    const contextLength = text.length;
-
-    // 0. Estimate Complexity
-    const request = { prompt: text, intent };
-    const complexity = this.llmRouter.estimateComplexity(request);
-
-    // 1. Estimate Tokens
-    const { inputTokens, outputTokens } = this.estimateTokens(contextLength, intent, complexity);
-
-    // 2. Select Model
-    const config = vscode.workspace.getConfiguration('openrouterCrew');
-    const model = this.llmRouter.selectModel({ ...request, complexity }, config);
-
-    // 3. Estimate Cost
-    const cost = this.costTracker.estimateCost(inputTokens, outputTokens, model);
-
-    return { cost, model, inputTokens, outputTokens, complexity };
-  }
-
-  private estimateTokens(contextLength: number, intent: ExtendedIntent, complexity: Complexity): { inputTokens: number; outputTokens: number } {
-    // Estimate Input Tokens (Rough approximation: 4 chars ~= 1 token)
-    const inputTokens = Math.ceil(contextLength / 4) + 100; // +100 overhead for system prompt
-
-    // Estimate Output Tokens based on intent heuristics
-    let outputTokens = 500; // Default
-    switch (intent) {
-      case 'GENERATE': outputTokens = 2000; break;
-      case 'REFACTOR': outputTokens = Math.ceil(inputTokens * 1.2); break;
-      case 'REVIEW': outputTokens = 1000; break;
-      case 'TEST': outputTokens = 1500; break;
-      case 'DOCUMENT': outputTokens = Math.ceil(inputTokens * 1.1); break;
-      case 'DEBUG': outputTokens = 1000; break;
-      case 'OPTIMIZE': outputTokens = Math.ceil(inputTokens * 1.0); break;
-      case 'EXPLAIN': outputTokens = 800; break;
-      case 'TRANSLATE': outputTokens = Math.ceil(inputTokens * 1.0); break;
+    /**
+     * A rough estimation of tokens based on character count.
+     * This is a heuristic and not perfectly accurate. A common ratio is ~4 characters per token.
+     * @param text The text to estimate tokens for.
+     * @returns An estimated token count.
+     */
+    private estimateTokens(text: string): number {
+        return Math.ceil(text.length / 4);
     }
 
-    // Adjust for complexity
-    if (complexity === 'HIGH') {
-      outputTokens = Math.ceil(outputTokens * 1.5);
-    } else if (complexity === 'MEDIUM') {
-      outputTokens = Math.ceil(outputTokens * 1.2);
-    }
+    /**
+     * Estimates the cost of an LLM request before sending it.
+     * @param request The LLM request details.
+     * @param model The model that will be used for the request.
+     * @returns The estimated cost in USD.
+     */
+    public estimateRequestCost(request: LLMRequest, model: string): number {
+        // 1. Estimate input tokens from all messages in the request.
+        const inputTokens = request.messages.reduce((acc, msg) => {
+            if (typeof msg.content === 'string') {
+                return acc + this.estimateTokens(msg.content);
+            }
+            // Note: This doesn't account for complex message parts like images.
+            return acc;
+        }, 0);
 
-    return { inputTokens, outputTokens };
-  }
+        // 2. Estimate output tokens. This is highly speculative.
+        // A simple heuristic is to assume the output will be a fraction of the input, e.g., 50%.
+        const outputTokens = Math.ceil(inputTokens * 0.5);
+
+        return this.costTracker.estimateCost(inputTokens, outputTokens, model);
+    }
 }

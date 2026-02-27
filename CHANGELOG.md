@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+- **VSCode Extension**: Initial release (v0.1.0) of the OpenRouter Crew VSCode Extension.
+- **VSCode Extension**: Added "Welcome Panel" for first-time configuration of API keys.
+- **VSCode Extension**: Added "Test Connection" button to validate OpenRouter API keys.
+- **VSCode Extension**: Implemented `vscode:install`, `vscode:package`, and `vscode:clean` scripts for streamlined development.
+- **VSCode Extension**: Added `openrouter-crew.chat` command for AI-assisted coding.
+- **VSCode Extension**: Added `openrouter-crew.analyzeComplexity` for code analysis.
+- **VSCode Extension**: Added `openrouter-crew.exportLogs` for session debugging.
+
 ### Fixed
 - **Local Development**: Increased `n8n` service health check timeout from 30s to 90s in `scripts/start-local-dev.sh` to accommodate slower startup times.
 - **Local Development**: Updated `check_service` to use `curl -sf` to ensure services return a valid HTTP 200 status before being marked as healthy.

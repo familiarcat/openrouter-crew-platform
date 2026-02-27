@@ -3,14 +3,33 @@ import { CostTracker } from '../services/cost-tracker.js';
 
 export class CostMeter implements vscode.Disposable {
   private statusBarItem: vscode.StatusBarItem;
-  private disposable: vscode.Disposable;
+  private disposables: vscode.Disposable[] = [];
+  private interval: NodeJS.Timeout | undefined;
 
   constructor(private costTracker: CostTracker) {
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.statusBarItem.command = 'openrouter-crew.showCostReport'; // A command to show more details
+    this.disposables.push(this.statusBarItem);
 
-    const interval = setInterval(() => this.update(), 60000); // Poll every 60 seconds
-    this.disposable = vscode.Disposable.from({ dispose: () => clearInterval(interval) }, this.statusBarItem);
+    // Start polling only if window is focused
+    if (vscode.window.state.focused) {
+        this.startPolling();
+    }
+
+    // Listen for window focus changes to pause/resume polling
+    this.disposables.push(
+        vscode.window.onDidChangeWindowState(state => {
+            if (state.focused) {
+                this.startPolling();
+                this.update(); // Immediate update on focus
+            } else {
+                this.stopPolling();
+            }
+        })
+    );
+
+    // Also update when cost changes (push-based)
+    this.disposables.push(this.costTracker.onDidCostUpdate(() => this.update()));
 
     this.update();
     this.statusBarItem.show();
@@ -20,7 +39,7 @@ export class CostMeter implements vscode.Disposable {
     try {
       const metrics = await this.costTracker.getCostMetrics('daily');
       const dailyCost = metrics.totalCost;
-      const dailyBudget = metrics.budgetLimit;
+      const dailyBudget = metrics.budget;
       const percentage = dailyBudget > 0 ? (dailyCost / dailyBudget) * 100 : 0;
 
       this.statusBarItem.text = `💰 $${dailyCost.toFixed(2)} / $${dailyBudget.toFixed(2)}`;
@@ -41,7 +60,21 @@ export class CostMeter implements vscode.Disposable {
     }
   }
 
+  private startPolling() {
+      if (!this.interval) {
+          this.interval = setInterval(() => this.update(), 60000); // Poll every 60 seconds
+      }
+  }
+
+  private stopPolling() {
+      if (this.interval) {
+          clearInterval(this.interval);
+          this.interval = undefined;
+      }
+  }
+
   public dispose(): void {
-    this.disposable.dispose();
+    this.stopPolling();
+    this.disposables.forEach(d => d.dispose());
   }
 }

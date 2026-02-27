@@ -8,7 +8,7 @@
     "url": "https://github.com/bradygeorgen/openrouter-crew-platform.git"
   },
   "scripts": {
-    "dev": "bash scripts/system/cleanup-ports.sh && concurrently \"pnpm dev:dashboards\" \"pnpm dev:supabase\" \"bash scripts/system/open-dashboards.sh\"",
+    "dev": "bash scripts/system/cleanup-ports.sh && concurrently \"pnpm dev:dashboards\" \"pnpm dev:supabase\" \"pnpm --filter openrouter-crew-vscode watch\" \"bash scripts/system/open-dashboards.sh\"",
     "dev:dashboards": "concurrently \"pnpm --filter unified-dashboard dev\" \"pnpm --filter alex-ai-universal-dashboard dev --port 3004\" \"pnpm --filter dj-booking-dashboard dev --port 3002\" \"pnpm --filter test-event-venue-dashboard dev --port 3003\"",
     "dev:dashboard": "pnpm --filter unified-dashboard dev",
     "dev:supabase": "supabase start",
@@ -56,6 +56,9 @@
     "pipeline": "bash scripts/pipeline.sh",
     "deploy:vercel": "pnpm --filter unified-dashboard vercel",
     "release:vscode": "bash scripts/release-vscode-local.sh",
+    "vscode:package": "bash scripts/vscode/package.sh",
+    "vscode:install": "bash scripts/vscode/install-local.sh",
+    "vscode:clean": "bash scripts/vscode/clean.sh",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",

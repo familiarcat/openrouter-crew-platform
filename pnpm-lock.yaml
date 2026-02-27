@@ -421,6 +421,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.39.0
         version: 2.95.3
+      tesseract.js:
+        specifier: ^5.0.0
+        version: 5.1.1
     devDependencies:
       '@types/mocha':
         specifier: ^10.0.6
@@ -443,9 +446,6 @@ importers:
       mocha:
         specifier: ^10.2.0
         version: 10.8.2
-      tesseract.js:
-        specifier: ^5.0.0
-        version: 5.1.1
       typescript:
         specifier: ^5.3.3
         version: 5.9.3

@@ -45,8 +45,10 @@ suite('Document Command Test Suite', () => {
             fileName: '/test/file.ts'
         });
 
-        testContext.fileManager.analyzeFile = () => ({
-            nodes: [{ type: 'function', name: 'foo', startLine: 1, content: 'function foo() {}' }]
+        testContext.fileManager.analyzeFile = async () => ({
+            nodes: [{ type: 'function', name: 'foo', startLine: 1, content: 'function foo() {}' }],
+            filePath: '/test/file.ts', language: 'typescript', imports: [], exports: [], complexity: 1,
+            issues: []
         });
 
         testContext.mockQuickPick({ 

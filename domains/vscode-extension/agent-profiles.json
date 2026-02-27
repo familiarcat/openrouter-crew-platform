@@ -1,0 +1,20 @@
+{
+    "lead": {
+        "name": "Lead Developer",
+        "role": "Technical Lead",
+        "specialties": ["Architecture", "Code Review"],
+        "model": "gpt-4o"
+    },
+    "qa": {
+        "name": "QA Engineer",
+        "role": "Quality Assurance",
+        "specialties": ["Testing", "Validation"],
+        "model": "gpt-4o"
+    },
+    "devops": {
+        "name": "DevOps Engineer",
+        "role": "DevOps",
+        "specialties": ["Deployment", "CI/CD"],
+        "model": "gpt-4o"
+    }
+}

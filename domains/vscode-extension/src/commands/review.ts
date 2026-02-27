@@ -2,7 +2,12 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
-import { FileManager } from '../services/file-manager.js';
+import { FileManager, CodeNode } from '../services/file-manager.js';
+import { ChatPanel } from '../ui/chat-panel.js';
+
+interface ReviewableNodeQuickPickItem extends vscode.QuickPickItem {
+    node: CodeNode | { content: string; name: string };
+}
 
 export async function reviewCommand(
     commandExecutor: CommandExecutor,
@@ -28,11 +33,11 @@ export async function reviewCommand(
 
     // If no code selected, try to find reviewable units
     if (!codeToReview && fileManager) {
-        const analysis = fileManager.analyzeFile(filePath, context.fileContent);
+        const analysis = await fileManager.analyzeFile(filePath, context.fileContent);
         const reviewableNodes = analysis.nodes.filter(n => n.type === 'function' || n.type === 'class');
 
         if (reviewableNodes.length > 0) {
-            const items = reviewableNodes.map(node => ({
+            const items: ReviewableNodeQuickPickItem[] = reviewableNodes.map(node => ({
                 label: `$(symbol-${node.type}) ${node.name}`,
                 description: `Line ${node.startLine}`,
                 node: node
@@ -42,10 +47,10 @@ export async function reviewCommand(
             items.unshift({
                 label: '$(file) Review Entire File',
                 description: 'Analyze the full file content',
-                node: { content: context.fileContent, name: 'Entire File' } as any
+                node: { content: context.fileContent, name: 'Entire File' }
             });
 
-            const selected = await vscode.window.showQuickPick(items, {
+            const selected = await vscode.window.showQuickPick<ReviewableNodeQuickPickItem>(items, {
                 placeHolder: 'Select a function, class, or the entire file to review',
                 title: 'Code Review'
             });
@@ -62,30 +67,32 @@ export async function reviewCommand(
         codeToReview = context.fileContent;
     }
 
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'Reviewing code...',
-        cancellable: false
-    }, async () => {
-        try {
-            const result = await commandExecutor.review(codeToReview!, filePath, targetName);
+    // Construct the prompt
+    const contextDescription = targetName ? `function/class '${targetName}'` : 'the selected code';
+    const prompt = `Perform a comprehensive code review of ${contextDescription} in '${filePath}'.
+        
+Check for:
+1. Logic errors and bugs
+2. Security vulnerabilities
+3. Performance issues
+4. Code style and best practices
+5. TypeScript/typing issues (if applicable)
 
-            if (!result.success) {
-                throw new Error(result.output);
-            }
+Provide specific, actionable feedback and code snippets for improvements.
 
-            outputLogger.logExchange({
-                title: 'Code Review',
-                model: result.model,
-                cost: result.costUSD,
-                content: result.output,
-                contextCode: {
-                    language: context.languageId,
-                    code: codeToReview!
-                }
-            });
-        } catch (error) {
-            vscode.window.showErrorMessage(`Review failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    });
+Code to review:
+\`\`\`${context.languageId}
+${codeToReview}
+\`\`\`
+`;
+
+    // Ensure Chat Panel is open
+    await vscode.commands.executeCommand('openrouter-crew.chat');
+    
+    // Send to Chat Panel
+    if (ChatPanel.currentPanel) {
+        ChatPanel.currentPanel.ask(prompt);
+    } else {
+        vscode.window.showErrorMessage('Failed to open Chat Panel.');
+    }
 }

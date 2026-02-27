@@ -16,6 +16,31 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "openrouter-crew-sidebar",
+          "title": "OpenRouter Crew",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "openrouter-crew-sidebar": [
+        {
+          "id": "openrouter-crew.project-view",
+          "name": "Projects"
+        },
+        {
+          "id": "openrouter-crew.crew-view",
+          "name": "Crew Roster"
+        },
+        {
+          "id": "openrouter-crew.cost-report",
+          "name": "Cost & Budget"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "openrouter-crew.resetCost",
@@ -128,6 +153,11 @@
       {
         "command": "openrouter-crew.settings",
         "title": "Open Extension Settings"
+      },
+      {
+        "command": "openrouter-crew.welcome",
+        "title": "OpenRouter Crew: Welcome",
+        "category": "OpenRouter Crew"
       }
     ],
     "configuration": {
@@ -214,7 +244,8 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "package": "npx @vscode/vsce package"
+    "run-in-browser": "npx @vscode/test-web --extensionDevelopmentPath=.",
+    "release": "npm version patch && git push --follow-tags"
   },
   "dependencies": {
     "@openrouter-crew/crew-api-client": "workspace:*",

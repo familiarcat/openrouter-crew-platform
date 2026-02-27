@@ -1,165 +1,233 @@
 import * as vscode from 'vscode';
+import { AgentNetworkService } from '../services/agent-network.js';
 import { CostTracker } from '../services/cost-tracker.js';
-import { CrewAPIService } from '../services/crew-api-service.js';
 
-/**
- * Tree Item for Crew Members
- */
-class CrewTreeItem extends vscode.TreeItem {
+const agentProfiles = require('../config/agent-profiles.json');
+// --- Project View ---
+
+class ProjectTreeItem extends vscode.TreeItem {
   constructor(
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    public readonly contextValue: string,
-    public readonly description?: string
+    public readonly project: any
   ) {
     super(label, collapsibleState);
-    this.tooltip = `${this.label}`;
-    this.description = description;
+    this.tooltip = `${project.description || 'No description'}`;
+    this.description = project.status;
+    this.contextValue = 'project';
+    this.iconPath = new vscode.ThemeIcon('repo');
   }
 }
 
-/**
- * Crew Tree View Provider
- * Displays active crew members and their status
- */
-export class CrewTreeProvider implements vscode.TreeDataProvider<CrewTreeItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<CrewTreeItem | undefined | null | void> = new vscode.EventEmitter<CrewTreeItem | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<CrewTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+export class ProjectTreeViewProvider implements vscode.TreeDataProvider<ProjectTreeItem> {
+  private _onDidChangeTreeData: vscode.EventEmitter<ProjectTreeItem | undefined | null | void> = new vscode.EventEmitter<ProjectTreeItem | undefined | null | void>();
+  readonly onDidChangeTreeData: vscode.Event<ProjectTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
-  constructor(private crewService: CrewAPIService) {}
+  constructor(private agentNetwork: AgentNetworkService) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: CrewTreeItem): vscode.TreeItem {
+  getTreeItem(element: ProjectTreeItem): vscode.TreeItem {
     return element;
   }
 
-  async getChildren(element?: CrewTreeItem): Promise<CrewTreeItem[]> {
+  async getChildren(element?: ProjectTreeItem): Promise<ProjectTreeItem[]> {
     if (element) {
-      return []; // No children for now
-    }
-
-    const roster = await this.crewService.getCrewRoster();
-
-    if (roster && roster.length > 0) {
-      return roster.map((member: any) => new CrewTreeItem(
-        member.display_name || member.name,
-        vscode.TreeItemCollapsibleState.None,
-        member.role,
-        member.role
-      ));
-    }
-
-    // Fallback if API fails or returns no members
-    return [
-      new CrewTreeItem('No Crew Found', vscode.TreeItemCollapsibleState.None, 'empty', 'Could not fetch crew roster')
-    ];
-  }
-}
-
-/**
- * Tree Item for Cost Metrics
- */
-class CostTreeItem extends vscode.TreeItem {
-  constructor(
-    public readonly label: string,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    public readonly value: string,
-    public readonly iconPath?: vscode.ThemeIcon
-  ) {
-    super(label, collapsibleState);
-    this.description = value;
-    this.tooltip = `${this.label}: ${this.value}`;
-    this.iconPath = iconPath;
-  }
-}
-
-/**
- * Cost Tree View Provider
- * Displays cost metrics and budget status
- */
-export class CostTreeProvider implements vscode.TreeDataProvider<CostTreeItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<CostTreeItem | undefined | null | void> = new vscode.EventEmitter<CostTreeItem | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<CostTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
-
-  constructor(private costTracker: CostTracker) {}
-
-  refresh(): void {
-    this._onDidChangeTreeData.fire();
-  }
-
-  getTreeItem(element: CostTreeItem): vscode.TreeItem {
-    return element;
-  }
-
-  async getChildren(element?: CostTreeItem): Promise<CostTreeItem[]> {
-    if (element) {
+      // Future: Show project details (sprints, files) as children
       return [];
     }
 
-    const dailyMetrics = await this.costTracker.getCostMetrics('daily');
-    const monthlyMetrics = await this.costTracker.getCostMetrics('monthly');
-    const history = this.costTracker.getLocalHistory();
-    
-    const totalRequests = history.length;
-    const totalCostAllTime = history.reduce((sum, r) => sum + r.costUSD, 0);
-    const avgCost = totalRequests > 0 ? totalCostAllTime / totalRequests : 0;
+    const projects = await this.agentNetwork.getProjects();
+    if (projects.length === 0) {
+        return [new vscode.TreeItem('No projects found in Supabase.', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem];
+    }
 
-    return [
-      new CostTreeItem(
-        "Today's Cost",
+    return projects.map(p => new ProjectTreeItem(
+        p.name,
         vscode.TreeItemCollapsibleState.None,
-        `$${dailyMetrics.totalCost.toFixed(4)}`,
-        new vscode.ThemeIcon('graph')
-      ),
-      new CostTreeItem(
-        "Month to Date",
-        vscode.TreeItemCollapsibleState.None,
-        `$${monthlyMetrics.totalCost.toFixed(4)}`,
-        new vscode.ThemeIcon('calendar')
-      ),
-      new CostTreeItem(
-        "Remaining Budget",
-        vscode.TreeItemCollapsibleState.None,
-        `$${monthlyMetrics.remaining.toFixed(2)} (${(100 - monthlyMetrics.percentUsed).toFixed(1)}%)`,
-        new vscode.ThemeIcon('pie-chart')
-      ),
-      new CostTreeItem(
-        "Total Requests",
-        vscode.TreeItemCollapsibleState.None,
-        `${totalRequests}`,
-        new vscode.ThemeIcon('symbol-event')
-      ),
-      new CostTreeItem(
-        "Avg Cost/Request",
-        vscode.TreeItemCollapsibleState.None,
-        `$${avgCost.toFixed(5)}`,
-        new vscode.ThemeIcon('calculator')
-      )
-    ];
+        p
+    ));
   }
 }
 
-/**
- * Register Tree Views
- */
-export function registerTreeViews(
-  context: vscode.ExtensionContext,
-  crewService: CrewAPIService,
-  costTracker: CostTracker
-): { crewProvider: CrewTreeProvider; costProvider: CostTreeProvider } {
-  const crewProvider = new CrewTreeProvider(crewService);
-  const costProvider = new CostTreeProvider(costTracker);
 
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider('openrouter-crew.crew-view', crewProvider),
-    vscode.window.registerTreeDataProvider('openrouter-crew.cost-view', costProvider)
-  );
+// --- Crew View ---
 
-  // Refresh views periodically
-  setInterval(() => costProvider.refresh(), 60000); // Refresh cost every minute
+class CrewTreeItem extends vscode.TreeItem {
+    constructor(
+      public readonly label: string,
+      public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+      public readonly description?: string,
+      public readonly details?: any
+    ) {
+      super(label, collapsibleState);
+      this.tooltip = `${this.label} - ${this.description}`;
+      this.contextValue = 'crewMember';
+      this.iconPath = new vscode.ThemeIcon('person');
+      this.command = {
+        command: 'openrouter-crew.showCrewDetails',
+        title: 'Show Details',
+        arguments: [this]
+      };
+    }
+  }
+  
+  export class CrewTreeProvider implements vscode.TreeDataProvider<CrewTreeItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<CrewTreeItem | undefined | null | void> = new vscode.EventEmitter<CrewTreeItem | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<CrewTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+  
+    constructor() {}
+  
+    refresh(): void {
+      this._onDidChangeTreeData.fire();
+    }
+  
+    getTreeItem(element: CrewTreeItem): vscode.TreeItem {
+      return element;
+    }
+  
+    async getChildren(element?: CrewTreeItem): Promise<CrewTreeItem[]> {
+      if (element) {
+        return []; // No children for now
+      }
+  
+      const profiles = agentProfiles as Record<string, any>;
+      if (Object.keys(profiles).length > 0) {
+        return Object.values(profiles).map((member: any) => new CrewTreeItem(
+          member.name,
+          vscode.TreeItemCollapsibleState.None,
+          member.role,
+          member
+        ));
+      }
+  
+      return [
+        new CrewTreeItem('No Crew Found', vscode.TreeItemCollapsibleState.None, 'Could not load agent profiles', {})
+      ];
+    }
+  }
 
-  return { crewProvider, costProvider };
-}
+// --- Cost View ---
+
+class CostTreeItem extends vscode.TreeItem {
+    constructor(
+      public readonly label: string,
+      public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+      public readonly value: string,
+      public readonly iconPath?: vscode.ThemeIcon
+    ) {
+      super(label, collapsibleState);
+      this.description = value;
+      this.tooltip = `${this.label}: ${this.value}`;
+      this.iconPath = iconPath;
+    }
+  }
+  
+  export class CostTreeProvider implements vscode.TreeDataProvider<CostTreeItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<CostTreeItem | undefined | null | void> = new vscode.EventEmitter<CostTreeItem | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<CostTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+  
+    constructor(private costTracker: CostTracker) {}
+  
+    refresh(): void {
+      this._onDidChangeTreeData.fire();
+    }
+  
+    getTreeItem(element: CostTreeItem): vscode.TreeItem {
+      return element;
+    }
+  
+    async getChildren(element?: CostTreeItem): Promise<CostTreeItem[]> {
+      if (element) {
+        return [];
+      }
+  
+      const dailyMetrics = await this.costTracker.getCostMetrics('daily');
+      const monthlyMetrics = await this.costTracker.getCostMetrics('monthly');
+  
+      return [
+        new CostTreeItem("Today's Cost", vscode.TreeItemCollapsibleState.None, `$${dailyMetrics.totalCost.toFixed(4)}`, new vscode.ThemeIcon('graph')),
+        new CostTreeItem("Month to Date", vscode.TreeItemCollapsibleState.None, `$${monthlyMetrics.totalCost.toFixed(4)}`, new vscode.ThemeIcon('calendar')),
+        new CostTreeItem("Remaining Budget", vscode.TreeItemCollapsibleState.None, `$${monthlyMetrics.remaining.toFixed(2)} (${(100 - monthlyMetrics.percentUsed).toFixed(1)}%)`, new vscode.ThemeIcon('pie-chart'))
+      ];
+    }
+  }
+
+// --- Registration ---
+
+export function registerTreeViews(context: vscode.ExtensionContext, agentNetwork: AgentNetworkService, costTracker: CostTracker) {
+    const projectProvider = new ProjectTreeViewProvider(agentNetwork);
+    const crewProvider = new CrewTreeProvider();
+    const costProvider = new CostTreeProvider(costTracker);
+
+    // Register providers
+    vscode.window.registerTreeDataProvider('openrouter-crew.project-view', projectProvider);
+    vscode.window.registerTreeDataProvider('openrouter-crew.crew-view', crewProvider);
+    vscode.window.registerTreeDataProvider('openrouter-crew.cost-report', costProvider);
+  
+    context.subscriptions.push(
+      // Refresh commands
+      vscode.commands.registerCommand('openrouter-crew.project-view.refresh', () => projectProvider.refresh()),
+      vscode.commands.registerCommand('openrouter-crew.crew-view.refresh', () => crewProvider.refresh()),
+      vscode.commands.registerCommand('openrouter-crew.cost-report.refresh', () => costProvider.refresh()),
+      
+      // Show Crew Details Command
+      vscode.commands.registerCommand('openrouter-crew.showCrewDetails', (item: CrewTreeItem) => {
+        const panel = vscode.window.createWebviewPanel(
+            'crewDetails',
+            `Crew Member: ${item.label}`,
+            vscode.ViewColumn.One,
+            {}
+        );
+        panel.webview.html = `<html><body>
+            <h1>${item.label}</h1>
+            <p><strong>Role:</strong> ${item.description}</p>
+            <pre>${JSON.stringify(item.details, null, 2)}</pre>
+        </body></html>`;
+      })
+    );
+  
+    let refreshInterval: NodeJS.Timeout | undefined;
+
+    const startRefreshing = () => {
+        if (!refreshInterval) {
+            refreshInterval = setInterval(() => {
+                projectProvider.refresh();
+                costProvider.refresh();
+            }, 60000); // Refresh views every minute
+        }
+    };
+
+    const stopRefreshing = () => {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+            refreshInterval = undefined;
+        }
+    };
+
+    // Initial check
+    if (vscode.window.state.focused) {
+        startRefreshing();
+    }
+
+    // Listen for focus changes
+    context.subscriptions.push(
+        vscode.window.onDidChangeWindowState(state => {
+            if (state.focused) {
+                startRefreshing();
+                // Immediate refresh on focus
+                projectProvider.refresh();
+                costProvider.refresh();
+            } else {
+                stopRefreshing();
+            }
+        })
+    );
+
+    // Ensure cleanup on deactivation
+    context.subscriptions.push({ dispose: stopRefreshing });
+
+    return { projectProvider, crewProvider, costProvider };
+  }

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 export async function quickFixCommand(
     commandExecutor: CommandExecutor,
@@ -70,59 +71,31 @@ export async function quickFixCommand(
   const startLine = Math.max(0, errorRange.start.line - 5);
   const endLine = Math.min(document.lineCount - 1, errorRange.end.line + 5);
   const contextRange = new vscode.Range(startLine, 0, endLine, document.lineAt(endLine).range.end.character);
+  
+  // Select the context range so the user sees what's being fixed and Apply/Diff works correctly
+  editor.selection = new vscode.Selection(contextRange.start, contextRange.end);
+  editor.revealRange(contextRange);
+  
   const codeContext = document.getText(contextRange);
-
-  const language = document.languageId;
   const filePath = document.fileName;
 
-  await vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: 'OpenRouter Crew: Analyzing error...',
-      cancellable: false
-  }, async () => {
-      try {
-          const instruction = `Fix the following ${targetDiagnostic!.severity === vscode.DiagnosticSeverity.Error ? 'error' : 'issue'}: "${targetDiagnostic!.message}"`;
+  // Construct the prompt
+  const instruction = `Fix the following ${targetDiagnostic.severity === vscode.DiagnosticSeverity.Error ? 'error' : 'issue'}: "${targetDiagnostic.message}"`;
+  const prompt = `${instruction} in '${filePath}'.
 
-          // Use refactor instead of debug to get a replaceable code block
-          const result = await commandExecutor.refactor(
-              codeContext,
-              filePath,
-              instruction
-          );
+Code Context:
+\`\`\`${document.languageId}
+${codeContext}
+\`\`\`
+`;
 
-          if (!result.success) {
-              throw new Error(result.output);
-          }
-
-          const fixedCode = commandExecutor.extractCode(result.output, true);
-
-          const logData: any = {
-              title: `Quick Fix: ${targetDiagnostic!.message}`,
-              model: result.model,
-              cost: result.costUSD,
-              content: result.output,
-              contextCode: {
-                  language,
-                  code: codeContext
-              }
-          };
-
-          if (fixedCode) {
-              await editor.edit(editBuilder => {
-                  editBuilder.replace(contextRange, fixedCode);
-              });
-
-              logData.applyCommand = {
-                  command: 'openrouter-crew.applyRefactoring',
-                  args: [fixedCode, contextRange]
-              };
-          } else {
-              vscode.window.showWarningMessage('No code block found in quick fix response.');
-          }
-
-          outputLogger.logExchange(logData);
-      } catch (error) {
-          vscode.window.showErrorMessage(`Quick fix failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-  });
+  // Ensure Chat Panel is open
+  await vscode.commands.executeCommand('openrouter-crew.chat');
+  
+  // Send to Chat Panel
+  if (ChatPanel.currentPanel) {
+      ChatPanel.currentPanel.ask(prompt);
+  } else {
+      vscode.window.showErrorMessage('Failed to open Chat Panel.');
+  }
 }

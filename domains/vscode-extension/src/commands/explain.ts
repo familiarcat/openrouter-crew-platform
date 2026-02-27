@@ -2,7 +2,12 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
-import { FileManager } from '../services/file-manager.js';
+import { FileManager, CodeNode } from '../services/file-manager.js';
+import { ChatPanel } from '../ui/chat-panel.js';
+
+interface ExplainableNodeQuickPickItem extends vscode.QuickPickItem {
+    node: CodeNode | { content: string; name: string };
+}
 
 export async function explainCommand(
     commandExecutor: CommandExecutor,
@@ -28,11 +33,11 @@ export async function explainCommand(
 
     // If no code selected, try to find explainable units
     if (!codeToExplain && fileManager) {
-        const analysis = fileManager.analyzeFile(filePath, context.fileContent);
+        const analysis = await fileManager.analyzeFile(filePath, context.fileContent);
         const explainableNodes = analysis.nodes.filter(n => n.type === 'function' || n.type === 'class');
 
         if (explainableNodes.length > 0) {
-            const items = explainableNodes.map(node => ({
+            const items: ExplainableNodeQuickPickItem[] = explainableNodes.map(node => ({
                 label: `$(symbol-${node.type}) ${node.name}`,
                 description: `Line ${node.startLine}`,
                 node: node
@@ -42,10 +47,10 @@ export async function explainCommand(
             items.unshift({
                 label: '$(file) Explain Entire File',
                 description: 'Explain the full file content',
-                node: { content: context.fileContent, name: 'Entire File' } as any
+                node: { content: context.fileContent, name: 'Entire File' }
             });
 
-            const selected = await vscode.window.showQuickPick(items, {
+            const selected = await vscode.window.showQuickPick<ExplainableNodeQuickPickItem>(items, {
                 placeHolder: 'Select a function, class, or the entire file to explain',
                 title: 'Explain Code'
             });
@@ -62,30 +67,17 @@ export async function explainCommand(
         codeToExplain = context.fileContent;
     }
 
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'Explaining code...',
-        cancellable: false
-    }, async () => {
-        try {
-            const result = await commandExecutor.explain(codeToExplain!, filePath, targetName);
+    // Construct the prompt
+    const contextDescription = targetName ? `function/class '${targetName}'` : 'the selected code';
+    const prompt = `Explain ${contextDescription} in '${filePath}':\n\n\`\`\`${context.languageId}\n${codeToExplain}\n\`\`\``;
 
-            if (!result.success) {
-                throw new Error(result.output);
-            }
-
-            outputLogger.logExchange({
-                title: 'Code Explanation',
-                model: result.model,
-                cost: result.costUSD,
-                content: result.output,
-                contextCode: {
-                    language: context.languageId,
-                    code: codeToExplain!
-                }
-            });
-        } catch (error) {
-            vscode.window.showErrorMessage(`Explanation failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    });
+    // Ensure Chat Panel is open
+    await vscode.commands.executeCommand('openrouter-crew.chat');
+    
+    // Send to Chat Panel
+    if (ChatPanel.currentPanel) {
+        ChatPanel.currentPanel.ask(prompt);
+    } else {
+        vscode.window.showErrorMessage('Failed to open Chat Panel.');
+    }
 }

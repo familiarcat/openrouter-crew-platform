@@ -1,0 +1,40 @@
+name: Test VSCode Extension
+
+on:
+  pull_request:
+    paths:
+      - 'domains/vscode-extension/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'domains/vscode-extension/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Compile Extension
+        run: pnpm --filter openrouter-crew-vscode run compile
+
+      - name: Run Tests
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: pnpm --filter openrouter-crew-vscode test

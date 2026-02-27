@@ -1,149 +1,102 @@
 import * as vscode from 'vscode';
 import { CostTracker } from './cost-tracker.js';
-
-export type Complexity = 'LOW' | 'MEDIUM' | 'HIGH';
-
-export type Intent =
-  | 'ASK'
-  | 'REVIEW'
-  | 'EXPLAIN'
-  | 'REFACTOR'
-  | 'GENERATE'
-  | 'DEBUG'
-  | 'TEST'
-  | 'DOCUMENT'
-  | 'COMPLETE'
-  | 'OPTIMIZE';
-
-export type ExtendedIntent = Intent | 'TRANSLATE';
-
-export interface FileContext {
-  path: string;
-  content: string;
-  language: string;
-}
-
-export interface ImageContext {
-  base64: string;
-  mimeType: string;
-}
-
-export interface LLMRequest {
-  prompt: string;
-  files?: FileContext[];
-  images?: ImageContext[];
-  language?: string;
-  intent?: ExtendedIntent;
-  complexity?: Complexity;
-}
-
-export interface LLMResponse {
-  content: string;
-  model: string;
-  provider: 'claude' | 'openrouter' | 'gemini';
-  costUSD: number;
-  executionTimeMs: number;
-  cached: boolean;
-}
+import { CostEstimator } from './cost-estimator.js';
+import { ResponseCache } from './cache.js';
+import { LLMRequest, LLMResponse } from './types.js';
 
 export class LLMRouter {
-  // Pricing per 1k tokens (Input / Output)
-  private static PRICING: Record<string, { input: number; output: number }> = {
-    'gemini-flash-1.5': { input: 0.0001, output: 0.0004 },
-    'claude-3-5-sonnet': { input: 0.003, output: 0.015 },
-    'claude-3-opus': { input: 0.015, output: 0.06 },
-    'gpt-4-turbo': { input: 0.01, output: 0.03 },
-    'mistral-large': { input: 0.004, output: 0.012 }
-  };
-  private costTracker: CostTracker;
+    constructor(
+        private costTracker: CostTracker,
+        private costEstimator: CostEstimator,
+        private responseCache?: ResponseCache
+    ) {}
 
-  constructor(costTracker: CostTracker) {
-    this.costTracker = costTracker;
-  }
+    async route(request: LLMRequest, signal?: AbortSignal): Promise<LLMResponse> {
+        const config = vscode.workspace.getConfiguration('openrouterCrew');
+        const apiKey = config.get<string>('apiKey');
+        if (!apiKey) throw new Error('API Key missing.');
 
-  /**
-   * Routes the request to the optimal model based on complexity and intent.
-   */
-  async route(request: LLMRequest): Promise<LLMResponse> {
-    const startTime = Date.now();
-    
-    // 1. Analyze complexity if not provided
-    const complexity = request.complexity || this.estimateComplexity(request);
-    
-    // 2. Select Model
-    const config = vscode.workspace.getConfiguration('openrouterCrew');
-    const model = this.selectModel({ ...request, complexity }, config);
+        // Simple routing logic - this is the "Shared" logic that will evolve
+        // to include complexity analysis and budget checks.
+        let model = 'openai/gpt-4o'; // Default high quality
+        if (request.hint === 'speed') {
+            model = 'google/gemini-flash-1.5';
+        } else if (request.hint === 'code') {
+            model = 'anthropic/claude-3.5-sonnet';
+        }
 
-    // 3. Estimate cost and check budget before execution
-    const inputTokens = Math.ceil(request.prompt.length / 4);
-    const estimatedOutputTokens = 1000; // A reasonable default for pre-execution check
-    const estimatedCost = this.costTracker.estimateCost(inputTokens, estimatedOutputTokens, model);
-    await this.checkBudget(estimatedCost);
+        // Perform Budget Check
+        const estimatedCost = this.costEstimator.estimateRequestCost(request, model);
+        const budgetCheck = await this.costTracker.checkBudget(estimatedCost);
+        if (!budgetCheck.allowed) {
+            throw new Error(`Budget exceeded: ${budgetCheck.reason}`);
+        }
 
-    // 4. Mock Execution (Integration with actual API comes in later phase)
-    // This would normally call the OpenRouter/Alex-AI-Universal API
-    const responseContent = `[Mock Response from ${model}] This is a placeholder response for the ${request.intent || 'ASK'} intent.`;
-    
-    // 5. Calculate actual cost based on mock response length
-    const outputTokens = Math.ceil(responseContent.length / 4);
-    const costUSD = this.costTracker.estimateCost(inputTokens, outputTokens, model);
+        // Check Cache
+        let cacheKey: string | undefined;
+        if (this.responseCache) {
+            const cachePayload = JSON.stringify({
+                model,
+                messages: request.messages,
+                tools: request.tools
+            });
+            cacheKey = this.responseCache.generateKey(cachePayload);
+            
+            const cached = this.responseCache.get<LLMResponse>(cacheKey);
+            if (cached) {
+                // Return cached response with 0 usage to avoid double-counting cost
+                return {
+                    ...cached,
+                    usage: { prompt_tokens: 0, completion_tokens: 0 },
+                    cached: true
+                };
+            }
+        }
 
-    return {
-      content: responseContent,
-      model: model,
-      provider: model.includes('claude') ? 'claude' : (model.includes('gemini') ? 'gemini' : 'openrouter'),
-      costUSD,
-      executionTimeMs: Date.now() - startTime,
-      cached: false
-    };
-  }
+        try {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://github.com/openrouter-crew/vscode-extension',
+                    'X-Title': 'OpenRouter Crew VSCode',
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: request.messages,
+                    tools: request.tools,
+                }),
+                signal
+            });
 
-  /**
-   * Estimates the complexity of a request based on heuristics.
-   */
-  public estimateComplexity(request: LLMRequest): Complexity {
-    const length = request.prompt.length;
-    const intent = request.intent;
-    const fileCount = request.files?.length || 0;
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`OpenRouter API Error: ${response.status} - ${errorText}`);
+            }
 
-    if (intent === 'DEBUG' || intent === 'REFACTOR' || intent === 'OPTIMIZE') return 'HIGH';
-    if (length > 4000 || fileCount > 3) return 'HIGH';
-    if (intent === 'REVIEW' || intent === 'TEST' || intent === 'GENERATE') return 'MEDIUM';
-    if (length > 1000 || fileCount > 0) return 'MEDIUM';
+            const data = await response.json() as any;
+            const choice = data.choices?.[0];
+            
+            if (!choice) throw new Error('No completion choice returned');
 
-    return 'LOW';
-  }
+            const result: LLMResponse = {
+                content: choice.message?.content || null,
+                model: data.model || model,
+                usage: data.usage || { prompt_tokens: 0, completion_tokens: 0 },
+                tool_calls: choice.message?.tool_calls,
+                cached: false
+            };
 
-  /**
-   * Selects the best model for the job based on cost/performance trade-offs.
-   */
-  public selectModel(request: LLMRequest, config: vscode.WorkspaceConfiguration): string {
-    const complexity = request.complexity || 'LOW';
-    const intent = request.intent;
-    const preferredModel = config.get<string>('model.preferred');
+            // Cache the result
+            if (this.responseCache && cacheKey) {
+                await this.responseCache.set(cacheKey, result);
+            }
 
-    if (preferredModel && preferredModel !== 'auto') return preferredModel;
+            return result;
 
-    // Intent-based routing
-    if (intent === 'REVIEW') return 'gpt-4-turbo';
-    if (intent === 'DEBUG') return 'claude-3-5-sonnet';
-
-    // Complexity-based routing
-    switch (complexity) {
-      case 'HIGH': return 'claude-3-5-sonnet';
-      case 'MEDIUM': return 'claude-3-5-sonnet';
-      case 'LOW': default: return 'gemini-flash-1.5';
+        } catch (e: any) {
+            throw new Error(`LLM Router Error: ${e.message}`);
+        }
     }
-  }
-
-  /**
-   * Checks if the estimated cost is within the user's budget.
-   * Throws an error if the budget is exceeded, which is caught by the CommandExecutor.
-   */
-  public async checkBudget(estimatedCost: number): Promise<void> {
-    const budgetCheck = await this.costTracker.checkBudget(estimatedCost);
-    if (!budgetCheck.allowed) {
-      throw new Error(budgetCheck.reason || 'Budget limit exceeded. Request blocked.');
-    }
-  }
 }
