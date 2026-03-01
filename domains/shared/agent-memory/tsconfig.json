@@ -7,8 +7,16 @@
     "noEmit": false,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "moduleResolution": "Node",
+    "target": "ES2022"
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["dist", "node_modules", "src/**/*.tsx"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/**/*.tsx"
+  ]
 }
