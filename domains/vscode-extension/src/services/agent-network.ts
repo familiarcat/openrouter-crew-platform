@@ -8,11 +8,11 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
-import { CostTracker } from './cost-tracker.js';
-import { FileManager } from './file-manager.js';
-import { ToolRegistry } from './tool-registry.js';
-import { AgentExecutionResult } from './types.js';
-import { LLMRouter } from './llm-router.js';
+import { CostTracker } from './cost-tracker';
+import { FileManager } from './file-manager';
+import { ToolRegistry } from './tool-registry';
+import { AgentExecutionResult } from './types';
+import { LLMRouter } from './llm-router';
 
 // Map friendly model names to OpenRouter model IDs
 const MODEL_ID_MAP: Record<AgentProfile['model'], string> = {

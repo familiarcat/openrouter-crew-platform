@@ -6,10 +6,10 @@
  */
 
 import * as vscode from 'vscode';
-import { AgentNetworkService, CrewAgent } from './agent-network.js';
-import { CostTracker } from './cost-tracker.js';
-import { FileManager } from './file-manager.js';
-import { ToolDefinition } from './types.js';
+import { AgentNetworkService, CrewAgent } from './agent-network';
+import { CostTracker } from './cost-tracker';
+import { FileManager } from './file-manager';
+import { ToolDefinition } from './types';
 import * as fs from 'fs';
 import * as path from 'path';
 

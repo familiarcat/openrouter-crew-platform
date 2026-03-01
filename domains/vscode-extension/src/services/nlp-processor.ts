@@ -1,4 +1,4 @@
-import { Intent, Complexity, LLMRequest, LLMRouter } from './llm-router.js';
+import { Intent, Complexity, LLMRequest, LLMRouter } from './llm-router';
 
 export interface Entity {
   type: 'FILE' | 'FUNCTION' | 'CLASS' | 'VARIABLE' | 'UNKNOWN';

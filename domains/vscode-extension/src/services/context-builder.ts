@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
-import { FileManager } from './file-manager.js';
+import { FileManager } from './file-manager';
 
 /**
  * Context Builder Service

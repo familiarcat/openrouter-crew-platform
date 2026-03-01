@@ -4,12 +4,22 @@
     "outDir": "dist",
     "types": ["node"],
     "moduleResolution": "Node",
+    "module": "CommonJS",
     "target": "ES2022",
     "strictNullChecks": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "composite": false,
-    "declaration": false
+    "declaration": false,
+    "declarationMap": false,
+    "baseUrl": ".",
+    "paths": {
+      "@openrouter-crew/shared-cost-tracking": ["../../domains/shared/cost-tracking/src/index.ts"],
+      "@openrouter-crew/shared-schemas": ["../../domains/shared/schemas/src/index.ts"],
+      "@openrouter-crew/shared-crew-coordination": ["../../domains/shared/crew-coordination/src/index.ts"],
+      "@openrouter-crew/crew-api-client": ["../../domains/shared/crew-api-client/src/index.ts"],
+      "@openrouter-crew/shared-ui-components": ["../../domains/shared/ui-components/src/index.ts"]
+    }
   },
   "include": [
     "src/**/*"

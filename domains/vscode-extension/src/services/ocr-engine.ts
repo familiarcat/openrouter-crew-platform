@@ -14,7 +14,7 @@
  */
 
 import { createWorker } from 'tesseract.js';
-import { NLPProcessor } from './nlp-processor.js';
+import { NLPProcessor } from './nlp-processor';
 
 /**
  * OCR result from image analysis

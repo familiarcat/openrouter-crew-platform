@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { CostTracker } from './cost-tracker.js';
-import { ResponseCache } from './cache.js';
+import { CostTracker } from './cost-tracker';
+import { ResponseCache } from './cache';
 import { CostCalculator, ModelRouter } from '@openrouter-crew/shared-cost-tracking';
 import { CostTier } from '@openrouter-crew/shared-schemas';
 

@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { AgentNetworkService } from '../services/agent-network.js';
-import { ToolRegistry } from '../services/tool-registry.js';
-import { TerminalManager } from '../services/terminal-manager.js';
-import { LLMRouter, LLMResponse } from '../services/llm-router.js';
-import { NLPProcessor } from '../services/nlp-processor.js';
-import { OCREngine } from '../services/ocr-engine.js';
+import { AgentNetworkService } from '../services/agent-network';
+import { ToolRegistry } from '../services/tool-registry';
+import { TerminalManager } from '../services/terminal-manager';
+import { LLMRouter, LLMResponse } from '../services/llm-router';
+import { NLPProcessor } from '../services/nlp-processor';
+import { OCREngine } from '../services/ocr-engine';
 
 export interface CommandResult {
     success: boolean;

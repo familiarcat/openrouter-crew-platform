@@ -250,7 +250,7 @@ memory
  * memory compliance - Check compliance status
  */
 memory
-  /*
+  /* Temporarily disabled due to API changes
   .command('compliance')
   .description('Check crew memory compliance status (GDPR)')
   .option('--period <period>', 'period to check (e.g., 30d, 90d)', '30d')
@@ -261,13 +261,13 @@ memory
 
       console.log(chalk.cyan('\n📋 Checking compliance status...\n'));
 
-      const status = await client.compliance_status(
-        {
-          crew_id: context.crew_id,
-          period: options.period,
-        },
-        context
-      );
+      // const status = await client.compliance_status(
+      //   {
+      //     crew_id: context.crew_id,
+      //     period: options.period,
+      //   },
+      //   context
+      // );
 
       if (options.json) {
         console.log(JSON.stringify(status, null, 2));
@@ -304,12 +304,12 @@ memory
 
       console.log(chalk.cyan('\n📊 Forecasting memory expiration...\n'));
 
-      const forecast = await client.expiration_forecast(
-        {
-          crew_id: context.crew_id,
-        },
-        context
-      );
+      // const forecast = await client.expiration_forecast(
+      //   {
+      //     crew_id: context.crew_id,
+      //   },
+      //   context
+      // );
 
       if (options.json) {
         console.log(JSON.stringify(forecast, null, 2));
@@ -326,9 +326,12 @@ memory
       console.error(chalk.red('✗ Failed to forecast expiration:'), error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
-  });*/
+  }); */
   .command('forecast')
-  .description('[Temporarily Disabled] Forecast memory expiration based on confidence decay');
+  .description('[Temporarily Disabled] Forecast memory expiration based on confidence decay')
+  .action(() => {
+      console.log(chalk.yellow('This command is temporarily disabled due to API updates.'));
+  });
 
 /**
  * memory export - Export crew memories

@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { LLMRouter } from '../services/llm-router.js';
-import { CostTracker } from '../services/cost-tracker.js';
-import { NLPProcessor } from '../services/nlp-processor.js';
-import { ContextBuilder } from '../services/context-builder.js';
-import { ToolRegistry } from '../services/tool-registry.js';
-import { CommandExecutor } from '../commands/command-executor.js';
+import { LLMRouter } from '../services/llm-router';
+import { CostTracker } from '../services/cost-tracker';
+import { NLPProcessor } from '../services/nlp-processor';
+import { ContextBuilder } from '../services/context-builder';
+import { ToolRegistry } from '../services/tool-registry';
+import { CommandExecutor } from '../commands/command-executor';
 
 export class ChatPanel {
   public static currentPanel: ChatPanel | undefined;
