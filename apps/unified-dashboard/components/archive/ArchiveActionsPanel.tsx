@@ -16,7 +16,7 @@ interface ActionItem {
   dangerous?: boolean;
 }
 
-export default function ArchiveActionsPanel({ crewId }: { crewId: string }) {
+export default function ArchiveActionsPanel() {
   const [showConfirm, setShowConfirm] = useState<string | null>(null);
 
   const actions: ActionItem[] = [
@@ -74,7 +74,7 @@ export default function ArchiveActionsPanel({ crewId }: { crewId: string }) {
     }
   };
 
-  const executeAction = (actionId: string) => {
+  const executeAction = (_actionId: string) => {
     setShowConfirm(null);
     // Action would be executed here
   };

@@ -23,8 +23,8 @@ export default function TerminalWindow({
       const newLine: TerminalLine = {
         id: Math.random().toString(),
         timestamp: new Date().toLocaleTimeString(),
-        type: types[Math.floor(Math.random() * types.length)],
-        content: msgs[Math.floor(Math.random() * msgs.length)]
+        type: types[Math.floor(Math.random() * types.length)]!,
+        content: msgs[Math.floor(Math.random() * msgs.length)]!
       };
       setLines(prev => [...prev.slice(-19), newLine]);
     }, 2000);

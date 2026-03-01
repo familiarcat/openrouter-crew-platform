@@ -8,14 +8,13 @@
     ],
     "jsx": "react-jsx",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "outDir": "./dist",
     "rootDir": "./src",
     "composite": true,
     "incremental": true,
     "target": "ES2022"
   },
-  "ignoreDeprecations": "6.0",
   "include": [
     "src/**/*"
   ],

@@ -37,11 +37,6 @@ export default function BudgetGauge({ crewId }: BudgetGaugeProps) {
   }
 
   const percentUsed = budget.percentUsed;
-  const getGaugeColor = (): string => {
-    if (percentUsed >= 90) return 'from-red-500 to-red-600';
-    if (percentUsed >= 80) return 'from-yellow-500 to-yellow-600';
-    return 'from-green-500 to-green-600';
-  };
 
   const getStatusText = (): string => {
     if (budget.alertThresholdReached) return '⚠️ Alert threshold reached';

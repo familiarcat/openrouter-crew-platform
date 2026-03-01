@@ -13,7 +13,7 @@ import CostBreakdownChart from '@/components/cost/CostBreakdownChart';
 import BudgetGauge from '@/components/cost/BudgetGauge';
 
 export default function CostPage() {
-  const [crewId, setCrewId] = useState<string>('crew_1'); // Would come from auth context
+  const [crewId] = useState<string>('crew_1'); // Would come from auth context
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<any>(null);
   const [breakdown, setBreakdown] = useState<any>(null);

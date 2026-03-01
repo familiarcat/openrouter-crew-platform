@@ -17,7 +17,6 @@ interface ArchiveStats {
 }
 
 export default function ArchiveStatsPanel({ stats }: { stats: ArchiveStats }) {
-  const spaceSaved = stats.totalSize;
   const compressionPercent = ((1 - stats.compressionRatio) * 100).toFixed(0);
 
   return (

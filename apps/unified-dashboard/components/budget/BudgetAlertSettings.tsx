@@ -20,7 +20,7 @@ interface Props {
   currentUsage: number;
 }
 
-export default function BudgetAlertSettings({ crewId, currentUsage }: Props) {
+export default function BudgetAlertSettings({ currentUsage }: Props) {
   const [settings, setSettings] = useState<AlertSettings>({
     thresholdWarning: 75,
     thresholdCritical: 90,

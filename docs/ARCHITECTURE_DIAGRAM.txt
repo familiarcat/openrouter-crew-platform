@@ -1,0 +1,230 @@
+================================================================================
+          OPENROUTER CREW PLATFORM - ARCHITECTURE DIAGRAM
+================================================================================
+
+                    ┌─────────────────────────────────────┐
+                    │   USER ENTRY POINTS (3 Surfaces)    │
+                    └─────────────────────────────────────┘
+                              │    │    │
+                    ┌─────────┴────┴────┴──────────┐
+                    │                               │
+           ┌────────▼────────┐         ┌───────────▼──────────┐
+           │  Web Dashboards │         │  CLI / Terminal      │
+           │  (4 concurrent) │         │  (Scripts/Batch)     │
+           ├────────────────┤         ├────────────────────┤
+           │ unified (3000) │         │ crew-cli            │
+           │ alex-ai (3004) │         │ crew-batch          │
+           │ dj-booking    │         │ crew-provision      │
+           │ test-event    │         │ crew-execute        │
+           └────────┬───────┘         └────────┬─────────┘
+                    │                         │
+           VSCode Extension ◄────────────────┘
+           (Inline Execution)
+
+
+                    ┌─────────────────────────────────────┐
+                    │   UNIFIED ORCHESTRATION GATEWAY     │
+                    │  (CrewAPIClient @ shared/ui-core)   │
+                    └─────────────────────────────────────┘
+                                  │
+            ┌─────────────────────┼─────────────────────┐
+            │                     │                     │
+     ┌──────▼──────┐    ┌─────────▼────────┐    ┌──────▼──────┐
+     │ MEMORY OPS  │    │   CREW MGMT      │    │ ADMIN OPS   │
+     ├─────────────┤    ├──────────────────┤    ├─────────────┤
+     │ Create      │    │ Execute          │    │ Export Data │
+     │ Retrieve    │    │ Get Status       │    │ Prune       │
+     │ Update      │    │ List All         │    │ Analyze     │
+     │ Delete      │    │ Search (RAG)     │    │ Audit       │
+     │ Restore     │    │                  │    │             │
+     └──────┬──────┘    └─────────┬────────┘    └──────┬──────┘
+            │                     │                    │
+            └─────────────────────┼────────────────────┘
+                                  │
+                    ┌─────────────▼──────────────┐
+                    │   COST OPTIMIZATION LAYER  │
+                    ├────────────────────────────┤
+                    │ ┌─────────────────────────┐│
+                    │ │ Classify Complexity     ││
+                    │ │ ↓                       ││
+                    │ │ Check Cache (0$)        ││
+                    │ │ ↓                       ││
+                    │ │ Route Model (H→S→O)     ││
+                    │ │ ↓                       ││
+                    │ │ Batch & Queue           ││
+                    │ │ ↓                       ││
+                    │ │ Execute with Budget     ││
+                    │ └─────────────────────────┘│
+                    └──────────┬──────────────────┘
+                               │
+            ┌──────────────────┼──────────────────┐
+            │                  │                  │
+   ┌────────▼────────┐  ┌──────▼──────┐  ┌──────▼──────┐
+   │ OPENROUTER API  │  │  SUPABASE   │  │  LOCAL CACHE│
+   ├─────────────────┤  ├─────────────┤  ├─────────────┤
+   │ Claude Haiku    │  │ PostgreSQL  │  │ Redis (opt) │
+   │ Claude Sonnet   │  │ Real-time   │  │ Memory DB   │
+   │ Claude Opus     │  │ Auth/JWT    │  │ Pattern     │
+   │ (+ GPT models)  │  │ Embeddings  │  │ Templates   │
+   └────────┬────────┘  └──────┬──────┘  └──────┬──────┘
+            │                  │                │
+            └──────────────────┼────────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │  DOMAIN SERVICES    │
+                    │  (Specialized Crews)│
+                    └─────────────────────┘
+                               │
+            ┌──────────────────┼──────────────────┐
+            │                  │                  │
+    ┌───────▼───────┐  ┌───────▼────────┐ ┌──────▼──────┐
+    │PRODUCT-FACTORY│  │ ALEX-AI-UNIV   │ │VSCODE-EXT   │
+    ├────────────────┤  ├────────────────┤ ├─────────────┤
+    │ Music Agent    │  │ Adv Analytics  │ │ Code Lint   │
+    │ Booking Agent  │  │ AI Insights    │ │ Inline Exec │
+    │ Venue Agent    │  │ Collaboration  │ │ Completion  │
+    │ Finance Agent  │  │ Embeddings RAG │ │ Symbols     │
+    │ Marketing      │  │ LLM Chaining   │ │             │
+    │ RAG Refresh    │  │                │ │             │
+    └────────────────┘  └────────────────┘ └─────────────┘
+
+
+================================================================================
+                        COST OPTIMIZATION FLOW
+================================================================================
+
+Query Arrives
+      │
+      ├─► [Classify] ─────────────────┐
+      │                               │
+      │   Complexity Scoring:         │
+      │   • Token count est.          │
+      │   • Reasoning depth           │
+      │   • Context size              │
+      │                               │
+      └─ Score: 0.0 - 1.0 ────────────┴────┐
+                                           │
+                                    ┌──────▼─────────┐
+                                    │ DECISION TREE  │
+                                    └────────────────┘
+                                           │
+              ┌────────────────────────────┼────────────────────────────┐
+              │                            │                            │
+         Score < 0.3                 0.3 < Score < 0.7           Score > 0.7
+              │                            │                            │
+      ┌───────▼───────┐            ┌───────▼──────┐           ┌────────▼────────┐
+      │  CACHE CHECK  │            │ CACHE CHECK  │           │  CACHE CHECK    │
+      │  (95% hit)    │            │  (50% hit)   │           │  (10% hit)      │
+      └───────┬───────┘            └───────┬──────┘           └────────┬────────┘
+              │                            │                          │
+         HIT (0$)                     HIT (0$)                    HIT (0$)
+              │                            │                          │
+         MISS │ Route to HAIKU      MISS │ Route to SONNET   MISS │ Route to OPUS
+              │ ($0.0035 per 1K tok) │ ($0.003 per 1K)       │ ($0.015 per 1K)
+              │                     │                         │
+              │ Batch? NO           │ Batch? YES              │ Batch? YES
+              │ Execute             │ Queue (5-60s)           │ Queue (30s-24h)
+              │ Return              │ Execute                 │ Execute
+              │                     │ Return                  │ Return
+              │                     │                         │
+              └─────────────────────┴─────────────────────────┘
+                              │
+                        Return Result
+                        Update Cache
+                        Track Cost
+
+
+================================================================================
+                      DAILY BUDGET ALLOCATION ($1.00)
+================================================================================
+
+TIME ZONE      TIME WINDOW      BUDGET    EXPECTED USERS    PRIORITY MODELS
+─────────────────────────────────────────────────────────────────────────────
+UTC Peak       06:00 - 09:00    $0.30     3 users          Haiku Only
+               └─ Real-time dashboards  └─ Dashboard views
+
+UTC High       09:00 - 18:00    $0.50     8 users          Sonnet + Haiku
+               └─ Work hours    └─ Analytics, reports, RAG
+
+UTC Normal     18:00 - 22:00    $0.15     2 users          Haiku + Cache
+               └─ Evening       └─ Light usage, refresh
+
+UTC Low        22:00 - 06:00    $0.05     0-1 users        Batch Only
+               └─ Maintenance   └─ Prune, warmup, offline
+
+
+ALERT THRESHOLDS:
+├─ 50% used  → Info: "Still 50% budget remaining"
+├─ 70% used  → Warning: "Reduce complexity, enable aggressive caching"
+├─ 90% used  → Critical: "Haiku only, batch disabled until reset"
+└─ 100% used → Blocked: "All queries queued until daily reset (UTC+0)"
+
+
+================================================================================
+                      PACKAGE DEPENDENCY GRAPH
+================================================================================
+
+unified-dashboard
+├── @openrouter-crew/shared-ui-components  [Navigation, Layouts]
+├── @openrouter-crew/crew-api-client       [API Gateway]
+├── @openrouter-crew/crew-schemas          [Zod validation]
+├── @openrouter-crew/cost-tracking         [Usage metrics]
+└── Next.js 14.2.35
+
+
+alex-ai-universal-dashboard
+├── @openrouter-crew/shared-ui-components
+├── @openrouter-crew/crew-api-client
+├── @openrouter-crew/crew-schemas
+├── @openrouter-crew/crew-core            [Agent execution]
+└── Next.js 15.1.4
+
+
+dj-booking-dashboard & test-event-venue-dashboard
+├── @openrouter-crew/shared-ui-components
+├── @openrouter-crew/crew-api-client
+├── @openrouter-crew/crew-schemas
+├── @openrouter-crew/cost-tracking
+├── product-factory-dashboard             [Shared utils]
+└── Next.js 14.0.4
+
+
+CLI (openrouter-crew-cli)
+├── @openrouter-crew/crew-api-client
+├── @openrouter-crew/crew-schemas
+├── zod                                    [Validation]
+└── Node.js 20+
+
+
+VSCode Extension
+├── @openrouter-crew/crew-api-client
+├── @openrouter-crew/crew-schemas
+└── VSCode API
+
+
+================================================================================
+                        FILE SIZE METRICS
+================================================================================
+
+Package Count:        6 root packages
+Monorepo Scale:       50+ sub-packages
+TypeScript Files:     ~200+ source files
+Dashboard Builds:     4 concurrent Next.js instances
+Agents Deployed:      6+ specialized crews
+Config Files:         26 tsconfig.json (optimized)
+Build System:         Turbo (cached builds)
+
+
+================================================================================
+                          LEGEND
+================================================================================
+
+$     = Cost point
+[TTL] = Time-to-live cache
+→     = Routing/flow
+│     = Connection
+┌─────┐ = Service boundary
+©     = Core critical path
+⚠️    = Optimization zone
+
+EOF

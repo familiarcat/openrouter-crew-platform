@@ -162,6 +162,11 @@
         "command": "openrouter-crew.welcome",
         "title": "OpenRouter Crew: Welcome",
         "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.openCodebaseAnalysis",
+        "title": "OpenRouter Crew: Open Codebase Analysis",
+        "category": "OpenRouter Crew"
       }
     ],
     "configuration": {

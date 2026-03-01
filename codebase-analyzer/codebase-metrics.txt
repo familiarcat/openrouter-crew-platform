@@ -1,0 +1,89 @@
+
+=== OPENROUTER CREW PLATFORM - CODEBASE METRICS ===
+Generated: 2026-03-01T08:22:10.557Z
+
+PROJECT INFORMATION:
+- Name: openrouter-crew-platform
+- Version: 1.0.0
+
+OVERALL STATISTICS:
+- Total Files: 2,071
+- Total Directories: 853
+- Total Lines of Code: 339,367
+- Total Size: 14.07 MB
+
+STATISTICS BY LANGUAGE:
+- TypeScript: 594 files, 61,178 lines, 1811.13 KB
+- Other: 396 files, 16,972 lines, 2789.53 KB
+- TypeScript React: 290 files, 51,596 lines, 1703.29 KB
+- JSON: 277 files, 84,387 lines, 3587.05 KB
+- JavaScript: 193 files, 17,409 lines, 651.46 KB
+- Markdown: 147 files, 74,937 lines, 2255.68 KB
+- Bash: 102 files, 18,525 lines, 639.89 KB
+- SQL: 34 files, 8,132 lines, 274.14 KB
+- CSS: 21 files, 2,983 lines, 77.25 KB
+- YAML: 10 files, 1,638 lines, 52.55 KB
+- Python: 4 files, 404 lines, 15.36 KB
+- HTML: 3 files, 1,206 lines, 551.76 KB
+
+DOMAINS IDENTIFIED:
+- alex-ai-universal
+- product-factory
+- shared
+- test-projects
+- vscode-extension
+
+PACKAGES AND SERVICES:
+Total: 37
+- @dj-studio/booking-agent (library): 8 deps
+- @dj-studio/booking-agent (library): 8 deps
+- @dj-studio/finance-agent (library): 8 deps
+- @dj-studio/finance-agent (library): 8 deps
+- @dj-studio/gateway (library): 4 deps
+- @dj-studio/gateway (library): 4 deps
+- @dj-studio/marketing-agent (library): 8 deps
+- @dj-studio/marketing-agent (library): 8 deps
+- @dj-studio/music-agent (library): 8 deps
+- @dj-studio/music-agent (library): 8 deps
+- @dj-studio/venue-agent (library): 8 deps
+- @dj-studio/venue-agent (library): 8 deps
+- @openrouter-crew/alex-ai-universal-dashboard (app): 18 deps
+- @openrouter-crew/cli (app): 11 deps
+- @openrouter-crew/codebase-analyzer (library): 0 deps
+- @openrouter-crew/crew-api-client (library): 3 deps
+- @openrouter-crew/dj-booking-dashboard (app): 4 deps
+- @openrouter-crew/n8n-nodes (library): 4 deps
+- @openrouter-crew/product-factory-dashboard (app): 1 deps
+- @openrouter-crew/shared-cost-tracking (library): 1 deps
+... and 17 more packages
+
+TECHNOLOGY STACK:
+Languages: TypeScript, typescript, @typescript-eslint/eslint-plugin, @typescript-eslint/parser
+Frameworks: React, Next.js, next, react, react-dom, lucide-react, @types/react, @types/react-dom, eslint-config-next, @sentry/nextjs, next-auth, reactflow, express, express-rate-limit, @types/express
+Build Tools: Turbo, pnpm, supabase, turbo, tailwindcss, @supabase/supabase-js, eslint, prettier, @types/jest, jest, ts-jest, n8n-core, n8n-workflow
+
+CODE COMPLEXITY METRICS:
+- Estimated Cyclomatic Complexity: 1771
+- Average Function Size: 6 lines
+- Large Files (>500 lines): 33
+
+CODE QUALITY METRICS:
+- Documentation Coverage: 2%
+- TypeScript Strict Mode Usage: 19%
+- Test Files Found: 159
+
+DUPLICATION ANALYSIS:
+- Estimated Duplication: N/A%
+- Suspicious Patterns:
+  None detected
+
+HEALTH & SECURITY:
+- TypeScript Strict Mode: Disabled
+- Outdated Packages (estimated): N/A
+- Security Issues (estimated): N/A
+
+RECOMMENDATIONS:
+- 📊 High complexity detected. Consider breaking down large functions.
+- 📁 Multiple large files detected. Consider refactoring.
+- 📝 Low documentation coverage. Add more JSDoc comments.
+- 🔒 Enable TypeScript strict mode in more packages.

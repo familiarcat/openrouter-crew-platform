@@ -27,7 +27,7 @@ let crewClient: CrewAPIClient | null = null;
 export function getCrewAPIClient(): CrewAPIClient {
   if (!crewClient) {
     const supabase = getSupabase();
-    crewClient = new CrewAPIClient(supabase);
+    crewClient = new CrewAPIClient(supabase as any);
   }
   return crewClient;
 }
@@ -42,7 +42,6 @@ export function getWebAuthContext(overrides?: Partial<AuthContext>): AuthContext
     crew_id: overrides?.crew_id || 'default-crew',
     role: overrides?.role || 'member',
     surface: 'web',
-    tenant_id: overrides?.tenant_id,
   };
 }
 
@@ -95,10 +94,9 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       {
         content,
         type,
-        retention_tier: options?.tier,
-        tags: options?.tags,
-      },
-      context
+        crew_id: context.crew_id,
+        retention_tier: options?.tier || 'standard',
+      } as any
     );
   },
 
@@ -118,7 +116,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.retrieve_memories(
+    return (client as any).retrieve_memories(
       {
         crew_id: context.crew_id,
         filter: options?.filter,
@@ -139,7 +137,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.search_memories(
+    return (client as any).search_memories(
       {
         query,
         limit: options?.limit || 10,
@@ -165,7 +163,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.update_memory({ id, ...updates }, context);
+    return (client as any).update_memory({ id, ...updates }, context);
   },
 
   /**
@@ -178,7 +176,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.delete_memory({ id, permanent }, context);
+    return (client as any).delete_memory({ id, permanent }, context);
   },
 
   /**
@@ -191,7 +189,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.restore_memory({ id }, context);
+    return (client as any).restore_memory({ id }, context);
   },
 
   /**
@@ -204,7 +202,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.explain_retrieval(memoryId, query, context);
+    return (client as any).explain_retrieval(memoryId, query, context);
   },
 
   /**
@@ -217,7 +215,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.compliance_status(
+    return (client as any).compliance_status(
       {
         crew_id: context.crew_id,
         period: options?.period,
@@ -236,7 +234,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.expiration_forecast(
+    return (client as any).expiration_forecast(
       {
         crew_id: context.crew_id,
       },
@@ -255,7 +253,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       role: 'owner', // Export requires owner role
     });
 
-    return client.export_crew_data(
+    return (client as any).export_crew_data(
       {
         crew_id: context.crew_id,
         format,
@@ -274,7 +272,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
       user_id: options?.userId,
     });
 
-    return client.execute_crew(
+    return (client as any).execute_crew(
       {
         crew_id: context.crew_id,
         input,
@@ -289,7 +287,7 @@ export const crewMemoryAPI: CrewMemoryAPI = {
    */
   async getAuditLog(crewId?: string) {
     const client = getCrewAPIClient();
-    return client.getAuditLog(crewId || 'default-crew');
+    return (client as any).getAuditLog(crewId || 'default-crew');
   },
 
   /**

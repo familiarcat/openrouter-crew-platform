@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 
-export default function WizardInline({ projectId, onApply }: any) {
+export default function WizardInline({ onApply }: any) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState({ headline: '', description: '', theme: 'midnight' });
 

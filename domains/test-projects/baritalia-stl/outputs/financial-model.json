@@ -1,0 +1,43 @@
+{
+  "baseCase": {
+    "year1": {
+      "revenue": 1890000,
+      "cogs": 567000,
+      "operatingExpenses": 900600,
+      "profit": 422400
+    },
+    "year2": {
+      "revenue": 2268000,
+      "cogs": 680400,
+      "operatingExpenses": 1080720,
+      "profit": 506880
+    },
+    "year3": {
+      "revenue": 2721600,
+      "cogs": 816480,
+      "operatingExpenses": 1296864,
+      "profit": 608256
+    }
+  },
+  "conservativeCase": {
+    "year1": {
+      "revenue": 1417500,
+      "cogs": 425250,
+      "operatingExpenses": 708750,
+      "profit": 283500
+    }
+  },
+  "optimisticCase": {
+    "year1": {
+      "revenue": 2362500,
+      "cogs": 708750,
+      "operatingExpenses": 1181250,
+      "profit": 472500
+    }
+  },
+  "metrics": {
+    "paybackPeriod": "3 months",
+    "roiYear1": "95%",
+    "roiYear3": "270%"
+  }
+}

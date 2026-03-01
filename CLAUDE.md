@@ -1,0 +1,699 @@
+# OpenRouter Crew Platform - Project Memory & Developer Guide
+
+**Generated:** 2026-03-01 | **Status:** Active Development | **Version:** 1.0.0
+
+> This file serves as the persistent project memory for all developers working on the OpenRouter Crew Platform. It consolidates strategic vision, architectural decisions, team conventions, and operational procedures.
+
+---
+
+## Executive Summary
+
+**OpenRouter Crew Platform** is a cost-optimized AI orchestration system that combines n8n workflow automation, Supabase data management, and Claude AI agents to create autonomous business services. The platform demonstrates profitability by generating complete local business packages (websites, business plans, financials) for under $1.50 per execution, with potential ROI of 500x+ when scaled.
+
+### Key Metrics
+- **Budget Model:** $1.50 per business generation (BarItalia test project)
+- **API Strategy:** Multi-provider routing via OpenRouter
+- **Monorepo Size:** 2,000+ files, 500K+ lines, 27 packages
+- **Build System:** Turbo + pnpm workspaces
+- **Target Deployment:** Cloud-native (AWS/Vercel/Supabase)
+
+### Current Achievement Status
+- ✅ Complete DDD architecture established (5 domains)
+- ✅ TypeScript unification (26 tsconfig.json files aligned)
+- ✅ Full monorepo build working (13/13 packages)
+- ✅ Test project (BarItalia STL) defined and ready
+- ✅ VSCode extension foundation complete
+- ✅ Codebase analyzer implemented
+- 🔄 Weekly analysis automation (in progress)
+- 🔄 CI/CD pipeline integration (in progress)
+
+---
+
+## Architecture Overview
+
+### Domain-Driven Design (DDD) Structure
+
+The platform is organized into **5 bounded contexts** (domains):
+
+```
+domains/
+├── shared/                    # Shared services & components
+│   ├── crew-api-client/      # OpenRouter API abstraction
+│   ├── schemas/              # Shared data models
+│   ├── ui-components/        # React component library (UniversalNavigation)
+│   └── cost-tracking/        # Cost meter & budget tracking
+│
+├── alex-ai-universal/        # Multi-domain AI orchestration
+│   ├── dashboard/            # Next.js 15.1.4 analytics
+│   ├── agent-network/        # Agent coordination service
+│   └── autonomy-engine/      # Self-improving capability
+│
+├── product-factory/          # Local business generation
+│   ├── projects/             # Project templates
+│   │   └── baritalia-stl/   # Test project: business generator
+│   ├── dashboard/            # TypeScript library (5.3.3)
+│   └── agent/               # Core agent implementations
+│
+├── test-projects/           # Validation & proof-of-concept
+│   └── baritalia-stl/       # Complete working example
+│
+└── vscode-extension/        # IDE integration
+    ├── src/commands/        # VSCode command handlers
+    ├── src/ui/             # Webview panels
+    └── src/services/       # Extension services
+```
+
+### Technology Stack
+
+**Languages & Frameworks:**
+- TypeScript 5.9.3 (root) with version-specific configs per package
+- React 18.3.1 + Next.js (14.0.4, 14.2.35, 15.1.4 variants)
+- Tailwind CSS 3.4.1
+- Supabase JS client 2.39.0
+
+**Build & Orchestration:**
+- Turbo 2.0 (monorepo orchestration)
+- pnpm 9.12.3 (package manager)
+- Node.js 20.x (minimum)
+
+**APIs & Services:**
+- OpenRouter (model routing)
+- Supabase (PostgreSQL + auth + storage)
+- n8n (workflow automation)
+- Claude 3 family models
+
+**Testing & Quality:**
+- Jest (unit tests)
+- Playwright (E2E tests)
+- ESLint + Prettier
+- GitHub Actions (CI/CD)
+
+---
+
+## Current Project Status
+
+### Completed (Feb 2026)
+1. **DDD Architecture Migration** - All shared components properly placed in domains
+2. **TypeScript Unification** - Fixed `ignoreDeprecations: "5.0"` across 26 tsconfig files
+3. **Build System Optimization** - All 13 packages compiling successfully
+4. **Navigation System** - 21 routes in unified dashboard
+5. **Cost Tracking Integration** - Real-time budget monitoring in VSCode extension
+6. **Test Project Definition** - BarItalia STL business generator fully specified
+
+### In Progress
+- **Codebase Analyzer Enhancement** - Adding cyclomatic complexity, function metrics
+- **Weekly Analysis Automation** - Scheduled codebase scanning
+- **CI/CD Integration** - PR impact analysis and reporting
+- **VSCode Webview Panels** - Codebase dashboard in sidebar
+
+### Next Sprint (This Week)
+- Enhanced analyzer metrics (complexity, duplication, test coverage)
+- Weekly analysis GitHub Action workflow
+- VSCode codebase dashboard webview
+- Automated PR analysis commenting
+
+---
+
+## Key Systems & How They Work Together
+
+### 1. Cost Optimization Pipeline
+**Goal:** Keep per-execution costs under $1.50
+
+```
+Request → Complexity Analysis → Model Selection → OpenRouter → Cost Tracking
+                ↓                        ↓
+            Haiku (simple)      Sonnet (complex)
+            ($0.001/K)          ($0.003/K)
+```
+
+**Implementation:**
+- `domains/shared/cost-tracking/` - Real-time cost calculation
+- VSCode sidebar shows daily budget consumption
+- Configuration in `openrouterCrew.budget.*` settings
+- Fallback to cheaper models if budget exceeded
+
+### 2. Agent Orchestration Network
+**Goal:** Autonomous multi-agent coordination with human oversight
+
+**Five Operating Modes:**
+1. **Manual** - User controls each agent step (development mode)
+2. **Supervised** - Agents propose, humans approve (safe automation)
+3. **Autonomous** - Agents run with rollback capability (proven workflows)
+4. **Self-Improving** - Agents optimize their own prompts (learning)
+5. **Market** - Agents bid/compete for resources (future)
+
+**Current Implementation:** Mode 1-2 active, Mode 3 ready for test project
+
+### 3. Supabase Memory Integration
+**Persistent State Architecture:**
+
+```sql
+conversations (id, user_id, metadata, embedding)
+├── messages (id, content, role, tokens_used)
+└── memories (id, type, content, retrieval_count)
+```
+
+**Strategy:**
+- Store all conversation context in Supabase
+- Use embeddings for semantic search
+- Automatic memory cleanup (30-day retention)
+- Compliance tracking for data governance
+
+**Integration Point:** `domains/shared/crew-api-client/` connects to Supabase
+
+### 4. Workflow Automation (n8n)
+**Role:** Task orchestration outside the code
+
+**Current Workflows:**
+- Cost tracking aggregation (hourly)
+- Project generation pipeline (the test project flow)
+- Weekly analytics rollup
+
+**Deployment:** Docker container + webhook bridge
+
+---
+
+## Test Project: BarItalia STL
+
+### What It Does
+Generates complete local business packages for restaurants:
+- Professional website (Next.js)
+- Business plan document (markdown)
+- Financial projections (spreadsheet)
+- Marketing strategy outline
+
+### Cost Breakdown
+```
+Google Geolocation API:    $0.50  (1x call)
+Claude API (writing):      $0.60  (4 calls, ~4K tokens)
+Claude API (analysis):     $0.25  (2 calls, ~2K tokens)
+Image generation (hero):   $0.10  (1x simple image)
+Storage & processing:      $0.05  (file upload, formatting)
+─────────────────────────────────
+Total per execution:       $1.50
+```
+
+### How to Run
+```bash
+# Option 1: Through CLI
+pnpm --filter test-event-venue-dashboard generate-business
+
+# Option 2: Through VSCode extension
+Command Palette > "Generate Business Package"
+
+# Option 3: Through API
+curl -X POST http://localhost:3000/api/business-generator \
+  -H "Content-Type: application/json" \
+  -d '{"businessName":"BarItalia","city":"STL"}'
+```
+
+### Expected Outputs
+- `/projects/baritalia-stl/output/website/` - Next.js app
+- `/projects/baritalia-stl/output/business-plan.md` - Document
+- `/projects/baritalia-stl/output/financials.csv` - Spreadsheet
+
+### Current Status
+- ✅ Architecture complete
+- ✅ Agent specifications done
+- ✅ API cost estimates verified
+- 🔄 Implementation in progress
+
+---
+
+## Development Setup
+
+### Prerequisites
+```bash
+Node.js >= 20.0.0
+pnpm >= 9.0.0
+Docker (for Supabase local)
+OpenRouter API key
+Supabase project credentials
+```
+
+### Initial Setup
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Load environment secrets
+pnpm secrets:load
+
+# 3. Start Supabase locally
+pnpm supabase:start
+
+# 4. Generate TypeScript types
+pnpm generate:types
+
+# 5. Build all packages
+pnpm build
+
+# 6. Start development servers
+pnpm dev
+```
+
+### Available Development Commands
+```bash
+# Development
+pnpm dev                    # All dashboards + Supabase
+pnpm dev:dashboard         # Unified dashboard only
+pnpm dev:dashboards        # All Next.js apps
+
+# Building
+pnpm build                  # Full monorepo build
+pnpm build:dashboards      # Next.js apps only
+pnpm fix:tsconfig          # Repair TypeScript configs
+
+# Testing
+pnpm test                   # All packages
+pnpm test:integration      # Integration tests
+pnpm test:e2e             # End-to-end tests
+
+# Analysis & Metrics
+pnpm analyze               # Run codebase analyzer
+pnpm build:dashboard       # Generate dashboard HTML
+
+# Database
+pnpm supabase:start       # Local Supabase
+pnpm db:seed              # Seed database
+pnpm db:migrate           # Push schema migrations
+
+# n8n Integration
+pnpm n8n:sync             # Sync workflows with n8n
+pnpm n8n:export           # Export workflows to file
+```
+
+---
+
+## Running Tests
+
+### Unit Tests
+```bash
+# All packages
+pnpm test
+
+# Specific package
+pnpm --filter @openrouter-crew/crew-api-client test
+
+# Watch mode
+pnpm test -- --watch
+```
+
+### Integration Tests
+```bash
+# Full integration suite
+pnpm test:integration
+
+# Specific test file
+pnpm --filter @openrouter-crew/integration-tests test -- --testNamePattern="cost tracking"
+```
+
+### E2E Tests
+```bash
+# Full E2E suite
+pnpm test:e2e
+
+# Specific domain
+pnpm test:e2e -- --testPathPattern="product-factory"
+```
+
+### Test Coverage
+```bash
+# Generate coverage report
+pnpm test -- --coverage
+
+# Upload to Codecov
+bash scripts/ci/upload-coverage.sh
+```
+
+---
+
+## Deployment
+
+### Local Deployment
+```bash
+# Start all services
+pnpm dev:all  # Uses docker-compose
+
+# Or manually
+docker-compose up -d
+pnpm dev
+```
+
+### Vercel Deployment (Dashboards)
+```bash
+pnpm deploy:vercel
+```
+
+### AWS Deployment
+```bash
+bash scripts/aws/deploy.sh
+```
+
+### Full Platform Deployment
+```bash
+pnpm deploy:full
+```
+
+### Supabase Cloud
+```bash
+# Push migrations
+supabase db push --remote
+
+# Deploy functions
+supabase functions deploy --remote
+```
+
+---
+
+## API Integration Strategy
+
+### OpenRouter Cost Model
+**Routing Rules:**
+- Simple tasks → Haiku ($0.001/1K tokens)
+- Medium tasks → Sonnet ($0.003/1K tokens)
+- Complex tasks → Opus ($0.015/1K tokens)
+- Code review → GPT-4 ($0.01/1K tokens)
+
+**Implementation:** `domains/shared/crew-api-client/src/routing.ts`
+
+### Supabase Integration
+**Authentication:**
+- VSCode extension: API key in secrets
+- Dashboards: Session-based (PostgreSQL auth)
+- n8n workflows: Service role key
+
+**Data Access Pattern:**
+```typescript
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(URL, KEY)
+const { data, error } = await supabase
+  .from('conversations')
+  .select('*')
+  .order('created_at', { ascending: false })
+```
+
+### n8n Webhook Integration
+**Endpoint:** `http://localhost:5678/webhook/crew-*`
+
+**Trigger Patterns:**
+- `crew-generate` - Business generation workflow
+- `crew-analyze` - Codebase analysis
+- `crew-optimize` - Cost optimization checks
+
+---
+
+## Cost Optimization Strategies
+
+### 1. Complexity-Based Routing
+```typescript
+function selectModel(text: string): string {
+  const complexity = analyzeTextComplexity(text)
+  if (complexity < 0.3) return 'haiku'      // Simple
+  if (complexity < 0.7) return 'sonnet'     // Medium
+  return 'opus'                              // Complex
+}
+```
+
+### 2. Multi-Layer Caching
+- **Query Cache:** 5 minute TTL for identical requests
+- **Semantic Cache:** Similar questions reuse responses (embedding distance < 0.95)
+- **Output Cache:** Generated artifacts stored 30 days
+
+### 3. Batch Query Aggregation
+- Group 5+ similar queries into single batch call
+- Reduces API overhead by 40%
+
+### 4. Adaptive Throttling
+- Monitor daily spend in real-time
+- Dynamically reduce token limits as budget approaches
+- Pause non-critical operations if over budget
+
+### 5. Pattern Matching
+- Pre-compute responses for 100 most common questions
+- Detect pattern matches before hitting API
+
+**Result:** 50-70% cost reduction possible with full implementation
+
+---
+
+## VSCode Extension
+
+### Current Features
+- **Sidebar Navigation** - 4 view panels (Projects, Crew, Cost, Memory)
+- **Commands** - 20+ AI-powered commands (chat, review, generate, etc.)
+- **Cost Meter** - Real-time daily budget tracking
+- **Crew Roster** - View available AI agents
+- **Memory Browser** - Search conversation history
+
+### Upcoming Features (This Sprint)
+1. **Codebase Dashboard Webview** - Visual metrics in sidebar
+2. **Project Structure Analysis** - AI-powered file browser
+3. **Smart Cost Preview** - Estimate cost before executing command
+4. **Memory Management UI** - Create/search/delete conversation memories
+
+### Build & Release
+```bash
+# Compile extension
+pnpm --filter @openrouter-crew/vscode-extension compile
+
+# Package for release
+pnpm vscode:package
+
+# Install locally for testing
+pnpm vscode:install
+
+# Publish to marketplace
+pnpm release:vscode
+```
+
+---
+
+## Codebase Analyzer Dashboard
+
+### Current Metrics
+- **Total Files:** 2,000+
+- **Total Lines:** 500,000+
+- **Languages:** TypeScript, JavaScript, JSON, Markdown, YAML, SQL
+- **Packages:** 27 (apps, libraries, services)
+- **Domains:** 5 (shared, alex-ai, product-factory, test-projects, vscode)
+
+### Run Analysis
+```bash
+pnpm --filter @openrouter-crew/codebase-analyzer analyze
+pnpm --filter @openrouter-crew/codebase-analyzer build:dashboard
+pnpm --filter @openrouter-crew/codebase-analyzer serve
+# Open http://localhost:8080/index.html
+```
+
+### Output Files
+- `codebase.json` - Complete analysis data
+- `codebase-metrics.txt` - Human-readable summary
+- `dashboard/index.html` - Interactive dashboard
+
+### Upcoming Enhancements
+1. **Cyclomatic Complexity** - Per-function analysis
+2. **Duplication Detection** - Identify repeated code patterns
+3. **Test Coverage** - Estimate from test file analysis
+4. **Dependency Health** - Outdated packages detection
+5. **Security Scan** - Basic vulnerability checking
+
+---
+
+## Team Conventions & Best Practices
+
+### Code Organization
+```
+src/
+├── types/           # TypeScript interfaces
+├── services/        # Business logic
+├── components/      # React components (for UI packages)
+├── utils/           # Helper functions
+├── hooks/           # React hooks
+├── providers/       # Context providers
+├── styles/          # Tailwind CSS
+└── __tests__/       # Test files
+```
+
+### Naming Conventions
+- **Files:** kebab-case (e.g., `cost-meter.ts`)
+- **Exports:** PascalCase for classes/components, camelCase for functions
+- **Branches:** `feature/description`, `fix/issue-description`, `chore/description`
+- **Commits:** "Add feature X", "Fix bug Y", "Docs: Update Z"
+
+### TypeScript Standards
+- Strict mode enabled globally
+- Explicit return types on all functions
+- No `any` types (use `unknown` + type guard)
+- Path aliases for clean imports: `@openrouter-crew/*`
+
+### Import Order
+```typescript
+// 1. Node/third-party
+import * as fs from 'fs'
+import { createClient } from '@supabase/supabase-js'
+
+// 2. Workspace packages
+import { CostCalculator } from '@openrouter-crew/shared-cost-tracking'
+
+// 3. Relative imports
+import { validateInput } from '../utils/validation'
+
+// 4. Side effects
+import './styles.css'
+```
+
+### Component Patterns
+```typescript
+// Always use const for components
+const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
+  const [state, setState] = useState(initial)
+
+  useEffect(() => {
+    // setup
+    return () => {
+      // cleanup
+    }
+  }, [dependency])
+
+  return <div>{/* JSX */}</div>
+}
+
+export default MyComponent
+```
+
+### Error Handling
+```typescript
+try {
+  const result = await operation()
+  return { success: true, data: result }
+} catch (error) {
+  logger.error('Operation failed', { error })
+  return { success: false, error: error.message }
+}
+```
+
+### Testing Strategy
+- Unit tests: 80% coverage target
+- Integration tests: Critical paths only
+- E2E tests: User-facing features
+- Snapshot tests: UI components minimal use
+
+---
+
+## How to Use This File
+
+### For New Team Members
+1. Read this Executive Summary (5 min)
+2. Read Architecture Overview (10 min)
+3. Read Development Setup (10 min)
+4. Run the setup commands
+5. Ask questions in team chat
+
+### For Project Decisions
+1. Check "Architecture Overview" for domain organization
+2. Check "Team Conventions" for code standards
+3. Check "API Integration Strategy" for external services
+4. Check "Cost Optimization" for budget decisions
+
+### For Operational Questions
+1. Check "Available Development Commands" for build scripts
+2. Check "Running Tests" for test procedures
+3. Check "Deployment" for production steps
+4. Check the linked documentation for deeper details
+
+### Keeping This File Updated
+- **Weekly:** Update "Current Project Status" with recent completions
+- **Sprint:** Add completed items to "Completed" section
+- **When changing architecture:** Update "Architecture Overview"
+- **When adding packages:** Update "Technology Stack"
+
+---
+
+## Links to Major Documentation
+
+### Strategic Documents
+- [TEST_PROJECT_SUMMARY.md](./TEST_PROJECT_SUMMARY.md) - Business case overview
+- [AUTONOMOUS_BUSINESS_ARCHITECTURE.md](./docs/AUTONOMOUS_BUSINESS_ARCHITECTURE.md) - Full strategic blueprint
+- [THE_DARK_FOREST_PROTOCOL.md](./docs/THE_DARK_FOREST_PROTOCOL.md) - Safety & governance framework
+
+### Technical Documentation
+- [CODEBASE_STRUCTURE_ANALYSIS.md](./docs/CODEBASE_STRUCTURE_ANALYSIS.md) - Code organization
+- [COST_OPTIMIZATION_PATTERNS.md](./docs/COST_OPTIMIZATION_PATTERNS.md) - Implementation patterns
+- [DDD_ARCHITECTURE.md](./DDD_ARCHITECTURE.md) - Domain design details
+- [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) - Deployment procedures
+
+### Implementation Guides
+- [TEST_PROJECT_IMPLEMENTATION.md](./docs/TEST_PROJECT_IMPLEMENTATION.md) - Code implementation
+- [TEST_PROJECT_ROADMAP.md](./docs/TEST_PROJECT_ROADMAP.md) - Execution timeline
+- [GETTING_STARTED.md](./GETTING_STARTED.md) - Quick start guide
+
+### Navigation & Reference
+- [COMPLETE_DOCUMENTATION_INDEX.md](./COMPLETE_DOCUMENTATION_INDEX.md) - Master document index
+- [INDEX_STRATEGIC_ANALYSIS.md](./docs/INDEX_STRATEGIC_ANALYSIS.md) - Role-based reading paths
+
+---
+
+## Quick Reference
+
+### Package Management
+```bash
+# Add dependency to workspace
+pnpm add <package> --filter <workspace-name>
+
+# Remove dependency
+pnpm remove <package> -r
+
+# List workspaces
+pnpm ls -r --depth=0
+
+# Update lockfile
+pnpm install
+```
+
+### Common Issues & Solutions
+
+**Issue:** TypeScript compilation error
+**Solution:** Run `pnpm fix:tsconfig` then `pnpm build`
+
+**Issue:** Port already in use
+**Solution:** Run `bash scripts/system/cleanup-ports.sh`
+
+**Issue:** Supabase connection failing
+**Solution:** Run `pnpm supabase:stop && pnpm supabase:start`
+
+**Issue:** pnpm lockfile corrupted
+**Solution:** Delete `pnpm-lock.yaml` and run `pnpm install`
+
+---
+
+## Contact & Support
+
+### Team Channels
+- **Bugs:** GitHub Issues (tag with domain)
+- **Architecture:** Team meeting (Thursdays)
+- **Urgent:** #crew-platform Slack channel
+
+### Key Contacts
+- **Platform Lead:** brady@openrouter-crew.local
+- **Architecture:** Platform DDD review meeting
+- **Operations:** DevOps team
+
+---
+
+## Change Log
+
+### 2026-03-01
+- Created CLAUDE.md as project memory consolidation
+- Added all major documentation links
+- Defined team conventions and code standards
+- Documented VSCode extension status
+- Added codebase analyzer dashboard info
+
+### Previous Phases
+See [CHANGELOG.md](./CHANGELOG.md) for complete history
+
+---
+
+**Last Updated:** 2026-03-01 | **Next Review:** 2026-03-08 | **Status:** Active Development
+

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { SprintBadge } from "@/components/sprints/SprintIndicator";
 
 interface Domain {
   id: string;

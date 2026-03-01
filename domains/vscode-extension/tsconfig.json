@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "composite": false,
     "module": "CommonJS",
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "target": "ES2020",
     "outDir": "out",
     "lib": [

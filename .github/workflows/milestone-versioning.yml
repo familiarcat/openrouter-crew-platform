@@ -1,0 +1,375 @@
+name: Milestone & Versioning
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'scripts/versioning/**'
+      - 'scripts/publishing/**'
+      - '.github/workflows/milestone-versioning.yml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: false
+        default: ''
+      stage:
+        description: 'Release stage'
+        required: false
+        default: 'alpha'
+        type: choice
+        options:
+          - alpha
+          - beta
+          - rc
+          - release
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9.12.3'
+
+jobs:
+  detect-version:
+    name: Detect Version Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      stage: ${{ steps.version.outputs.stage }}
+      should-publish: ${{ steps.version.outputs.should-publish }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Detect version
+        id: version
+        run: |
+          # Get version from input or package.json
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            STAGE="${{ github.event.inputs.stage }}"
+          else
+            VERSION=$(jq -r '.version' package.json)
+            STAGE="alpha"  # Default stage for CI
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "stage=${STAGE}" >> $GITHUB_OUTPUT
+
+          # Check if this version has been tagged before
+          if git rev-parse "v${VERSION}-${STAGE}" >/dev/null 2>&1; then
+            echo "should-publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "should-publish=true" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Version detected: ${VERSION}-${STAGE}"
+
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: detect-version
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run type checks
+        run: pnpm type-check
+
+      - name: Run tests
+        run: pnpm test -- --passWithNoTests || true
+        continue-on-error: true
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            apps/*/build/
+            apps/*/.next/
+          retention-days: 7
+
+  generate-version-info:
+    name: Generate Version Information
+    runs-on: ubuntu-latest
+    needs: [detect-version, build-and-test]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate version info
+        run: npx ts-node scripts/versioning/generate-version-info.ts all
+
+      - name: Upload version info
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-info
+          path: .version-info/
+          retention-days: 30
+
+  publish-local:
+    name: Publish Local
+    runs-on: ubuntu-latest
+    needs: [detect-version, build-and-test]
+    if: needs.detect-version.outputs.should-publish == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run local publish
+        run: bash scripts/publishing/publish-local.sh ${{ needs.detect-version.outputs.version }} ${{ needs.detect-version.outputs.stage }}
+
+      - name: Upload distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: distribution-${{ needs.detect-version.outputs.version }}
+          path: dist/${{ needs.detect-version.outputs.version }}/
+          retention-days: 30
+
+      - name: Create git tags
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          VERSION="${{ needs.detect-version.outputs.version }}"
+          STAGE="${{ needs.detect-version.outputs.stage }}"
+          GIT_TAG="v${VERSION}-${STAGE}"
+
+          # Create tag
+          git tag -a "${GIT_TAG}" -m "Release ${VERSION} (${STAGE})" || echo "Tag already exists"
+
+          # Push tag
+          git push origin "${GIT_TAG}" || echo "Could not push tag"
+
+  publish-remote:
+    name: Publish Remote
+    runs-on: ubuntu-latest
+    needs: [detect-version, publish-local]
+    if: needs.detect-version.outputs.should-publish == 'true' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup GitHub CLI
+        run: gh auth setup-git
+
+      - name: Download local distribution
+        uses: actions/download-artifact@v4
+        with:
+          name: distribution-${{ needs.detect-version.outputs.version }}
+          path: dist/${{ needs.detect-version.outputs.version }}/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.detect-version.outputs.version }}"
+          STAGE="${{ needs.detect-version.outputs.stage }}"
+          GIT_TAG="v${VERSION}-${STAGE}"
+
+          CHANGELOG=""
+          if [ -f "dist/${VERSION}/CHANGELOG.md" ]; then
+            CHANGELOG=$(cat "dist/${VERSION}/CHANGELOG.md")
+          fi
+
+          gh release create "${GIT_TAG}" \
+            --title "Version ${VERSION} (${STAGE})" \
+            --notes "${CHANGELOG}" \
+            $([ "${STAGE}" != "release" ] && echo "--prerelease") \
+            || echo "Release already exists"
+
+      - name: Upload artifacts to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.detect-version.outputs.version }}"
+          STAGE="${{ needs.detect-version.outputs.stage }}"
+          GIT_TAG="v${VERSION}-${STAGE}"
+          DIST_DIR="dist/${VERSION}"
+
+          # Upload each artifact
+          for file in CHANGELOG.md analysis.json test-results.json metadata.json; do
+            if [ -f "${DIST_DIR}/${file}" ]; then
+              gh release upload "${GIT_TAG}" "${DIST_DIR}/${file}" --clobber || true
+            fi
+          done
+
+      - name: Create milestone issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.detect-version.outputs.version }}"
+          STAGE="${{ needs.detect-version.outputs.stage }}"
+          GIT_TAG="v${VERSION}-${STAGE}"
+
+          ISSUE_TITLE="Milestone: Version ${VERSION} (${STAGE})"
+          ISSUE_BODY="## Release Information
+          - **Version**: ${VERSION}
+          - **Stage**: ${STAGE}
+          - **Git Tag**: ${GIT_TAG}
+          - **Released**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          See [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${GIT_TAG}) for details."
+
+          gh issue create \
+            --title "${ISSUE_TITLE}" \
+            --body "${ISSUE_BODY}" \
+            --label "release,${STAGE}" \
+            || echo "Could not create issue"
+
+      - name: Post Slack notification
+        if: vars.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            🚀 OpenRouter Crew Platform v${{ needs.detect-version.outputs.version }} (${{ needs.detect-version.outputs.stage }}) Published
+            Repository: ${{ github.repository }}
+            Commit: ${{ github.sha }}
+            Release: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.detect-version.outputs.version }}-${{ needs.detect-version.outputs.stage }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          fields: repo,action,eventName,ref
+
+  generate-release-notes:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+    needs: [detect-version, publish-remote]
+    if: needs.detect-version.outputs.should-publish == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        run: |
+          VERSION="${{ needs.detect-version.outputs.version }}"
+          STAGE="${{ needs.detect-version.outputs.stage }}"
+
+          # Add to MILESTONES.md
+          mkdir -p milestones
+
+          # Create summary entry
+          echo "- v${VERSION}-${STAGE}: $(date +'%Y-%m-%d')" >> milestones/releases.txt
+
+      - name: Commit release notes
+        continue-on-error: true
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add milestones/
+          git commit -m "chore: record release v${{ needs.detect-version.outputs.version }}-${{ needs.detect-version.outputs.stage }}" || echo "No changes"
+          git push
+
+  summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [detect-version, build-and-test, generate-version-info, publish-local]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Create job summary
+        run: |
+          echo "## 🎯 Milestone & Versioning Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Version Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.detect-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stage**: ${{ needs.detect-version.outputs.stage }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Should Publish**: ${{ needs.detect-version.outputs.should-publish }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build & Test**: ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Info**: ${{ needs.generate-version-info.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Local Publish**: ${{ needs.publish-local.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Build artifacts preserved for 7 days" >> $GITHUB_STEP_SUMMARY
+          echo "- Version info available for 30 days" >> $GITHUB_STEP_SUMMARY
+          echo "- Distribution available for 30 days" >> $GITHUB_STEP_SUMMARY

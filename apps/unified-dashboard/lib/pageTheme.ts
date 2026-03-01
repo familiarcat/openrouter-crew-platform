@@ -61,7 +61,7 @@ const pageThemes: Record<string, PageTheme> = {
  */
 export function getPageTheme(pageSlug: string): PageTheme {
   const normalizedSlug = pageSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-  return pageThemes[normalizedSlug] || pageThemes.home;
+  return pageThemes[normalizedSlug] || pageThemes.home!;
 }
 
 /**

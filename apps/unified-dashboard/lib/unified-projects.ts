@@ -2,7 +2,7 @@
 
 import { ClientTypes } from '@openrouter-crew/shared-schemas'
 import type { Domain } from './domains'
-import { UNIFIED_DOMAINS, getDomain } from './domains'
+import { getDomain } from './domains'
 
 export type Project = ClientTypes.Project
 

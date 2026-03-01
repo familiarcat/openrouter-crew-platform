@@ -10,6 +10,7 @@ packages:
   - 'domains/shared/workflows'
   - 'domains/shared/ui-components'
   - 'domains/shared/openrouter-client'
+  - 'domains/shared/agent-memory'
 
   # Product Factory Domain
   - 'domains/product-factory/dashboard'

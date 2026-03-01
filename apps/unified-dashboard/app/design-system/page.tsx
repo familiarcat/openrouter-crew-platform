@@ -175,8 +175,8 @@ export default function ComponentLibraryPage() {
           <ComponentWrapper label="Analytics Dashboard"><AnalyticsDashboard /></ComponentWrapper>
           <ComponentWrapper label="Vector Dashboard"><VectorBasedDashboard /></ComponentWrapper>
           <ComponentWrapper label="Vector Priority"><VectorPrioritySystem /></ComponentWrapper>
-          <ComponentWrapper label="Priority Matrix"><PriorityMatrix vectors={[]} /></ComponentWrapper>
-          <ComponentWrapper label="Progress Tracker"><ProgressTracker taskId="demo-task" /></ComponentWrapper>
+          <ComponentWrapper label="Priority Matrix"><PriorityMatrix /></ComponentWrapper>
+          <ComponentWrapper label="Progress Tracker"><ProgressTracker /></ComponentWrapper>
         </Section>
 
         <Section title="UX & Design System" description="Components for testing themes, comparing UI designs, and monitoring user experience metrics.">
@@ -185,18 +185,18 @@ export default function ComponentLibraryPage() {
           <ComponentWrapper label="UX Analytics"><UserExperienceAnalytics /></ComponentWrapper>
           <ComponentWrapper label="Status Ribbon"><StatusRibbon /></ComponentWrapper>
           <ComponentWrapper label="Universal Progress"><UniversalProgressBar current={65} total={100} description="System Load" /></ComponentWrapper>
-          <ComponentWrapper label="Error Display"><DesignSystemErrorDisplay error="Sample error message" title="Demo Error" /></ComponentWrapper>
+          <ComponentWrapper label="Error Display"><DesignSystemErrorDisplay /></ComponentWrapper>
         </Section>
 
         <Section title="Dynamic Data & Registry" description="Low-level components for rendering dynamic data structures and component registries.">
-          <ComponentWrapper label="Data Drilldown"><DynamicDataDrilldown data={{ sample: 'data', nested: { value: 123 } }} title="Sample Drilldown" /></ComponentWrapper>
-          <ComponentWrapper label="Data Renderer"><DynamicDataRenderer data={{ key: 'value' }} structure={{ id: 'root', type: 'container' }} /></ComponentWrapper>
+          <ComponentWrapper label="Data Drilldown"><DynamicDataDrilldown /></ComponentWrapper>
+          <ComponentWrapper label="Data Renderer"><DynamicDataRenderer /></ComponentWrapper>
           <ComponentWrapper label="Component Grid"><ComponentGrid componentIds={['comp-1', 'comp-2']} /></ComponentWrapper>
         </Section>
 
         <Section title="Interactive Wizards & Forms" description="Step-by-step guides and interactive forms for user input and configuration.">
           <ComponentWrapper label="Project Wizard"><WizardInline projectId="demo-proj" onApply={(data: any) => console.log(data)} /></ComponentWrapper>
-          <ComponentWrapper label="Inline Quiz"><QuizInline projectId="demo-proj" /></ComponentWrapper>
+          <ComponentWrapper label="Inline Quiz"><QuizInline /></ComponentWrapper>
           <ComponentWrapper label="Theme Selector">
             <div className="space-y-8">
               <ThemeSelector value="midnight" onChange={() => {}} mode="gallery" label="Gallery Mode" />
@@ -236,7 +236,7 @@ export default function ComponentLibraryPage() {
               <div className="space-y-6">
                 <div className="p-4 bg-white/5 rounded border border-white/10">
                   <h4 className="text-sm font-bold mb-4 text-gray-400">Aesthetic Alignment</h4>
-                  <QuizInline projectId="new-project" />
+                  <QuizInline />
                 </div>
                 <StuckOperationWarning operationName="Template Hydration" retryCount={1} maxRetries={3} onCancel={() => {}} />
               </div>

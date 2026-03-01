@@ -1,0 +1,22 @@
+{
+  "name": "@openrouter-crew/codebase-analyzer",
+  "version": "1.0.0",
+  "description": "Comprehensive codebase analyzer and static HTML dashboard for OpenRouter Crew Platform",
+  "private": true,
+  "type": "module",
+  "main": "analyzer.ts",
+  "scripts": {
+    "analyze": "node --loader ts-node/esm analyzer.ts ../",
+    "build:dashboard": "node --loader ts-node/esm build-dashboard.ts",
+    "generate": "pnpm analyze && pnpm build:dashboard",
+    "serve": "npx http-server ./output -p 8080 -g",
+    "dev": "watch -p 'codebase-analyzer/*.ts' -c 'pnpm generate'",
+    "weekly": "bash scripts/weekly-analysis.sh",
+    "weekly:dry": "DRY_RUN=true bash scripts/weekly-analysis.sh"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "ts-node": "^10.9.1"
+  }
+}

@@ -4,43 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { docsNav } from '@/lib/nav';
 import { ProjectSummary, getStatusColor } from '@/lib/projects';
 import { Icon, IconName } from '@/lib/icons';
 import { supabase } from '@/lib/supabase';
-import { enrichProjectWithDomain } from '@/lib/unified-projects';
-
-const crewIds = [
-  { id: 'captain_picard', name: 'Captain Picard' },
-  { id: 'commander_data', name: 'Commander Data' },
-  { id: 'commander_riker', name: 'Commander Riker' },
-  { id: 'geordi_la_forge', name: 'Geordi La Forge' },
-  { id: 'lieutenant_worf', name: 'Lieutenant Worf' },
-  { id: 'dr_crusher', name: 'Dr. Crusher' },
-  { id: 'counselor_troi', name: 'Counselor Troi' },
-  { id: 'chief_obrien', name: "Chief O'Brien" },
-  { id: 'lieutenant_uhura', name: 'Lieutenant Uhura' },
-  { id: 'quark', name: 'Quark' },
-];
-
-// Icon mapping for nav items - now using IconName
-const navIconMap: Record<string, IconName> = {
-  '/': 'home',
-  '/categories': 'domains',
-  '/create': 'create',
-  '/ask': 'ask',
-  '/diagnostics': 'diagnostics',
-  '/env': 'environment',
-  '/crew': 'crew',
-  '/observation-lounge': 'observation',
-  '/docs/overview': 'list',
-  '/docs/timeline': 'timeline',
-  '/docs/categories': 'domains',
-  '/docs/portfolio': 'portfolio',
-  '/docs/roadmap': 'roadmap',
-  '/docs/nextjs_product_factory_best_practices': 'bestpractices',
-  '/docs/assumptions': 'assumptions',
-};
 
 // Status icon mapping
 const statusIconMap: Record<string, IconName> = {
@@ -113,9 +79,8 @@ export function Sidebar() {
           .limit(5);
 
         if (data && Array.isArray(data)) {
-          // Map to ProjectSummary format and enrich with domain
+          // Map to ProjectSummary format
           const enrichedProjects = (data as any[]).map((p: any) => {
-            const enriched = enrichProjectWithDomain(p);
             return {
               id: p.id || '',
               name: p.name || 'Untitled',

@@ -1,0 +1,423 @@
+name: Codebase Analysis
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  schedule:
+    # Run weekly analysis on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9.12.3'
+
+jobs:
+  analyze:
+    name: Analyze Codebase
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run codebase analysis
+        id: analysis
+        run: |
+          cd codebase-analyzer
+          pnpm analyze ../
+          pnpm build:dashboard
+          echo "analysis_complete=true" >> $GITHUB_OUTPUT
+
+      - name: Generate metrics summary
+        if: steps.analysis.outputs.analysis_complete == 'true'
+        id: metrics
+        run: |
+          REPORT_FILE="codebase-analyzer/codebase-metrics.txt"
+          if [ -f "$REPORT_FILE" ]; then
+            echo "metrics_report<<EOF" >> $GITHUB_OUTPUT
+            cat "$REPORT_FILE" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare with baseline
+        if: github.event_name == 'pull_request'
+        id: comparison
+        run: |
+          #!/bin/bash
+          CURRENT="codebase-analyzer/codebase.json"
+
+          # Calculate change metrics
+          if [ -f "$CURRENT" ]; then
+            TOTAL_FILES=$(jq '.totalFiles' "$CURRENT")
+            TOTAL_LINES=$(jq '.totalLines' "$CURRENT")
+            TOTAL_SIZE=$(jq '.totalSize' "$CURRENT")
+            PACKAGES=$(jq '.packages | length' "$CURRENT")
+
+            # Check if metrics crossed thresholds
+            if [ "$TOTAL_FILES" -gt 2500 ]; then
+              FILE_STATUS="⚠️  HIGH"
+            elif [ "$TOTAL_FILES" -gt 2000 ]; then
+              FILE_STATUS="✅ NORMAL"
+            else
+              FILE_STATUS="✅ LOW"
+            fi
+
+            echo "total_files=$TOTAL_FILES" >> $GITHUB_OUTPUT
+            echo "total_lines=$TOTAL_LINES" >> $GITHUB_OUTPUT
+            echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
+            echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+            echo "file_status=$FILE_STATUS" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR with analysis
+        if: github.event_name == 'pull_request' && steps.analysis.outputs.analysis_complete == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Read analysis results
+            const analysisPath = path.join(process.env.GITHUB_WORKSPACE, 'codebase-analyzer', 'codebase.json');
+            const analysis = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
+
+            // Format bytes
+            const formatBytes = (bytes) => {
+              if (bytes === 0) return '0 B';
+              const k = 1024;
+              const sizes = ['B', 'KB', 'MB', 'GB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+            };
+
+            // Get top languages
+            const languages = Object.entries(analysis.statistics.byLanguage)
+              .sort((a, b) => b[1].files - a[1].files)
+              .slice(0, 5)
+              .map(([lang, stats]) => `${lang}: ${stats.files} files`)
+              .join('\n');
+
+            // Get top packages
+            const packages = analysis.packages
+              .slice(0, 5)
+              .map(pkg => `- ${pkg.name} (${pkg.type})`)
+              .join('\n');
+
+            // Build comment
+            const comment = `## 📊 Codebase Analysis Report
+
+### 📈 Current Metrics
+| Metric | Value |
+|--------|-------|
+| Total Files | ${analysis.totalFiles} |
+| Total Directories | ${analysis.totalDirectories} |
+| Lines of Code | ${analysis.totalLines.toLocaleString()} |
+| Total Size | ${formatBytes(analysis.totalSize)} |
+| Packages | ${analysis.packages.length} |
+
+### 📝 Files by Language
+\`\`\`
+${languages}
+\`\`\`
+
+### 🏗️ Domains
+${analysis.domains.map(d => \`- \${d}\`).join('\\n')}
+
+### 🔧 Technology Stack
+- **Languages:** ${analysis.technologies.languages.slice(0, 3).join(', ')}
+- **Frameworks:** ${analysis.technologies.frameworks.slice(0, 3).join(', ')}
+- **Tools:** ${analysis.technologies.tools.slice(0, 3).join(', ')}
+
+### 📦 Top Packages
+${packages}
+
+---
+*Generated by Codebase Analyzer at ${new Date().toISOString()}*`;
+
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload analysis artifact
+        if: always() && steps.analysis.outputs.analysis_complete == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: codebase-analysis
+          path: |
+            codebase-analyzer/codebase.json
+            codebase-analyzer/codebase-metrics.txt
+            codebase-analyzer/output/index.html
+          retention-days: 30
+
+      - name: Generate GitHub Pages report
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          mkdir -p gh-pages
+          cp codebase-analyzer/output/index.html gh-pages/index.html
+          cp codebase-analyzer/codebase.json gh-pages/codebase.json
+          cp codebase-analyzer/codebase-metrics.txt gh-pages/metrics.txt
+
+      - name: Deploy to GitHub Pages
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages
+          cname: codebase-analysis.openrouter-crew.dev
+
+      - name: Create status check
+        if: steps.analysis.outputs.analysis_complete == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const analysis = require('./codebase-analyzer/codebase.json');
+
+            // Determine status
+            let conclusion = 'success';
+            let description = 'Codebase analysis completed successfully';
+
+            if (analysis.totalFiles > 3000) {
+              conclusion = 'neutral';
+              description = 'Large codebase detected. Consider refactoring.';
+            }
+
+            if (context.eventName === 'pull_request') {
+              github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'Codebase Analysis',
+                head_sha: context.payload.pull_request.head.sha,
+                status: 'completed',
+                conclusion: conclusion,
+                output: {
+                  title: 'Codebase Metrics',
+                  summary: description,
+                  text: `
+- Total Files: ${analysis.totalFiles}
+- Lines of Code: ${analysis.totalLines}
+- Total Size: ${(analysis.totalSize / 1024 / 1024).toFixed(2)} MB
+- Packages: ${analysis.packages.length}
+                  `.trim()
+                }
+              });
+            }
+
+  quality-metrics:
+    name: Calculate Quality Metrics
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Calculate test coverage
+        id: coverage
+        run: |
+          # Run tests with coverage
+          pnpm test -- --coverage --passWithNoTests || true
+
+          # Extract coverage metrics
+          COVERAGE_FILE="coverage/coverage-summary.json"
+          if [ -f "$COVERAGE_FILE" ]; then
+            COVERAGE=$(jq '.total.lines.pct' "$COVERAGE_FILE")
+            echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          else
+            echo "coverage=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Lint analysis
+        id: lint
+        run: |
+          # Count lint warnings/errors
+          pnpm lint 2>&1 | tee lint-output.txt || true
+          LINT_ERRORS=$(grep -c "error" lint-output.txt || echo "0")
+          LINT_WARNINGS=$(grep -c "warning" lint-output.txt || echo "0")
+          echo "errors=$LINT_ERRORS" >> $GITHUB_OUTPUT
+          echo "warnings=$LINT_WARNINGS" >> $GITHUB_OUTPUT
+
+      - name: Type check analysis
+        id: types
+        run: |
+          # Check TypeScript compilation
+          pnpm type-check 2>&1 | tee type-output.txt || true
+          TYPE_ERRORS=$(grep -c "error TS" type-output.txt || echo "0")
+          echo "type_errors=$TYPE_ERRORS" >> $GITHUB_OUTPUT
+
+      - name: Comment quality metrics
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const coverage = '${{ steps.coverage.outputs.coverage }}' || 'N/A';
+            const lintErrors = '${{ steps.lint.outputs.errors }}' || '0';
+            const lintWarnings = '${{ steps.lint.outputs.warnings }}' || '0';
+            const typeErrors = '${{ steps.types.outputs.type_errors }}' || '0';
+
+            const comment = `## ✅ Quality Metrics
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| Test Coverage | ${coverage}% | ${coverage >= 80 ? '✅' : '⚠️'} |
+| Lint Errors | ${lintErrors} | ${lintErrors == 0 ? '✅' : '❌'} |
+| Lint Warnings | ${lintWarnings} | ${lintWarnings == 0 ? '✅' : '⚠️'} |
+| Type Errors | ${typeErrors} | ${typeErrors == 0 ? '✅' : '❌'} |
+
+*Generated by Quality Check at ${new Date().toISOString()}*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-metrics
+          path: |
+            coverage/
+            lint-output.txt
+            type-output.txt
+          retention-days: 7
+
+  trend-tracking:
+    name: Track Codebase Trends
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Record metrics
+        run: |
+          cd codebase-analyzer
+
+          # Create metrics history file
+          mkdir -p .metrics-history
+
+          TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          METRIC_FILE=".metrics-history/${TIMESTAMP}.json"
+
+          if [ -f "codebase.json" ]; then
+            jq ".timestamp = \"$TIMESTAMP\"" codebase.json > "$METRIC_FILE"
+            echo "Recorded metrics for $TIMESTAMP"
+          fi
+
+      - name: Commit metrics history
+        if: hashFiles('codebase-analyzer/.metrics-history/*') != ''
+        run: |
+          cd codebase-analyzer
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .metrics-history/
+          git commit -m "chore: record codebase metrics history" || echo "No changes to commit"
+          git push
+
+      - name: Generate trend report
+        if: always()
+        run: |
+          #!/bin/bash
+
+          # This would generate a trend report comparing last few weeks
+          echo "# Codebase Trend Report" > TREND_REPORT.md
+          echo "Generated: $(date)" >> TREND_REPORT.md
+          echo "" >> TREND_REPORT.md
+
+          # List all metrics in history
+          if [ -d "codebase-analyzer/.metrics-history" ]; then
+            echo "## Metrics History" >> TREND_REPORT.md
+            ls -1 codebase-analyzer/.metrics-history/*.json | tail -10 | while read file; do
+              echo "- $(basename $file)" >> TREND_REPORT.md
+            done
+          fi
+
+  summary:
+    name: Analysis Summary
+    runs-on: ubuntu-latest
+    needs: [analyze, quality-metrics]
+    if: always()
+    permissions:
+      checks: write
+
+    steps:
+      - name: Create job summary
+        run: |
+          echo "## 📊 Codebase Analysis Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **Codebase Analysis**: ${{ needs.analyze.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Quality Metrics**: ${{ needs.quality-metrics.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Review the analysis report in PR comments" >> $GITHUB_STEP_SUMMARY
+          echo "- Check artifact downloads for detailed results" >> $GITHUB_STEP_SUMMARY
+          echo "- View full dashboard at deployed URL (weekly)" >> $GITHUB_STEP_SUMMARY

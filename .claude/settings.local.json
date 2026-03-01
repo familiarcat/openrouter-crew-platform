@@ -39,7 +39,22 @@
       "Bash(curl:*)",
       "Bash(npm view:*)",
       "Bash(pnpm list:*)",
-      "Bash(pnpm --filter unified-dashboard run type-check:*)"
+      "Bash(pnpm --filter unified-dashboard run type-check:*)",
+      "Bash(/Users/bradygeorgen/Dev/openrouter-crew-platform/docs/PM_SYSTEM_SUMMARY.md:*)",
+      "Bash(pnpm run generate:business)",
+      "Bash(npx next build)",
+      "Bash(pnpm build:dashboards)",
+      "Bash(npx ts-node analyzer.ts /Users/bradygeorgen/Dev/openrouter-crew-platform /Users/bradygeorgen/Dev/openrouter-crew-platform/codebase-analyzer/codebase.json)",
+      "Bash(npx ts-node build-dashboard.ts)",
+      "Bash(/Users/bradygeorgen/Dev/openrouter-crew-platform/codebase-analyzer/FINAL_SUMMARY.txt:*)",
+      "Bash(timeout 60 node --input-type=module --eval \"import\\(''./dist/build-dashboard.js''\\)\")",
+      "Bash(/tmp/final_summary.txt:*)",
+      "Bash(/tmp/files_created.txt:*)",
+      "Bash(/tmp/versioning_summary.txt:*)",
+      "Bash(/tmp/file_manifest.txt:*)",
+      "Bash(./scripts/unify-platform.sh --quick)",
+      "Bash(pnpm clean)",
+      "Bash(pnpm type-check)"
     ]
   }
 }

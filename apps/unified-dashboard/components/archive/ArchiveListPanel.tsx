@@ -17,7 +17,7 @@ interface ArchiveItem {
   confidence: number;
 }
 
-export default function ArchiveListPanel({ crewId }: { crewId: string }) {
+export default function ArchiveListPanel() {
   const [sortBy, setSortBy] = useState<'date' | 'size'>('date');
   const [filter, setFilter] = useState<'all' | 'compressed'>('all');
 

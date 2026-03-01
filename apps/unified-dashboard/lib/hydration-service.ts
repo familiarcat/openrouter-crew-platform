@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { DOMAINS, MOCK_PROJECTS, MOCK_WORKFLOWS } from './unified-mock-data';
+import { MOCK_PROJECTS, MOCK_WORKFLOWS } from './unified-mock-data';
 
 // Safe initialization for build time
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'http://localhost:54321';
@@ -47,7 +47,7 @@ export async function hydrateSupabase() {
       updated_at: new Date().toISOString()
     }));
 
-    const { error: wfError } = await supabase
+    await supabase
       .from('workflows')
       .upsert(wfRows, { onConflict: 'id' });
     

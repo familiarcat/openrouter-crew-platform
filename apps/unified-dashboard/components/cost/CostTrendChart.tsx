@@ -109,12 +109,14 @@ export default function CostTrendChart() {
       </div>
 
       {/* Trend Indicator */}
-      <div className="mt-4 p-3 bg-green-50 rounded flex items-center gap-2 text-sm">
-        <span className="text-green-600">📉</span>
-        <span className="text-green-700">
-          Costs declining by {(((data[0].cost - data[data.length - 1].cost) / data[0].cost) * 100).toFixed(1)}%
-        </span>
-      </div>
+      {data.length > 0 && (
+        <div className="mt-4 p-3 bg-green-50 rounded flex items-center gap-2 text-sm">
+          <span className="text-green-600">📉</span>
+          <span className="text-green-700">
+            Costs declining by {(((data[0]!.cost - data[data.length - 1]!.cost) / data[0]!.cost) * 100).toFixed(1)}%
+          </span>
+        </div>
+      )}
     </div>
   );
 }

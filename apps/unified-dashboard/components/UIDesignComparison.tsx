@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-export default function UIDesignComparison(props: any) {
+export default function UIDesignComparison() {
   return (
     <div className="p-4 border border-dashed border-white/20 rounded-lg min-h-[100px] flex items-center justify-center bg-white/5">
       <div className="text-center">

@@ -13,7 +13,7 @@ interface BudgetData {
   limit: number;
 }
 
-export default function BudgetHistoryChart({ crewId }: { crewId: string }) {
+export default function BudgetHistoryChart() {
   const [timeframe, setTimeframe] = useState<'week' | 'month'>('month');
 
   const getHistoryData = (): BudgetData[] => {

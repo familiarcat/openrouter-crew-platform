@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🧠 Memory System Dashboard</title>
+  <!-- VSCode Webview API -->
+  <script>
+    // Detect VSCode environment
+    if (typeof acquireVsCodeApi === 'function') {
+      window.vscode = acquireVsCodeApi();
+      document.documentElement.classList.add('vscode-webview');
+    }
+
+    // Detect theme
+    function updateTheme() {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const bodyClasses = document.body.classList;
+
+      if (isDark) {
+        bodyClasses.add('vscode-dark');
+        bodyClasses.remove('vscode-light');
+      } else {
+        bodyClasses.add('vscode-light');
+        bodyClasses.remove('vscode-dark');
+      }
+
+      // Check for high contrast
+      const isHighContrast = window.matchMedia('(prefers-contrast: more)').matches;
+      if (isHighContrast) {
+        bodyClasses.add('vscode-high-contrast');
+      } else {
+        bodyClasses.remove('vscode-high-contrast');
+      }
+    }
+
+    // Initial theme detection
+    updateTheme();
+
+    // Listen for theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
+    window.matchMedia('(prefers-contrast: more)').addEventListener('change', updateTheme);
+  </script>
+
+  <!-- Universal Dark Theme CSS with VSCode Integration -->
+  <style>
+    :root {
+      --color-bg-primary: #1e1e1e;
+      --color-bg-secondary: #252526;
+      --color-bg-tertiary: #2d2d30;
+      --color-bg-hover: #383838;
+      --color-bg-active: #505052;
+      --color-text-primary: #cccccc;
+      --color-text-secondary: #858585;
+      --color-text-tertiary: #6a6a6a;
+      --color-text-inverse: #1e1e1e;
+      --color-border: #3e3e42;
+      --color-primary-500: #3b82f6;
+      --color-primary-600: #2563eb;
+      --color-primary-50: #1e3a5f;
+      --color-layer-1-bg: #1e3a5f;
+      --color-layer-1-text: #3b82f6;
+      --color-layer-2-bg: #2d1b4e;
+      --color-layer-2-text: #a855f7;
+      --color-layer-3-bg: #3d2817;
+      --color-layer-3-text: #f59e0b;
+      --color-layer-4-bg: #3a1e1e;
+      --color-layer-4-text: #ef4444;
+      --color-success: #10b981;
+      --color-warning: #f59e0b;
+      --color-error: #ef4444;
+      --color-info: #3b82f6;
+    }
+
+    /* VSCode Theme Integration - Dark Mode (Default) */
+    .vscode-webview.vscode-dark {
+      --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
+      --color-bg-secondary: var(--vscode-sideBar-background, #252526);
+      --color-bg-tertiary: var(--vscode-editorGroupHeader-tabsBackground, #2d2d30);
+      --color-text-primary: var(--vscode-editor-foreground, #cccccc);
+      --color-text-secondary: var(--vscode-editorGutter-foreground, #858585);
+      --color-border: var(--vscode-editorGroup-border, #3e3e42);
+      --color-primary-500: var(--vscode-focusBorder, #3b82f6);
+      --color-primary-600: var(--vscode-button-hoverBackground, #2563eb);
+    }
+
+    /* VSCode High Contrast Mode */
+    .vscode-webview.vscode-high-contrast {
+      --color-bg-primary: #000000;
+      --color-bg-secondary: #1e1e1e;
+      --color-bg-tertiary: #2d2d30;
+      --color-text-primary: #ffffff;
+      --color-text-secondary: #ffff00;
+      --color-text-inverse: #000000;
+      --color-border: #ffffff;
+      --color-primary-500: #ffff00;
+      --color-primary-600: #ffff00;
+      --color-layer-1-bg: #1e3a5f;
+      --color-layer-1-text: #ffff00;
+      --color-layer-2-bg: #2d1b4e;
+      --color-layer-2-text: #ffff00;
+      --color-layer-3-bg: #3d2817;
+      --color-layer-3-text: #ffff00;
+      --color-layer-4-bg: #3a1e1e;
+      --color-layer-4-text: #ffff00;
+    }
+
+    /* Light Mode Support */
+    .vscode-webview.vscode-light {
+      --color-bg-primary: #ffffff;
+      --color-bg-secondary: #f5f5f5;
+      --color-bg-tertiary: #ececec;
+      --color-bg-hover: #e8e8e8;
+      --color-bg-active: #d9d9d9;
+      --color-text-primary: #333333;
+      --color-text-secondary: #858585;
+      --color-text-tertiary: #999999;
+      --color-text-inverse: #ffffff;
+      --color-border: #cccccc;
+      --color-primary-500: #2563eb;
+      --color-primary-600: #1d4ed8;
+      --color-primary-50: #dbeafe;
+      --color-layer-1-bg: #dbeafe;
+      --color-layer-1-text: #1e40af;
+      --color-layer-2-bg: #e9d5ff;
+      --color-layer-2-text: #6b21a8;
+      --color-layer-3-bg: #fed7aa;
+      --color-layer-3-text: #92400e;
+      --color-layer-4-bg: #fecaca;
+      --color-layer-4-text: #7f1d1d;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--color-bg-primary);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    /* VSCode Webview Specific */
+    .vscode-webview {
+      overflow: hidden;
+    }
+
+    .vscode-webview .container {
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    /* Custom Scrollbar for VSCode */
+    .vscode-webview ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    .vscode-webview ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .vscode-webview ::-webkit-scrollbar-thumb {
+      background-color: var(--vscode-scrollbar-shadow, rgba(255, 255, 255, 0.2));
+      border-radius: 6px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+
+    .vscode-webview ::-webkit-scrollbar-thumb:hover {
+      background-color: var(--vscode-scrollbarSlider-activeBackground, rgba(255, 255, 255, 0.3));
+      background-clip: content-box;
+    }
+
+    /* Container & Layout */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: var(--color-text-primary);
+    }
+
+    .header p {
+      color: var(--color-text-secondary);
+      font-size: 14px;
+    }
+
+    /* Error Message */
+    .error {
+      background-color: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--color-bg-secondary);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      transition: background-color 0.2s;
+    }
+
+    .stat-card:hover {
+      background-color: var(--color-bg-tertiary);
+    }
+
+    .stat-label {
+      color: var(--color-text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--color-primary-500);
+    }
+
+    /* Layer Filters */
+    .layer-filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .filter-btn {
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 2px solid;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+      font-size: 14px;
+      background-color: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+    }
+
+    .filter-btn:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      background-color: var(--color-bg-hover);
+    }
+
+    .filter-btn:focus-visible {
+      outline: 2px solid var(--color-primary-500);
+      outline-offset: 2px;
+    }
+
+    .filter-btn.active {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+      background-color: var(--color-primary-50);
+    }
+
+    .filter-btn.layer-1 {
+      background-color: var(--color-layer-1-bg);
+      border-color: var(--color-primary-500);
+      color: var(--color-layer-1-text);
+    }
+    .filter-btn.layer-1.active { background-color: rgba(59, 130, 246, 0.3); }
+
+    .filter-btn.layer-2 {
+      background-color: var(--color-layer-2-bg);
+      border-color: var(--color-layer-2-text);
+      color: var(--color-layer-2-text);
+    }
+    .filter-btn.layer-2.active { background-color: rgba(168, 85, 247, 0.2); }
+
+    .filter-btn.layer-3 {
+      background-color: var(--color-layer-3-bg);
+      border-color: var(--color-layer-3-text);
+      color: var(--color-layer-3-text);
+    }
+    .filter-btn.layer-3.active { background-color: rgba(245, 158, 11, 0.2); }
+
+    .filter-btn.layer-4 {
+      background-color: var(--color-layer-4-bg);
+      border-color: var(--color-layer-4-text);
+      color: var(--color-layer-4-text);
+    }
+    .filter-btn.layer-4.active { background-color: rgba(239, 68, 68, 0.2); }
+
+    .filter-btn.all {
+      background-color: var(--color-bg-secondary);
+      border-color: var(--color-border);
+      color: var(--color-text-primary);
+    }
+    .filter-btn.all.active { background-color: var(--color-bg-hover); }
+
+    /* Search Section */
+    .search-section {
+      background: var(--color-bg-secondary);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      margin-bottom: 32px;
+    }
+
+    .search-section h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--color-text-primary);
+    }
+
+    .search-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      background-color: var(--color-bg-primary);
+      color: var(--color-text-primary);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-box input::placeholder {
+      color: var(--color-text-tertiary);
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--color-primary-500);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    .search-box button {
+      padding: 10px 20px;
+      background-color: var(--color-primary-500);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+
+    .search-box button:hover {
+      background-color: var(--color-primary-600);
+    }
+
+    .search-box button:focus-visible {
+      outline: 2px solid var(--color-primary-500);
+      outline-offset: 2px;
+    }
+
+    .search-box button:disabled {
+      background-color: var(--color-text-tertiary);
+      cursor: not-allowed;
+    }
+
+    /* Retrieval Results */
+    .retrieval-result {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--color-border);
+      display: none;
+    }
+
+    .retrieval-result.show {
+      display: block;
+    }
+
+    .retrieval-result h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--color-text-primary);
+    }
+
+    .prompt-section {
+      background-color: var(--color-bg-primary);
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+    }
+
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Memories Section */
+    .memories-section {
+      background: var(--color-bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--color-border);
+      background-color: var(--color-bg-tertiary);
+    }
+
+    .section-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .memories-list {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 600px;
+    }
+
+    .memory-item {
+      padding: 12px;
+      border-left: 4px solid;
+      cursor: pointer;
+      transition: background-color 0.15s;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .memory-item:hover {
+      background-color: var(--color-bg-hover);
+    }
+
+    .memory-item:focus-visible {
+      outline: 2px solid var(--color-primary-500);
+      outline-offset: -2px;
+    }
+
+    .memory-item.selected {
+      background-color: var(--color-primary-50);
+      border-left-color: var(--color-primary-500);
+    }
+
+    .memory-item.layer-1 { border-left-color: var(--color-layer-1-text); }
+    .memory-item.layer-2 { border-left-color: var(--color-layer-2-text); }
+    .memory-item.layer-3 { border-left-color: var(--color-layer-3-text); }
+    .memory-item.layer-4 { border-left-color: var(--color-layer-4-text); }
+
+    .memory-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .memory-badge.layer-1 {
+      background-color: var(--color-layer-1-bg);
+      color: var(--color-layer-1-text);
+    }
+    .memory-badge.layer-2 {
+      background-color: var(--color-layer-2-bg);
+      color: var(--color-layer-2-text);
+    }
+    .memory-badge.layer-3 {
+      background-color: var(--color-layer-3-bg);
+      color: var(--color-layer-3-text);
+    }
+    .memory-badge.layer-4 {
+      background-color: var(--color-layer-4-bg);
+      color: var(--color-layer-4-text);
+    }
+
+    .memory-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--color-text-primary);
+      line-clamp: 2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .memory-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--color-text-secondary);
+    }
+
+    /* Details Section */
+    .details-section {
+      background: var(--color-bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 24px;
+    }
+
+    .details-content {
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+      max-height: 600px;
+    }
+
+    .detail-group {
+      margin-bottom: 16px;
+    }
+
+    .detail-label {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .detail-value {
+      font-size: 13px;
+      color: var(--color-text-primary);
+      word-break: break-all;
+    }
+
+    .confidence-bar {
+      width: 100%;
+      height: 8px;
+      background-color: var(--color-bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background-color: var(--color-primary-500);
+      transition: width 0.3s;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tag {
+      padding: 2px 8px;
+      background-color: var(--color-bg-tertiary);
+      color: var(--color-text-primary);
+      border-radius: 3px;
+      font-size: 11px;
+      border: 1px solid var(--color-border);
+    }
+
+    .no-selection {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--color-text-tertiary);
+      text-align: center;
+      padding: 20px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--color-text-secondary);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--color-border);
+      border-top-color: var(--color-primary-500);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container {
+        padding: 12px;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .stat-value {
+        font-size: 20px;
+      }
+
+      .layer-filters {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .memories-list {
+        max-height: 400px;
+      }
+
+      .details-section {
+        position: relative;
+        top: 0;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 8px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .layer-filters {
+        grid-template-columns: 1fr;
+      }
+
+      .memories-list {
+        max-height: 300px;
+      }
+
+      .search-box {
+        flex-direction: column;
+      }
+
+      .search-box button {
+        width: 100%;
+      }
+    }
+
+    /* Accessibility */
+    @media (prefers-contrast: more) {
+      :root {
+        --color-border: #666666;
+        --color-text-secondary: #999999;
+      }
+
+      .stat-card:hover {
+        background-color: var(--color-bg-secondary);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+
+      .spinner {
+        border-top-color: var(--color-bg-secondary);
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🧠 Memory System Dashboard</h1>
+      <p>Project: <span id="projectId">-</span></p>
+    </div>
+
+    <!-- Error Display -->
+    <div id="error" class="error"></div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- Layer Filters -->
+    <div class="layer-filters">
+      <button class="filter-btn all active" data-layer="all">All Layers</button>
+      <button class="filter-btn layer-1" data-layer="1">Layer 1: Observations</button>
+      <button class="filter-btn layer-2" data-layer="2">Layer 2: Patterns</button>
+      <button class="filter-btn layer-3" data-layer="3">Layer 3: Strategies</button>
+      <button class="filter-btn layer-4" data-layer="4">Layer 4: Institutional</button>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+      <h2>🔍 Test Retrieval</h2>
+      <div class="search-box">
+        <input
+          type="text"
+          id="contextInput"
+          placeholder="Enter a context to retrieve relevant memories..."
+        />
+        <button id="searchBtn">Search</button>
+      </div>
+      <div id="retrievalResult" class="retrieval-result">
+        <h3>Retrieved Memories: <span id="resultCount">0</span></h3>
+        <div id="promptSection" class="prompt-section"></div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+      <!-- Memories List -->
+      <div class="memories-section">
+        <div class="section-header">
+          <h2>Memories <span id="memoryCount">0</span></h2>
+        </div>
+        <div id="memoriesList" class="memories-list"></div>
+      </div>
+
+      <!-- Details Panel -->
+      <div class="details-section">
+        <div class="section-header">
+          <h2>Details</h2>
+        </div>
+        <div id="detailsPanel" class="details-content">
+          <div class="no-selection">
+            Click on a memory to view details
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = new URLSearchParams(window.location.search).get('apiUrl') || 'http://localhost:3333';
+    const projectId = new URLSearchParams(window.location.search).get('projectId') || 'unknown';
+
+    let currentFilter = 'all';
+    let memories = [];
+
+    const LAYER_NAMES = {
+      1: 'Observation',
+      2: 'Pattern',
+      3: 'Strategy',
+      4: 'Institutional'
+    };
+
+    // Update project ID display
+    document.getElementById('projectId').textContent = projectId;
+
+    // Show error
+    function showError(message) {
+      const errorEl = document.getElementById('error');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
+    }
+
+    // Load memories
+    async function loadMemories() {
+      try {
+        const params = new URLSearchParams();
+        if (currentFilter !== 'all') params.append('layer', currentFilter);
+
+        const response = await fetch(`${API_URL}/api/memories/project/${projectId}?${params}`);
+        const data = await response.json();
+
+        memories = data.byLayer ? Object.values(data.byLayer).flat() : [];
+        renderMemories();
+      } catch (error) {
+        showError(`Failed to load memories: ${error.message}`);
+      }
+    }
+
+    // Load stats
+    async function loadStats() {
+      try {
+        const response = await fetch(`${API_URL}/api/stats/project/${projectId}`);
+        const data = await response.json();
+
+        document.getElementById('statsGrid').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-label">Total Memories</div>
+            <div class="stat-value">${data.nodes}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Edges</div>
+            <div class="stat-value">${data.edges}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Confidence</div>
+            <div class="stat-value">${(data.avgConfidence * 100).toFixed(0)}%</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Edge Weight</div>
+            <div class="stat-value">${(data.avgEdgeWeight * 100).toFixed(0)}%</div>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+      }
+    }
+
+    // Render memories list
+    function renderMemories() {
+      const list = document.getElementById('memoriesList');
+      document.getElementById('memoryCount').textContent = memories.length;
+
+      if (memories.length === 0) {
+        list.innerHTML = '<div class="loading">No memories found</div>';
+        return;
+      }
+
+      list.innerHTML = memories.map(m => `
+        <div class="memory-item layer-${m.layer}" onclick="showMemoryDetails('${m.id}')" tabindex="0">
+          <div class="memory-badge layer-${m.layer}">
+            Layer ${m.layer} - ${LAYER_NAMES[m.layer]}
+          </div>
+          <div class="memory-title">${m.summary || m.content.slice(0, 60)}</div>
+          <div class="memory-meta">
+            <span>Confidence: ${(m.confidence_weight * 100).toFixed(0)}%</span>
+            <span>Activations: ${m.activation_count}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Show memory details
+    async function showMemoryDetails(memoryId) {
+      try {
+        const response = await fetch(`${API_URL}/api/memories/${memoryId}`);
+        const data = await response.json();
+        const m = data.node;
+
+        // Update UI
+        document.querySelectorAll('.memory-item').forEach(el => el.classList.remove('selected'));
+        event?.target?.closest('.memory-item')?.classList.add('selected');
+
+        const detailsPanel = document.getElementById('detailsPanel');
+        detailsPanel.innerHTML = `
+          <div class="detail-group">
+            <div class="detail-label">ID</div>
+            <div class="detail-value" style="font-family: monospace; font-size: 11px;">${m.id}</div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">Layer</div>
+            <div class="detail-value">${m.layer} (${LAYER_NAMES[m.layer]})</div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">Confidence</div>
+            <div class="detail-value">${(m.confidence_weight * 100).toFixed(1)}%</div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" style="width: ${m.confidence_weight * 100}%"></div>
+            </div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">Activations</div>
+            <div class="detail-value">${m.activation_count}</div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">Tags</div>
+            <div class="tags">
+              ${(m.tags || []).length ? m.tags.map(t => `<span class="tag">${t}</span>`).join('') : '<span class="tag" style="color: var(--color-text-tertiary);">None</span>'}
+            </div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">Created</div>
+            <div class="detail-value">${new Date(m.created_at).toLocaleString()}</div>
+          </div>
+          ${data.outgoing?.length ? `
+            <div class="detail-group">
+              <div class="detail-label">Outgoing Edges (${data.outgoing.length})</div>
+              <div style="font-size: 11px; color: var(--color-text-secondary);">
+                ${data.outgoing.slice(0, 3).map(e =>
+                  `<div>→ Weight: ${(e.weight * 100).toFixed(0)}% | Co-activations: ${e.co_activation_count}</div>`
+                ).join('')}
+                ${data.outgoing.length > 3 ? `<div>... and ${data.outgoing.length - 3} more</div>` : ''}
+              </div>
+            </div>
+          ` : ''}
+        `;
+      } catch (error) {
+        showError(`Failed to load memory details: ${error.message}`);
+      }
+    }
+
+    // Test retrieval
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      const context = document.getElementById('contextInput').value;
+      if (!context) return;
+
+      document.getElementById('searchBtn').disabled = true;
+      document.getElementById('searchBtn').textContent = 'Searching...';
+
+      try {
+        const response = await fetch(
+          `${API_URL}/api/retrieve?projectId=${projectId}&context=${encodeURIComponent(context)}`
+        );
+        const data = await response.json();
+
+        document.getElementById('resultCount').textContent = data.memories?.length || 0;
+        document.getElementById('promptSection').textContent = data.promptSection || 'No prompt section generated';
+        document.getElementById('retrievalResult').classList.add('show');
+      } catch (error) {
+        showError(`Retrieval failed: ${error.message}`);
+      } finally {
+        document.getElementById('searchBtn').disabled = false;
+        document.getElementById('searchBtn').textContent = 'Search';
+      }
+    });
+
+    // Handle Enter key in search
+    document.getElementById('contextInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('searchBtn').click();
+    });
+
+    // Layer filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.layer;
+        loadMemories();
+      });
+    });
+
+    // Memory item keyboard support
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && document.activeElement.classList.contains('memory-item')) {
+        const memoryId = Array.from(document.querySelectorAll('.memory-item')).indexOf(document.activeElement);
+        if (memoryId >= 0 && memories[memoryId]) {
+          showMemoryDetails(memories[memoryId].id);
+        }
+      }
+    });
+
+    // Initial load
+    loadMemories();
+    loadStats();
+    setInterval(loadStats, 30000);  // Refresh stats every 30s
+
+    // Handle VSCode messages
+    if (window.vscode) {
+      window.addEventListener('message', (event) => {
+        const message = event.data;
+        if (message.command === 'refresh') {
+          loadMemories();
+          loadStats();
+        } else if (message.command === 'setProject') {
+          document.getElementById('projectId').textContent = message.projectId;
+          loadMemories();
+          loadStats();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

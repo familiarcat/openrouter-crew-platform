@@ -153,7 +153,7 @@ export function ScoreBar({ scores, compact = false }: ScoreBarProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 6 : 10 }}>
-      {dimensions.map(({ key, label, icon, description }) => {
+      {dimensions.map(({ key, label, icon }) => {
         const value = scores[key as keyof DomainScores];
         const color = getScoreColor(value);
         

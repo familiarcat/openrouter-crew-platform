@@ -1,0 +1,20 @@
+{
+  "name": "test-project-baritalia-stl",
+  "version": "1.0.0",
+  "description": "Business generator test - BarItalia STL proof of concept",
+  "private": true,
+  "scripts": {
+    "generate:business": "npx ts-node agents/gateway/src/index.ts",
+    "website:dev": "cd website && pnpm dev",
+    "website:build": "cd website && pnpm build"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.1",
+    "@types/node": "^20.10.0"
+  }
+}

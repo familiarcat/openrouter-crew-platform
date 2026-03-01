@@ -1,0 +1,404 @@
+name: 🧠 Publish Memory System
+
+on:
+  workflow_dispatch:
+    inputs:
+      version-type:
+        description: 'Version type to release'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - patch
+          - minor
+          - major
+  push:
+    branches:
+      - main
+    paths:
+      - 'domains/shared/agent-memory/**'
+      - '.github/workflows/publish-memory-system.yml'
+
+env:
+  PACKAGE_DIR: domains/shared/agent-memory
+  PACKAGE_NAME: '@openrouter-crew/agent-memory'
+
+jobs:
+  # =========================================================================
+  # Build & Test
+  # =========================================================================
+  build:
+    name: 🏗️ Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build package
+        run: pnpm --filter @openrouter-crew/agent-memory build
+
+      - name: Type check
+        run: pnpm --filter @openrouter-crew/agent-memory type-check
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: ${{ env.PACKAGE_DIR }}/dist
+          retention-days: 7
+
+  # =========================================================================
+  # Publish to npm
+  # =========================================================================
+  publish-npm:
+    name: 📦 Publish to npm
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ${{ env.PACKAGE_DIR }}/dist
+
+      - name: Determine version type
+        id: version
+        run: |
+          VERSION_TYPE="${{ github.event.inputs.version-type }}"
+          echo "type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+
+          if [ "$VERSION_TYPE" = "preview" ]; then
+            echo "publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "publish=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update version
+        if: steps.version.outputs.publish == 'true'
+        run: |
+          cd ${{ env.PACKAGE_DIR }}
+          VERSION_TYPE="${{ steps.version.outputs.type }}"
+
+          # Get current version
+          CURRENT_VERSION=$(jq -r '.version' package.json)
+
+          # Calculate new version
+          case "$VERSION_TYPE" in
+            major)
+              NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print ($1+1)".0.0"}')
+              ;;
+            minor)
+              NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1".".($2+1)".0"}')
+              ;;
+            patch)
+              NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2".".($3+1)}')
+              ;;
+          esac
+
+          # Update package.json
+          jq --arg ver "$NEW_VERSION" '.version = $ver' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: Publish to npm
+        if: steps.version.outputs.publish == 'true'
+        run: |
+          cd ${{ env.PACKAGE_DIR }}
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.publish == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.PACKAGE_DIR }}/dist/**
+          body: |
+            # ${{ env.PACKAGE_NAME }} v${{ env.NEW_VERSION }}
+
+            ## Changelog
+            - See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/${{ env.PACKAGE_DIR }}/CHANGELOG.md)
+
+            ## Installation
+            ```bash
+            npm install ${{ env.PACKAGE_NAME }}@${{ env.NEW_VERSION }}
+            pnpm add ${{ env.PACKAGE_NAME }}@${{ env.NEW_VERSION }}
+            yarn add ${{ env.PACKAGE_NAME }}@${{ env.NEW_VERSION }}
+            ```
+
+            ## Documentation
+            - [README](https://github.com/${{ github.repository }}/blob/main/${{ env.PACKAGE_DIR }}/README.md)
+            - [Quick Start](https://github.com/${{ github.repository }}/blob/main/${{ env.PACKAGE_DIR }}/QUICKSTART.md)
+            - [Design System](https://github.com/${{ github.repository }}/blob/main/${{ env.PACKAGE_DIR }}/DESIGN_SYSTEM.md)
+          tag_name: memory-system-v${{ env.NEW_VERSION }}
+
+  # =========================================================================
+  # Deploy Documentation
+  # =========================================================================
+  deploy-docs:
+    name: 📚 Deploy Documentation
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build documentation site
+        run: |
+          cd ${{ env.PACKAGE_DIR }}
+
+          # Create docs directory
+          mkdir -p /tmp/docs-build
+
+          # Copy markdown files
+          cp README.md /tmp/docs-build/
+          cp QUICKSTART.md /tmp/docs-build/
+          cp DESIGN_SYSTEM.md /tmp/docs-build/
+          cp UNIFIED_DESIGN.md /tmp/docs-build/
+          cp CHANGELOG.md /tmp/docs-build/ 2>/dev/null || true
+
+          # Create index.html
+          cat > /tmp/docs-build/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Memory System Docs</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-light.min.css">
+            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+              h1 { color: #3b82f6; margin: 30px 0 10px 0; }
+              h2 { color: #2563eb; margin: 25px 0 10px 0; border-bottom: 2px solid #3b82f6; padding-bottom: 5px; }
+              h3 { color: #1d4ed8; margin: 20px 0 10px 0; }
+              code { background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+              pre { background: #f3f4f6; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 15px 0; }
+              pre code { background: none; padding: 0; }
+              a { color: #3b82f6; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .nav { background: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 15px; }
+              .nav a { display: inline-block; padding: 8px 16px; background: white; border-radius: 4px; border: 1px solid #e5e7eb; }
+              .nav a:hover { background: #fff5e6; border-color: #3b82f6; }
+              .content { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+              table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+              td, th { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
+              th { background: #f3f4f6; font-weight: 600; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>🧠 Memory System Documentation</h1>
+              <div class="nav">
+                <a href="#" onclick="loadDoc('README.md'); return false;">📖 README</a>
+                <a href="#" onclick="loadDoc('QUICKSTART.md'); return false;">⚡ Quick Start</a>
+                <a href="#" onclick="loadDoc('DESIGN_SYSTEM.md'); return false;">🎨 Design System</a>
+                <a href="#" onclick="loadDoc('UNIFIED_DESIGN.md'); return false;">🔗 Unified Design</a>
+                <a href="#" onclick="loadDoc('CHANGELOG.md'); return false;">📝 Changelog</a>
+              </div>
+              <div class="content" id="content">
+                <p>Loading documentation...</p>
+              </div>
+            </div>
+
+            <script>
+              async function loadDoc(filename) {
+                const response = await fetch(filename);
+                const markdown = await response.text();
+                const html = marked.parse(markdown);
+                document.getElementById('content').innerHTML = html;
+                // Highlight code blocks
+                document.querySelectorAll('pre code').forEach(block => {
+                  hljs.highlightElement(block);
+                });
+              }
+
+              // Load README by default
+              loadDoc('README.md');
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload docs artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: /tmp/docs-build
+          retention-days: 30
+
+      - name: Deploy to Pages (if available)
+        if: vars.ENABLE_GITHUB_PAGES == 'true'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/docs-build
+
+  # =========================================================================
+  # Deploy Preview Dashboard
+  # =========================================================================
+  deploy-preview:
+    name: 🎨 Deploy Preview Dashboard
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ${{ env.PACKAGE_DIR }}/dist
+
+      - name: Prepare preview deployment
+        run: |
+          mkdir -p /tmp/preview
+          cp ${{ env.PACKAGE_DIR }}/src/dashboard.html /tmp/preview/index.html
+          cp ${{ env.PACKAGE_DIR }}/src/dashboard.css /tmp/preview/
+          cp ${{ env.PACKAGE_DIR }}/dist/design-system.* /tmp/preview/ 2>/dev/null || true
+
+          # Create deployment info
+          cat > /tmp/preview/info.json << EOF
+          {
+            "version": "$(jq -r .version ${{ env.PACKAGE_DIR }}/package.json)",
+            "timestamp": "$(date -Iseconds)",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref }}"
+          }
+          EOF
+
+      - name: Upload preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-dashboard
+          path: /tmp/preview
+          retention-days: 30
+
+      - name: Deploy to preview server (if configured)
+        if: vars.PREVIEW_DEPLOY_ENABLED == 'true'
+        run: |
+          # Example: Deploy using scp, rsync, or cloud provider
+          # This depends on your infrastructure setup
+          # For example with AWS S3:
+          # aws s3 sync /tmp/preview s3://memory-preview-bucket/
+          echo "Preview deployment configured but not implemented"
+          echo "Configure PREVIEW_DEPLOY_ENABLED and implement deployment step"
+
+  # =========================================================================
+  # Summary & Notification
+  # =========================================================================
+  summary:
+    name: 📋 Publication Summary
+    needs: [build, publish-npm, deploy-docs, deploy-preview]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check deployment status
+        run: |
+          echo "🧠 Memory System Publication Summary"
+          echo "======================================"
+          echo ""
+          echo "Build Status: ${{ needs.build.result }}"
+          echo "npm Publish Status: ${{ needs.publish-npm.result }}"
+          echo "Docs Deploy Status: ${{ needs.deploy-docs.result }}"
+          echo "Preview Deploy Status: ${{ needs.deploy-preview.result }}"
+          echo ""
+          echo "Package: ${{ env.PACKAGE_NAME }}"
+          echo "Version: $(jq -r .version domains/shared/agent-memory/package.json)"
+          echo ""
+
+      - name: Create deployment summary
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          cat > /tmp/summary.md << 'EOF'
+          # 🧠 Memory System Publication Complete
+
+          ## Deployment Summary
+
+          - **Package**: ${{ env.PACKAGE_NAME }}
+          - **Version Type**: ${{ github.event.inputs.version-type }}
+          - **Timestamp**: $(date)
+          - **Commit**: ${{ github.sha }}
+
+          ## Artifacts
+
+          - ✅ npm Package
+          - ✅ Documentation Site
+          - ✅ Preview Dashboard
+
+          ## Access Points
+
+          ### npm Registry
+          ```bash
+          npm install ${{ env.PACKAGE_NAME }}@latest
+          ```
+
+          ### Documentation
+          Available in the `docs` artifact or GitHub Pages (if enabled)
+
+          ### Preview Dashboard
+          Available in the `preview-dashboard` artifact
+
+          ## Next Steps
+
+          1. Verify npm package: https://npmjs.com/package/${{ env.PACKAGE_NAME }}
+          2. Check documentation site
+          3. Test preview dashboard
+          4. Verify GitHub Release (if created)
+
+          EOF
+
+      - name: Upload summary
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-summary
+          path: /tmp/summary.md

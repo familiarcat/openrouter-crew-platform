@@ -23,7 +23,7 @@ export default function AnalyticsTopicsChart({ topics }: Props) {
 
   // Mock data for demonstration
   const getTopicData = (): TopicData[] => {
-    return topics.map((topic, idx) => ({
+    return topics.map((topic) => ({
       name: topic,
       frequency: Math.floor(Math.random() * 100) + 50,
       trend: Math.random() > 0.5 ? 5 : -3,

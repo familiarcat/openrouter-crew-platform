@@ -1,0 +1,133 @@
+{
+  "budget": 1.5,
+  "spent": 0.06342,
+  "remaining": 1.43658,
+  "entries": [
+    {
+      "phase": "research",
+      "model": "haiku",
+      "inputTokens": 100,
+      "outputTokens": 500,
+      "cost": 0.0020800000000000003,
+      "timestamp": "2026-03-01T07:29:30.870Z"
+    },
+    {
+      "phase": "website-structure",
+      "model": "sonnet",
+      "inputTokens": 300,
+      "outputTokens": 800,
+      "cost": 0.0129,
+      "timestamp": "2026-03-01T07:29:30.973Z"
+    },
+    {
+      "phase": "website-content-Home",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 300,
+      "cost": 0.00132,
+      "timestamp": "2026-03-01T07:29:31.074Z"
+    },
+    {
+      "phase": "website-content-Menu",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 300,
+      "cost": 0.00132,
+      "timestamp": "2026-03-01T07:29:31.175Z"
+    },
+    {
+      "phase": "website-content-Reservations",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 300,
+      "cost": 0.00132,
+      "timestamp": "2026-03-01T07:29:31.277Z"
+    },
+    {
+      "phase": "website-content-About",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 300,
+      "cost": 0.00132,
+      "timestamp": "2026-03-01T07:29:31.378Z"
+    },
+    {
+      "phase": "website-content-Contact",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 300,
+      "cost": 0.00132,
+      "timestamp": "2026-03-01T07:29:31.479Z"
+    },
+    {
+      "phase": "website-component-Header",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 250,
+      "cost": 0.00112,
+      "timestamp": "2026-03-01T07:29:31.581Z"
+    },
+    {
+      "phase": "website-component-MenuCard",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 250,
+      "cost": 0.00112,
+      "timestamp": "2026-03-01T07:29:31.683Z"
+    },
+    {
+      "phase": "website-component-ReservationForm",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 250,
+      "cost": 0.00112,
+      "timestamp": "2026-03-01T07:29:31.784Z"
+    },
+    {
+      "phase": "website-component-GalleryCarousel",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 250,
+      "cost": 0.00112,
+      "timestamp": "2026-03-01T07:29:31.885Z"
+    },
+    {
+      "phase": "website-component-ReviewsSection",
+      "model": "haiku",
+      "inputTokens": 150,
+      "outputTokens": 250,
+      "cost": 0.00112,
+      "timestamp": "2026-03-01T07:29:31.986Z"
+    },
+    {
+      "phase": "business-plan",
+      "model": "sonnet",
+      "inputTokens": 400,
+      "outputTokens": 2000,
+      "cost": 0.0312,
+      "timestamp": "2026-03-01T07:29:32.088Z"
+    },
+    {
+      "phase": "financial-model",
+      "model": "haiku",
+      "inputTokens": 200,
+      "outputTokens": 1000,
+      "cost": 0.0041600000000000005,
+      "timestamp": "2026-03-01T07:29:32.190Z"
+    },
+    {
+      "phase": "summary",
+      "model": "haiku",
+      "inputTokens": 100,
+      "outputTokens": 200,
+      "cost": 0.00088,
+      "timestamp": "2026-03-01T07:29:32.291Z"
+    }
+  ],
+  "summary": {
+    "totalCalls": 15,
+    "totalTokens": 9850,
+    "averageCostPerCall": 0.004228,
+    "percentOfBudget": "4.23%"
+  }
+}

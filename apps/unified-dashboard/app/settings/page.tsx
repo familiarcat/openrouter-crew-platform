@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { User, Lock, Bell, Globe, Save } from 'lucide-react';
+import { User, Lock, Bell, Save } from 'lucide-react';
 
 export default function SettingsPage() {
   return (

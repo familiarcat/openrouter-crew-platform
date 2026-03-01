@@ -5,7 +5,7 @@
     "rootDir": "./src",
     "composite": true,
     "incremental": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "module": "ESNext",
     "target": "ES2022",
     "declaration": true,
@@ -18,6 +18,5 @@
     "node_modules",
     "dist",
     "tests"
-  ],
-  "ignoreDeprecations": "6.0"
+  ]
 }

@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import type { Sprint, Story, StoryWithDetails, CrewMember } from '@/types/sprint';
+import type { Sprint, StoryWithDetails, CrewMember } from '@/types/sprint';
 import { CREW_MEMBERS } from '@/types/sprint';
 
 export interface SprintTimelineProps {
@@ -103,7 +103,7 @@ export default function SprintTimeline({
 
     // Compact mode: only show crew with stories
     const storiesByCrew = getStoriesByCrew(sprint);
-    return Object.keys(storiesByCrew).filter(crew => storiesByCrew[crew].length > 0);
+    return Object.keys(storiesByCrew).filter(crew => (storiesByCrew[crew] ?? []).length > 0);
   };
 
   if (loading) {

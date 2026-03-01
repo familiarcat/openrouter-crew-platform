@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 
-export default function QuizInline({ projectId }: any) {
+export default function QuizInline() {
   const [idx, setIdx] = useState(0);
   const [done, setDone] = useState(false);
   

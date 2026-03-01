@@ -16,7 +16,7 @@ interface Recommendation {
   icon: string;
 }
 
-export default function AnalyticsRecommendationsPanel({ crewId }: { crewId: string }) {
+export default function AnalyticsRecommendationsPanel() {
   const recommendations: Recommendation[] = [
     {
       id: '1',

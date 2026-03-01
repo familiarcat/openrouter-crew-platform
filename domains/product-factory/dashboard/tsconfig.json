@@ -27,5 +27,6 @@
   "include": [
     "src/**/*",
     "index.ts"
-  ]
+  ],
+  "ignoreDeprecations": "5.0"
 }
