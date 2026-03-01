@@ -19,7 +19,10 @@ export class ResponseCache {
   /**
    * Generates a unique key based on the prompt content
    */
-  public generateKey(content: string): string {
+  public generateKey(prompt: string, model: string, files: any[] = [], canonicalForm?: string): string {
+    // Semantic Caching: Use canonicalForm if available to cache based on intent/meaning rather than raw phrasing
+    const keyContent = canonicalForm || prompt;
+    const content = `${model}:${keyContent}:${JSON.stringify(files)}`;
     return crypto.createHash('sha256').update(content).digest('hex');
   }
 

@@ -1,5 +1,5 @@
 import { CostTracker } from './cost-tracker.js';
-import { LLMRequest } from './types.js';
+import { LLMRequest } from './llm-router.js';
 
 /**
  * Estimates the cost of LLM requests before they are sent.
@@ -26,13 +26,16 @@ export class CostEstimator {
      */
     public estimateRequestCost(request: LLMRequest, model: string): number {
         // 1. Estimate input tokens from all messages in the request.
-        const inputTokens = request.messages.reduce((acc, msg) => {
-            if (typeof msg.content === 'string') {
-                return acc + this.estimateTokens(msg.content);
+        let inputTokens = this.estimateTokens(request.prompt);
+
+        if (request.files) {
+            for (const file of request.files) {
+                inputTokens += this.estimateTokens(file.content);
             }
-            // Note: This doesn't account for complex message parts like images.
-            return acc;
-        }, 0);
+        }
+        if (request.images) {
+            inputTokens += request.images.length * 1000; // Rough estimate per image
+        }
 
         // 2. Estimate output tokens. This is highly speculative.
         // A simple heuristic is to assume the output will be a fraction of the input, e.g., 50%.

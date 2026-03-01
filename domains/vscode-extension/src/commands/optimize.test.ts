@@ -1,16 +1,26 @@
 import * as assert from 'assert';
 import { optimizeCommand } from './optimize.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 suite('Optimize Command Test Suite', () => {
     let testContext: CommandTestContext;
+    let askedPrompt: string | undefined;
 
     setup(() => {
         testContext = new CommandTestContext();
+        askedPrompt = undefined;
+        // Mock ChatPanel
+        ChatPanel.currentPanel = {
+            ask: async (prompt: string) => {
+                askedPrompt = prompt;
+            }
+        } as any;
     });
 
     teardown(() => {
         testContext.restore();
+        ChatPanel.currentPanel = undefined;
     });
 
     test('should optimize selected code', async () => {
@@ -21,13 +31,6 @@ suite('Optimize Command Test Suite', () => {
             fileName: '/test/file.ts'
         });
 
-        let capturedInstruction = '';
-        testContext.commandExecutor.refactor = async (code: string, file: string, instruction: string) => {
-            capturedInstruction = instruction;
-            return { success: true, output: 'fast code', model: 'test', costUSD: 0 };
-        };
-        testContext.commandExecutor.extractCode = () => 'fast code';
-
         await optimizeCommand(
             testContext.commandExecutor,
             testContext.contextProvider,
@@ -35,7 +38,9 @@ suite('Optimize Command Test Suite', () => {
             testContext.fileManager
         );
 
-        assert.ok(capturedInstruction.includes('Optimize this code'));
+        assert.ok(askedPrompt);
+        assert.ok(askedPrompt.includes('Optimize this code'));
+        assert.ok(askedPrompt.includes('slow code'));
     });
 
     test('should suggest optimizations if no selection', async () => {
@@ -66,6 +71,8 @@ suite('Optimize Command Test Suite', () => {
             testContext.outputLogger,
             testContext.fileManager
         );
-        // Verification implicit: if it runs without error and calls refactor (mocked in context), it passes.
+        
+        assert.ok(askedPrompt);
+        assert.ok(askedPrompt.includes('Optimize this specific issue: High complexity'));
     });
 });

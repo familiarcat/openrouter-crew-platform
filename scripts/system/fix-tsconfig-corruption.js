@@ -15,8 +15,12 @@ const ROOT_DIR = path.resolve(__dirname, '../..');
 const IGNORE_DIRS = ['node_modules', '.git', '.next', 'dist', 'build', '.turbo'];
 
 function stripJsonComments(json) {
-    // Simple regex to strip // and /* */ comments
-    return json.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => g ? "" : m);
+    // Match strings, comments, OR trailing commas
+    return json.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)|,\s*([}\]])/g, (m, g1, g2) => {
+        if (g1) return ""; // Comment
+        if (g2) return g2; // Trailing comma: return the closing brace/bracket
+        return m; // String
+    });
 }
 
 function findTsConfigs(dir, fileList = []) {
@@ -40,11 +44,7 @@ function findTsConfigs(dir, fileList = []) {
     return fileList;
 }
 
-console.log('🔍 Scanning for tsconfig.json files...');
-const configs = findTsConfigs(ROOT_DIR);
-console.log(`Found ${configs.length} configuration files.`);
-
-configs.forEach(configPath => {
+function fixConfig(configPath) {
     try {
         const rawContent = fs.readFileSync(configPath, 'utf8');
         const jsonContent = stripJsonComments(rawContent);
@@ -61,13 +61,24 @@ configs.forEach(configPath => {
         const relPath = path.relative(ROOT_DIR, configPath);
 
         // 1. Fix Module Resolution (The "Current Compiler Options" issue)
-        // Modern Next.js/Vite apps should use 'Bundler'. Pure Node scripts 'NodeNext'.
-        // Defaulting to Bundler as it's the most permissive for monorepos.
-        if (co.moduleResolution !== 'Bundler' && co.moduleResolution !== 'NodeNext') {
-            co.moduleResolution = 'Bundler';
-            co.module = 'ESNext';
-            modified = true;
-            console.log(`   [${relPath}] Updated moduleResolution to 'Bundler'`);
+        // Differentiate between Next.js projects and standard Node.js packages.
+        const projectDir = path.dirname(configPath);
+        const isNextProject = fs.existsSync(path.join(projectDir, 'next.config.js')) ||
+                              fs.existsSync(path.join(projectDir, 'next.config.mjs'));
+
+        if (isNextProject) {
+            if (co.moduleResolution !== 'Bundler') {
+                co.moduleResolution = 'Bundler';
+                co.module = 'ESNext'; // Next.js projects use ES Modules
+                modified = true;
+                console.log(`   [${relPath}] Updated moduleResolution to 'Bundler' for Next.js project`);
+            }
+        } else { // For Node.js libraries, CLI, and VSCode extension
+            if (co.moduleResolution !== 'Node' && co.moduleResolution !== 'NodeNext') {
+                co.moduleResolution = 'Node'; // Align with documented strategy
+                modified = true;
+                console.log(`   [${relPath}] Updated moduleResolution to 'Node' for Node.js project`);
+            }
         }
 
         // 2. Fix baseUrl Deprecation
@@ -96,4 +107,14 @@ configs.forEach(configPath => {
     } catch (e) {
         console.error(`❌ Error processing ${path.relative(ROOT_DIR, configPath)}: ${e.message}`);
     }
-});
+}
+
+if (require.main === module) {
+    console.log('🔍 Scanning for tsconfig.json files...');
+    const configs = findTsConfigs(ROOT_DIR);
+    console.log(`Found ${configs.length} configuration files.`);
+
+    configs.forEach(configPath => fixConfig(configPath));
+}
+
+module.exports = { stripJsonComments, findTsConfigs, fixConfig };

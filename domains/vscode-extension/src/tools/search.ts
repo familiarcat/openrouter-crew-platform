@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ToolDefinition } from './services/types.js';
+import { ToolDefinition } from '../services/types.js';
 
 export const searchTools: ToolDefinition[] = [
     {

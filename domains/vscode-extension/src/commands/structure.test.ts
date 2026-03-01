@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { structureCommand } from './structure.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
 
 suite('Structure Command Test Suite', () => {
     let testContext: CommandTestContext;

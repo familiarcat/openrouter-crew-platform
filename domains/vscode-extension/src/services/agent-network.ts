@@ -21,7 +21,12 @@ const MODEL_ID_MAP: Record<AgentProfile['model'], string> = {
     'gemini-1.5-pro': 'google/gemini-1.5-pro-latest'
 };
 
-const agentProfiles = require('../config/agent-profiles.json');
+let agentProfiles: any = {};
+try {
+    agentProfiles = require('../config/agent-profiles.json');
+} catch (e) {
+    // Profiles might not exist or be loaded yet
+}
 
 // Configuration for an Agent's persona and capabilities
 export interface AgentProfile {
@@ -38,10 +43,14 @@ export class AgentNetworkService {
     private toolRegistry: ToolRegistry;
 
     constructor(private costTracker: CostTracker, private llmRouter: LLMRouter) {
-        // Connect to your local Supabase instance for shared memory
+        // Connect to Supabase using VSCode configuration
+        const config = vscode.workspace.getConfiguration('openrouterCrew');
+        const supabaseUrl = config.get<string>('supabaseUrl') || process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
+        const supabaseKey = config.get<string>('supabaseKey') || process.env.SUPABASE_SERVICE_KEY || 'placeholder-key';
+
         this.supabase = createClient(
-            process.env.SUPABASE_URL || 'http://127.0.0.1:54321',
-            process.env.SUPABASE_SERVICE_KEY || 'placeholder-key'
+            supabaseUrl,
+            supabaseKey
         );
         this.fileManager = new FileManager();
         this.toolRegistry = new ToolRegistry(this.fileManager, this.costTracker, this);
@@ -124,7 +133,7 @@ export class CrewAgent {
      * Main execution loop for the agent.
      * It decides whether to delegate or perform the work directly.
      */
-    public async executeTask(task: string, context?: any, signal?: AbortSignal, onProgress?: (message: string) => void): Promise<AgentExecutionResult> {
+    public async executeTask(task: string, execContext?: any, signal?: AbortSignal, onProgress?: (message: string) => void): Promise<AgentExecutionResult> {
         const config = vscode.workspace.getConfiguration('openrouterCrew');
         const apiKey = config.get<string>('apiKey');
         if (!apiKey) throw new Error(`[${this.profile.name}] Error: API Key missing.`);
@@ -165,9 +174,10 @@ Answer with only "yes" or "no".
         let shouldDelegate = false;
         try {
             const response = await this.llmRouter.route({
-                messages: [{ role: 'user', content: decisionPrompt }],
-                hint: 'speed'
-            }, signal);
+                prompt: decisionPrompt,
+                intent: 'ASK',
+                complexity: 'LOW'
+            });
             const decision = response.content?.toLowerCase().trim().replace(/[^a-z]/g, '');
 
             if (decision === 'yes') {
@@ -182,7 +192,7 @@ Answer with only "yes" or "no".
         }
 
         // 3. Act - Perform the task using tools or direct generation
-        return this.performWork(task, apiKey, memoryContext, signal, onProgress);
+        return this.performWork(task, apiKey, memoryContext, signal, onProgress, execContext);
     }
 
     private async delegateToSubTeam(task: string, apiKey: string, signal?: AbortSignal, onProgress?: (message: string) => void): Promise<AgentExecutionResult> {
@@ -205,9 +215,10 @@ Answer with only "yes" or "no".
 
         try {
             const response = await this.llmRouter.route({
-                messages: [{ role: 'user', content: delegationPrompt }],
-                hint: 'quality'
-            }, signal);
+                prompt: delegationPrompt,
+                intent: 'ASK',
+                complexity: 'MEDIUM'
+            });
             const content = response.content;
             
             if (!content) throw new Error("No response from delegation request");
@@ -259,7 +270,7 @@ Answer with only "yes" or "no".
         }
     }
 
-    private async performWork(task: string, apiKey: string, memoryContext: string = '', signal?: AbortSignal, onProgress?: (message: string) => void): Promise<AgentExecutionResult> {
+    private async performWork(task: string, apiKey: string, memoryContext: string = '', signal?: AbortSignal, onProgress?: (message: string) => void, execContext?: any): Promise<AgentExecutionResult> {
         const startTime = Date.now();
         const tools = this.toolRegistry.getToolDefinitions();
         
@@ -286,24 +297,38 @@ Answer with only "yes" or "no".
         let iterations = 0;
         const maxIterations = 15; // Safety limit to prevent infinite loops
 
+        // Extract intent/complexity from context if available (passed from CommandExecutor)
+        const intent = execContext?.intent || 'ASK';
+        const complexity = execContext?.complexity || 'MEDIUM';
+        const canonicalForm = execContext?.canonicalForm;
+
         while (iterations < maxIterations) {
             if (signal?.aborted) throw new Error('Aborted');
 
             try {
+                // Convert messages history to a prompt string for the router
+                const promptString = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
+
                 const response = await this.llmRouter.route({
-                    messages,
-                    tools,
-                    hint: 'code'
-                }, signal);
+                    prompt: promptString,
+                    intent,
+                    complexity,
+                    // Note: Tools are not explicitly in LLMRequest interface but may be handled by specific providers
+                    // or we might need to extend LLMRequest to support tools if the router supports it.
+                    // For now, we assume the router handles the prompt and returns content.
+                } as any); // Cast to any to pass tools if the underlying implementation supports it, otherwise tools are lost
 
                 if (!response.content && (!response.tool_calls || response.tool_calls.length === 0)) break;
 
                 // Add assistant's thought/tool-call to history
-                messages.push({ role: 'assistant', content: response.content, tool_calls: response.tool_calls });
+                // Note: LLMResponse doesn't explicitly have tool_calls in the interface provided, 
+                // but we check for it in case the implementation returns it.
+                const responseWithTools = response as any;
+                messages.push({ role: 'assistant', content: response.content, tool_calls: responseWithTools.tool_calls });
 
                 // If there are tool calls, execute them and loop again
-                if (response.tool_calls && response.tool_calls.length > 0) {
-                    for (const toolCall of response.tool_calls) {
+                if (responseWithTools.tool_calls && responseWithTools.tool_calls.length > 0) {
+                    for (const toolCall of responseWithTools.tool_calls) {
                         const args = JSON.parse(toolCall.function.arguments);
                         console.log(`[${this.profile.name}] Executing: ${toolCall.function.name}`, args);
                         
@@ -326,7 +351,12 @@ Answer with only "yes" or "no".
                 } else {
                     // No tool calls means the agent is done
                     const finalContent = response.content || `[${this.profile.name}] Task completed.`;
-                    const totalCost = this.costTracker.estimateCost(response.usage.prompt_tokens, response.usage.completion_tokens, response.model);
+                    // LLMResponse has costUSD directly
+                    const totalCost = response.costUSD;
+
+                    if (canonicalForm) {
+                        await this.network.broadcastInsight(canonicalForm, this.profile.name);
+                    }
                     
                     return {
                         output: finalContent,

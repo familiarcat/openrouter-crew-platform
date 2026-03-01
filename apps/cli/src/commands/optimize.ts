@@ -2,8 +2,9 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { costOptimizer, OptimizationSuggestion } from '@openrouter-crew/shared-cost-tracking';
 import { UsageTracker } from '@openrouter-crew/shared-cost-tracking';
-import { configService } from '../services/config-service';
-import { historyService } from '../services/history-service';
+import { LLMUsageEvent } from '@openrouter-crew/shared-schemas';
+import { configService } from './config-service.js';
+import { historyService } from './history-service.js';
 
 // Mock tracker for now, in a real scenario this would connect to Supabase
 // or fetch from an API endpoint
@@ -29,7 +30,7 @@ optimizeCommand
       let events = await tracker.fetchEvents(1000);
 
       if (options.project) {
-        events = events.filter(e => e.project_id === options.project);
+        events = events.filter((e: LLMUsageEvent) => e.project_id === options.project);
       }
 
       // Filter by date if needed (assuming events have timestamps)
@@ -38,11 +39,11 @@ optimizeCommand
         if (isNaN(cutoff.getTime())) {
           throw new Error('Invalid date format for --since. Please use YYYY-MM-DD.');
         }
-        events = events.filter(e => new Date(e.created_at) >= cutoff);
+        events = events.filter((e: LLMUsageEvent) => new Date(e.created_at) >= cutoff);
       } else if (options.days) {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - parseInt(options.days));
-        events = events.filter(e => new Date(e.created_at) >= cutoff);
+        events = events.filter((e: LLMUsageEvent) => new Date(e.created_at) >= cutoff);
       }
 
       if (events.length === 0) {
@@ -59,7 +60,7 @@ optimizeCommand
 
       console.log(chalk.green(`\nFound ${suggestions.length} optimization opportunities:\n`));
 
-      suggestions.forEach((suggestion, index) => {
+      suggestions.forEach((suggestion: OptimizationSuggestion, index: number) => {
         const impactColor = suggestion.impact === 'high' ? chalk.red :
                            suggestion.impact === 'medium' ? chalk.yellow : chalk.blue;
 
@@ -110,7 +111,7 @@ optimizeCommand
       // Re-run analysis to find the suggestion details
       const events = await tracker.fetchEvents(1000);
       const suggestions = await costOptimizer.analyzeUsage(events);
-      const suggestion = suggestions.find(s => s.id === suggestionId);
+      const suggestion = suggestions.find((s: OptimizationSuggestion) => s.id === suggestionId);
 
       if (!suggestion) {
         console.error(chalk.red(`\n❌ Optimization suggestion with ID '${suggestionId}' not found.`));
@@ -159,7 +160,7 @@ optimizeCommand
       // Re-run analysis to find the suggestion. In a real app, this might be cached or fetched.
       const events = await tracker.fetchEvents(1000);
       const suggestions = await costOptimizer.analyzeUsage(events);
-      const suggestion = suggestions.find(s => s.id === suggestionId);
+      const suggestion = suggestions.find((s: OptimizationSuggestion) => s.id === suggestionId);
 
       if (!suggestion) {
         console.error(chalk.red(`\n❌ Optimization suggestion with ID '${suggestionId}' not found.`));

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { TextDecoder, TextEncoder } from 'util';
-import { ToolDefinition } from './types.js';
-import { execAsync } from './exec.js';
+import { ToolDefinition } from '../services/types.js';
+import { execAsync } from '../services/exec.js';
 
 export const analysisTools: ToolDefinition[] = [
     {

@@ -3,6 +3,7 @@ import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
 import { FileManager } from '../services/file-manager.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 export async function optimizeCommand(
     commandExecutor: CommandExecutor,
@@ -65,58 +66,20 @@ export async function optimizeCommand(
         }
     }
 
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'Optimizing code...',
-        cancellable: false
-    }, async () => {
-        try {
-            const result = await commandExecutor.refactor(
-                codeToAnalyze,
-                filePath,
-                instruction
-            );
+    // Construct the prompt to be sent to the Chat Panel
+    const prompt = `${instruction}
 
-            if (!result.success) {
-                throw new Error(result.output);
-            }
+Code to optimize:
+\`\`\`${context.languageId}
+${codeToAnalyze}
+\`\`\`
+`;
 
-            // Extract code from the result to make it apply-able
-            const optimizedCode = commandExecutor.extractCode(result.output, true);
-
-            const logData: any = {
-                title: 'Code Optimization',
-                model: result.model,
-                cost: result.costUSD,
-                content: result.output,
-                contextCode: {
-                    language: context.languageId,
-                    code: codeToAnalyze
-                }
-            };
-
-            if (optimizedCode) {
-                // If no selection was made, we optimized the whole file, so we should replace the whole file
-                let rangeToReplace = context.selectionRange;
-                if (!context.selectedCode) {
-                    const lastLine = editor.document.lineAt(editor.document.lineCount - 1);
-                    rangeToReplace = new vscode.Range(0, 0, lastLine.lineNumber, lastLine.range.end.character);
-                }
-
-                await editor.edit(editBuilder => {
-                    editBuilder.replace(rangeToReplace, optimizedCode);
-                });
-
-                logData.applyCommand = {
-                    command: 'openrouter-crew.applyRefactoring',
-                    args: [optimizedCode, rangeToReplace]
-                };
-            } else {
-                vscode.window.showWarningMessage('No code block found in optimization response.');
-            }
-            outputLogger.logExchange(logData);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Optimization failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    });
+    // Ensure Chat Panel is open and send the request
+    await vscode.commands.executeCommand('openrouter-crew.chat');
+    if (ChatPanel.currentPanel) {
+        ChatPanel.currentPanel.ask(prompt);
+    } else {
+        vscode.window.showErrorMessage('Failed to open Chat Panel.');
+    }
 }

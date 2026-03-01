@@ -11,6 +11,8 @@ import { FileManager } from './services/file-manager';
 import { AgentNetworkService } from './services/agent-network';
 import { CostEstimator } from './services/cost-estimator';
 import { ResponseCache } from './services/cache';
+import { CommandExecutor } from './commands/command-executor';
+import { TerminalManager } from './services/terminal-manager';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -20,12 +22,15 @@ export function activate(context: vscode.ExtensionContext) {
     const costTracker = new CostTracker(context);
     const responseCache = new ResponseCache(context);
     const costEstimator = new CostEstimator(costTracker);
-    const llmRouter = new LLMRouter(costTracker, costEstimator, responseCache);
+    const llmRouter = new LLMRouter(costTracker, responseCache);
     const fileManager = new FileManager();
-    const nlpProcessor = new NLPProcessor();
+    const nlpProcessor = new NLPProcessor(llmRouter);
     const contextBuilder = new ContextBuilder(fileManager);
     const agentNetwork = new AgentNetworkService(costTracker, llmRouter);
     const toolRegistry = new ToolRegistry(fileManager, costTracker, agentNetwork);
+    const terminalManager = new TerminalManager();
+    const outputChannel = vscode.window.createOutputChannel('OpenRouter Crew');
+    const commandExecutor = new CommandExecutor(agentNetwork, toolRegistry, terminalManager, outputChannel, llmRouter, nlpProcessor);
     
     toolRegistry.initialize();
 
@@ -39,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
             async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
                 // The state is persisted by VS Code, but we are using globalState for history.
                 // `revive` will handle loading the history from globalState.
-                ChatPanel.revive(webviewPanel, context.extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, context);
+                ChatPanel.revive(webviewPanel, context.extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, commandExecutor, context);
             }
         })
     );
@@ -53,6 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
             nlpProcessor, 
             contextBuilder, 
             toolRegistry, 
+            commandExecutor,
             context
         );
     });

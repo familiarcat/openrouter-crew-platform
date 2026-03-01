@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 export async function debugCommand(
     commandExecutor: CommandExecutor,
@@ -68,34 +69,19 @@ export async function debugCommand(
         }
     }
 
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: 'Debugging code...',
-        cancellable: false
-    }, async () => {
-        try {
-            // We pass a general instruction as the "error" since we are doing a proactive debug analysis
-            const result = await commandExecutor.debug(
-                errorDescription,
-                { code: codeToAnalyze, file: filePath }
-            );
+    const prompt = `${errorDescription}
 
-            if (!result.success) {
-                throw new Error(result.output);
-            }
+Code Context:
+\`\`\`${context.languageId}
+${codeToAnalyze}
+\`\`\`
+`;
 
-            outputLogger.logExchange({
-                title: `Debug Analysis (${context.languageId})`,
-                model: result.model,
-                cost: result.costUSD,
-                content: result.output,
-                contextCode: {
-                    language: context.languageId,
-                    code: codeToAnalyze
-                }
-            });
-        } catch (error) {
-            vscode.window.showErrorMessage(`Debug analysis failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    });
+    await vscode.commands.executeCommand('openrouter-crew.chat');
+    
+    if (ChatPanel.currentPanel) {
+        ChatPanel.currentPanel.ask(prompt);
+    } else {
+        vscode.window.showErrorMessage('Failed to open Chat Panel.');
+    }
 }

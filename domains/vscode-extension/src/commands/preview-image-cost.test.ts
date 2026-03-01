@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { previewImageCostCommand } from './preview-image-cost.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
 
 suite('Preview Image Cost Command Test Suite', () => {
     let testContext: CommandTestContext;

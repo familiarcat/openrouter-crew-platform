@@ -58,3 +58,5 @@ export interface OptimizationResult {
   savingsPercent: number;
   reasoning: string;
 }
+
+export type HistoryEntry = UsageEvent;

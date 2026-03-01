@@ -18,13 +18,16 @@
     "useDefineForClassFields": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "composite": true,
     "incremental": true,
+    "baseUrl": ".",
     "paths": {
       "@crew/*": [
         "domains/shared/crew-api-client/src/*"
@@ -50,7 +53,7 @@
       "@dashboard/*": [
         "apps/unified-dashboard/*"
       ]
-    },
+    }
   },
   "exclude": [
     "node_modules",

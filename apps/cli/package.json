@@ -15,17 +15,19 @@
   },
   "dependencies": {
     "@openrouter-crew/crew-api-client": "workspace:*",
+    "@openrouter-crew/shared-cost-tracking": "workspace:*",
+    "@openrouter-crew/shared-crew-coordination": "workspace:*",
+    "@openrouter-crew/shared-schemas": "workspace:*",
     "@supabase/supabase-js": "^2.38.0",
     "axios": "^1.6.5",
     "chalk": "^4.1.2",
-    "commander": "^11.1.0",
+    "commander": "^12.0.0",
     "dotenv": "^16.3.1",
-    "table": "^6.8.1",
-    "@openrouter-crew/shared-crew-coordination": "workspace:*",
-    "@openrouter-crew/shared-cost-tracking": "workspace:*",
-    "@openrouter-crew/shared-schemas": "workspace:*"
+    "inquirer": "^9.3.8",
+    "table": "^6.8.1"
   },
   "devDependencies": {
+    "@types/inquirer": "^9.0.9",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.2",
     "@typescript-eslint/parser": "^6.13.2",

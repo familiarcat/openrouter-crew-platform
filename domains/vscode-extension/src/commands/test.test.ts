@@ -1,16 +1,26 @@
 import * as assert from 'assert';
 import { testCommand } from './test.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 suite('Test Generation Command Test Suite', () => {
     let testContext: CommandTestContext;
+    let askedPrompt: string | undefined;
 
     setup(() => {
         testContext = new CommandTestContext();
+        askedPrompt = undefined;
+        // Mock ChatPanel
+        ChatPanel.currentPanel = {
+            ask: async (prompt: string) => {
+                askedPrompt = prompt;
+            }
+        } as any;
     });
 
     teardown(() => {
         testContext.restore();
+        ChatPanel.currentPanel = undefined;
     });
 
     test('should generate tests for selected code', async () => {
@@ -20,12 +30,6 @@ suite('Test Generation Command Test Suite', () => {
             fileName: '/test/file.ts'
         });
 
-        let capturedCode = '';
-        testContext.commandExecutor.generateTests = async (code: string) => {
-            capturedCode = code;
-            return { success: true, output: 'tests', model: 'test', costUSD: 0 };
-        };
-
         await testCommand(
             testContext.commandExecutor,
             testContext.contextProvider,
@@ -33,6 +37,8 @@ suite('Test Generation Command Test Suite', () => {
             testContext.fileManager
         );
 
-        assert.strictEqual(capturedCode, 'function add(a,b) { return a+b; }');
+        assert.ok(askedPrompt);
+        assert.ok(askedPrompt.includes('function add(a,b) { return a+b; }'));
+        assert.ok(askedPrompt.includes('Generate comprehensive unit tests'));
     });
 });

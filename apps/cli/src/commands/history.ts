@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { historyService } from '../services/history-service';
-import { formatTable } from '../lib/formatters';
+import { historyService } from './history-service.js';
+import { formatTable } from '../lib/formatters.js';
 
 export const historyCommand = new Command('history')
   .description('View historical logs for platform activities');

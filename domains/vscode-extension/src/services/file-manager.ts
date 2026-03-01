@@ -259,16 +259,46 @@ export class FileManager {
     const imports: string[] = [];
 
     if (language === 'javascript' || language === 'typescript') {
-      const importPattern = /^import\s+.*?\s+from\s+['"]([^'"]+)['"]/gm;
-      let match;
-      while ((match = importPattern.exec(content)) !== null) {
-        imports.push(match[1]);
-      }
+      const sourceFile = ts.createSourceFile(
+        'temp.ts',
+        content,
+        ts.ScriptTarget.Latest,
+        true
+      );
 
-      const requirePattern = /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-      while ((match = requirePattern.exec(content)) !== null) {
-        imports.push(match[1]);
-      }
+      const visit = (node: ts.Node) => {
+        if (ts.isImportDeclaration(node)) {
+          if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+            imports.push(node.moduleSpecifier.text);
+          }
+        } else if (ts.isCallExpression(node)) {
+          // Handle require('module')
+          if (
+            ts.isIdentifier(node.expression) &&
+            node.expression.text === 'require' &&
+            node.arguments.length > 0 &&
+            ts.isStringLiteral(node.arguments[0])
+          ) {
+            imports.push((node.arguments[0] as ts.StringLiteral).text);
+          }
+          // Handle dynamic import('module')
+          else if (
+            node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+            node.arguments.length > 0 &&
+            ts.isStringLiteral(node.arguments[0])
+          ) {
+            imports.push((node.arguments[0] as ts.StringLiteral).text);
+          }
+        } else if (ts.isExportDeclaration(node)) {
+          // Handle export ... from 'module'
+          if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+            imports.push(node.moduleSpecifier.text);
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+
+      visit(sourceFile);
     } else if (language === 'python') {
       const importPattern = /^import\s+(\S+)|^from\s+(\S+)\s+import/gm;
       let match;
@@ -287,17 +317,47 @@ export class FileManager {
     const exports: string[] = [];
 
     if (language === 'javascript' || language === 'typescript') {
-      const exportPattern = /^export\s+(function|class|const|let|var)\s+(\w+)/gm;
-      let match;
-      while ((match = exportPattern.exec(content)) !== null) {
-        exports.push(match[2]);
-      }
+      const sourceFile = ts.createSourceFile(
+        'temp.ts',
+        content,
+        ts.ScriptTarget.Latest,
+        true
+      );
 
-      const namedExportPattern = /export\s*{\s*([^}]+)\s*}/;
-      const namedMatch = content.match(namedExportPattern);
-      if (namedMatch) {
-        exports.push(...namedMatch[1].split(',').map(s => s.trim()));
-      }
+      const visit = (node: ts.Node) => {
+        if (ts.isExportDeclaration(node)) {
+          if (node.exportClause && ts.isNamedExports(node.exportClause)) {
+            node.exportClause.elements.forEach(e => exports.push(e.name.text));
+          }
+        } else if (ts.isExportAssignment(node)) {
+          exports.push('default');
+        } else if (
+          (ts.isFunctionDeclaration(node) ||
+            ts.isClassDeclaration(node) ||
+            ts.isInterfaceDeclaration(node) ||
+            ts.isTypeAliasDeclaration(node) ||
+            ts.isEnumDeclaration(node) ||
+            ts.isVariableStatement(node)) &&
+          node.modifiers &&
+          node.modifiers.some(m => m.kind === ts.SyntaxKind.ExportKeyword)
+        ) {
+          const isDefault = node.modifiers.some(m => m.kind === ts.SyntaxKind.DefaultKeyword);
+          if (isDefault) {
+            exports.push('default');
+          } else if (ts.isVariableStatement(node)) {
+            node.declarationList.declarations.forEach(d => {
+              if (ts.isIdentifier(d.name)) {
+                exports.push(d.name.text);
+              }
+            });
+          } else if ((node as any).name && ts.isIdentifier((node as any).name)) {
+            exports.push((node as any).name.text);
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+
+      visit(sourceFile);
     }
 
     return exports;
@@ -572,8 +632,8 @@ Return ONLY the refactored code. Do not include any explanations or markdown for
   /**
    * Generate module dependency graph
    */
-  generateDependencyGraph(files: Array<{ path: string; content: string }>): string {
-    const analysis = this.analyzeMultipleFiles(files);
+  async generateDependencyGraph(files: Array<{ path: string; content: string }>): Promise<string> {
+    const analysis = await this.analyzeMultipleFiles(files);
     let graph = 'Module Dependencies:\n';
 
     for (const [file, deps] of analysis.crossFileDependencies.entries()) {

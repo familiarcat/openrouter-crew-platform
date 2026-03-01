@@ -2,106 +2,120 @@ import * as vscode from 'vscode';
 import { AgentNetworkService } from '../services/agent-network.js';
 import { ToolRegistry } from '../services/tool-registry.js';
 import { TerminalManager } from '../services/terminal-manager.js';
-import { AgentExecutionResult } from '../services/types.js';
-import { LLMRouter } from '../services/llm-router.js';
+import { LLMRouter, LLMResponse } from '../services/llm-router.js';
+import { NLPProcessor } from '../services/nlp-processor.js';
+import { OCREngine } from '../services/ocr-engine.js';
 
-/**
- * Orchestrates commands between the VSCode UI and the Agent Network.
- */
+export interface CommandResult {
+    success: boolean;
+    output: string;
+    model: string;
+    costUSD: number;
+}
+
 export class CommandExecutor {
+    private ocrEngine: OCREngine;
+
     constructor(
-        private network: AgentNetworkService,
+        private agentNetwork: AgentNetworkService,
         private toolRegistry: ToolRegistry,
-        private terminal: TerminalManager,
+        private terminalManager: TerminalManager,
         private outputChannel: vscode.OutputChannel,
-        private llmRouter: LLMRouter
-    ) {}
-
-    /**
-     * Execute a task using the Agent Network.
-     * @param task The natural language task description.
-     * @param context Additional context (selected code, file path, etc.)
-     */
-    public async executeTask(task: string, context?: any, signal?: AbortSignal, onProgress?: (message: string) => void): Promise<AgentExecutionResult> {
-        this.outputChannel.show(true);
-        this.outputChannel.appendLine(`\n>>> User Task: ${task}`);
-
-        try {
-            // 1. Identify the best department/agent for the job
-            // For now, we default to the 'Lead' or 'Tech Lead' equivalent, 
-            // or a specific agent if the task implies it.
-            const agentName = await this.determineAgent(task);
-            const agent = this.network.getDepartment(agentName);
-
-            this.outputChannel.appendLine(`>>> Assigning to Agent: ${agent.profile.name} (${agent.profile.role})`);
-
-            // 2. Execute the task
-            const result = await agent.executeTask(task, context, signal, onProgress);
-
-            this.outputChannel.appendLine(`\n>>> Result from ${result.model} (Cost: $${result.cost.toFixed(6)}):\n${result.output}`);
-            return result;
-        } catch (error: any) {
-            this.outputChannel.appendLine(`\n>>> Error: ${error.message}`);
-            vscode.window.showErrorMessage(`Agent execution failed: ${error.message}`);
-            throw error; // Re-throw for the caller (ChatPanel) to handle
-        }
-    }
-
-    private async determineAgent(task: string): Promise<string> {
-        const lowerTask = task.toLowerCase();
-
-        // 1. Fast Heuristics
-        if (lowerTask.includes('test') || lowerTask.includes('coverage')) return 'qa';
-        if (lowerTask.includes('deploy') || lowerTask.includes('docker') || lowerTask.includes('pipeline')) return 'devops';
-        if (lowerTask.includes('security') || lowerTask.includes('audit')) return 'security';
-        if (lowerTask.includes('design') || lowerTask.includes('css') || lowerTask.includes('ui')) return 'design';
-        if (lowerTask.includes('sql') || lowerTask.includes('database')) return 'data';
-
-        // 2. LLM-based routing for ambiguous tasks
-        try {
-            const response = await this.llmRouter.route({
-                messages: [{
-                    role: 'system',
-                    content: `Classify the following task into one of these agent roles: lead, qa, devops, security, design, product, data.
-                    Task: "${task}"
-                    Return ONLY the role name (e.g., "lead").`
-                }],
-                hint: 'speed'
-            });
-            
-            const role = response.content?.trim().toLowerCase();
-            if (role && ['lead', 'qa', 'devops', 'security', 'design', 'product', 'data'].includes(role)) {
-                return role;
-            }
-        } catch (e) {
-            // Fallback to lead if routing fails
-        }
-
-        return 'lead';
+        private llmRouter: LLMRouter,
+        private nlpProcessor: NLPProcessor
+    ) {
+        this.ocrEngine = new OCREngine();
     }
 
     /**
-     * Perform a code review on the specified code.
+     * Analyzes the complexity of a code snippet.
      */
-    public async review(code: string, filePath: string, targetName?: string): Promise<AgentExecutionResult> {
-        const contextDescription = targetName ? `function/class '${targetName}'` : 'the selected code';
-        const task = `Perform a comprehensive code review of ${contextDescription} in '${filePath}'.
+    async analyzeComplexity(code: string, filePath: string): Promise<CommandResult> {
+        const prompt = `Analyze the cyclomatic complexity and maintainability of the following code from ${filePath}:\n\n\`\`\`\n${code}\n\`\`\``;
+        const response = await this.llmRouter.route({
+            prompt,
+            intent: 'REVIEW',
+            complexity: 'HIGH'
+        });
         
-        Check for:
-        1. Logic errors and bugs
-        2. Security vulnerabilities
-        3. Performance issues
-        4. Code style and best practices
-        5. TypeScript/typing issues (if applicable)
+        return {
+            success: true,
+            output: response.content,
+            model: response.model,
+            costUSD: response.costUSD
+        };
+    }
 
-        Provide specific, actionable feedback and code snippets for improvements.
+    /**
+     * Processes an image using OCR.
+     */
+    async processImage(base64Image: string): Promise<any> {
+        return this.ocrEngine.processImage(base64Image);
+    }
 
-        Code to review:
-        \`\`\`
-        ${code}
-        \`\`\`
-        `;
+    /**
+     * Estimates the cost of processing an image.
+     */
+    async estimateImageCost(base64Image: string): Promise<{ cost: number; model: string; inputTokens: number; outputTokens: number; complexity: string }> {
+        // Rough estimate: ~0.004 USD per image for high-res analysis
+        return {
+            cost: 0.004,
+            model: 'gpt-4o',
+            inputTokens: 1000,
+            outputTokens: 500,
+            complexity: 'MEDIUM'
+        };
+    }
 
-        return this.executeTask(task);
+    /**
+     * Explains a terminal command or error.
+     */
+    async explainTerminal(input: string): Promise<CommandResult> {
+        const prompt = `Explain the following terminal command or error:\n\n${input}`;
+        const response = await this.llmRouter.route({
+            prompt,
+            intent: 'EXPLAIN',
+            complexity: 'MEDIUM'
+        });
+        return {
+            success: true,
+            output: response.content,
+            model: response.model,
+            costUSD: response.costUSD
+        };
+    }
+
+    /**
+     * Analyzes project structure.
+     */
+    async structure(focus?: string): Promise<LLMResponse> {
+        const files = await vscode.workspace.findFiles('**/*', '**/node_modules/**');
+        const fileList = files.map(f => vscode.workspace.asRelativePath(f)).join('\n');
+        
+        const prompt = `Analyze the project structure based on this file list. Focus: ${focus || 'General Architecture'}\n\n${fileList}`;
+        
+        return this.llmRouter.route({
+            prompt,
+            intent: 'EXPLAIN',
+            complexity: 'HIGH'
+        });
+    }
+
+    /**
+     * Executes a generic task using the agent network.
+     */
+    async executeTask(task: string, context?: any): Promise<{ output: string; model: string; cost: number; executionTimeMs: number; success: boolean }> {
+        const agent = this.agentNetwork.getDepartment('engineering');
+        
+        if (!context?.intent) {
+            const detection = await this.nlpProcessor.detectIntent(task);
+            context = { ...context, ...detection };
+        }
+        
+        const result = await agent.executeTask(task, context);
+        return {
+            ...result,
+            success: true // Agents throw on failure, so return is success
+        };
     }
 }

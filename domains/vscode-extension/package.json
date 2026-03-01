@@ -1,5 +1,5 @@
 {
-  "name": "openrouter-crew-vscode",
+  "name": "@openrouter-crew/vscode-extension",
   "displayName": "OpenRouter Crew AI",
   "description": "Cost-optimized AI coding assistant using OpenRouter",
   "version": "0.1.0",
@@ -38,6 +38,10 @@
         {
           "id": "openrouter-crew.cost-report",
           "name": "Cost & Budget"
+        },
+        {
+          "id": "openrouter-crew.memory-view",
+          "name": "Memories"
         }
       ]
     },
@@ -194,12 +198,12 @@
         },
         "openrouterCrew.budget.monthly": {
           "type": "number",
-          "default": 10.0,
+          "default": 10,
           "description": "Monthly budget limit in USD"
         },
         "openrouterCrew.budget.daily": {
           "type": "number",
-          "default": 1.0,
+          "default": 1,
           "description": "Daily budget limit in USD. The cost meter will track usage against this limit."
         }
       }
@@ -249,16 +253,20 @@
   },
   "dependencies": {
     "@openrouter-crew/crew-api-client": "workspace:*",
+    "@openrouter-crew/shared-cost-tracking": "workspace:^",
+    "@openrouter-crew/shared-crew-coordination": "workspace:^",
+    "@openrouter-crew/shared-schemas": "workspace:^",
     "@supabase/supabase-js": "^2.39.0",
-    "tesseract.js": "^5.0.0"
+    "tesseract.js": "^5.0.0",
+    "typescript": "^5.3.3",
+    "web-tree-sitter": "^0.20.8"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
+    "@types/mocha": "^10.0.6",
     "@types/node": "20.x",
-    "typescript": "^5.3.3",
+    "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^2.24.0",
-    "@types/mocha": "^10.0.6",
     "glob": "^10.3.10",
     "mocha": "^10.2.0"
   }

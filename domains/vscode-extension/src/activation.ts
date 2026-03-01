@@ -7,8 +7,6 @@ import { ResponseCache } from './services/cache.js';
 import { CostMeter } from './ui/cost-meter.js';
 import { reviewCommand } from './commands/review.js';
 import { explainCommand } from './commands/explain.js';
-import { CostReportView } from './ui/cost-report-view.js';
-import { showCostReportCommand } from './commands/show-cost-report.js';
 import { exportCostReportJsonCommand } from './commands/export-cost-report-json.js';
 import { generateCommand } from './commands/generate.js';
 import { refactorCommand } from './commands/refactor.js';
@@ -48,40 +46,71 @@ import { CommandExecutor } from './commands/command-executor.js';
 import { AgentNetworkService } from './services/agent-network.js';
 import { ToolRegistry } from './services/tool-registry.js';
 import { findRelatedFilesCommand } from './commands/find-related-files.js';
+import { TelemetryService } from './services/telemetry.js';
+import { WelcomePanel } from './ui/welcome-panel.js';
+import { CrewCodeActionProvider } from './providers/code-action.js';
+import { CostReportPanel } from './ui/cost-report-panel.js';
+import { MemoryBrowser } from './ui/memory-browser.js';
+
+function registerCommandWithTelemetry(
+    context: vscode.ExtensionContext,
+    telemetryService: TelemetryService,
+    commandId: string,
+    callback: (...args: any[]) => any
+) {
+    const disposable = vscode.commands.registerCommand(commandId, async (...args: any[]) => {
+        await telemetryService.sendCommandEvent(commandId);
+        try {
+            return await Promise.resolve(callback(...args));
+        } catch (error) {
+            if (error instanceof Error) {
+                await telemetryService.sendError(error, `Command: ${commandId}`);
+            }
+            throw error;
+        }
+    });
+    context.subscriptions.push(disposable);
+}
 
 export async function activateExtension(context: vscode.ExtensionContext): Promise<void> {
     // Initialize Core Services
     const costTracker = new CostTracker(context);
     const responseCache = new ResponseCache(context);
     const costEstimator = new CostEstimator(costTracker);
-    const llmRouter = new LLMRouter(costTracker, costEstimator, responseCache);
+    const llmRouter = new LLMRouter(costTracker, responseCache);
     const fileManager = new FileManager();
     const terminalManager = new TerminalManager();
-    const nlpProcessor = new NLPProcessor();
+    const nlpProcessor = new NLPProcessor(llmRouter);
     const contextBuilder = new ContextBuilder(fileManager);
     const contextProvider = new ContextProvider();
     const outputLogger = new VSCodeOutputLogger();
     const outputChannel = vscode.window.createOutputChannel('OpenRouter Crew CLI');
     const cliExecutor = new CLIExecutor(outputChannel);
     const crewAPIService = new CrewAPIService(outputChannel);
+    const telemetryService = new TelemetryService(context);
 
     // Initialize Agent Network & Tools
     const agentNetwork = new AgentNetworkService(costTracker, llmRouter);
     const toolRegistry = new ToolRegistry(fileManager, costTracker, agentNetwork);
     await toolRegistry.initialize();
-    const commandExecutor = new CommandExecutor(agentNetwork, toolRegistry, terminalManager, outputChannel, llmRouter);
+    const commandExecutor = new CommandExecutor(agentNetwork, toolRegistry, terminalManager, outputChannel, llmRouter, nlpProcessor);
 
     // Initialize UI Providers & Managers
     const costMeter = new CostMeter(costTracker);
-    const costReportView = new CostReportView(context, costTracker);
     const structureView = new StructureView(context);
     const historyView = new HistoryView(context, costTracker);
     const diagnosticsProvider = new DiagnosticsProvider(fileManager);
     const codeLensProvider = new CrewCodeLensProvider(fileManager);
+    const codeActionProvider = new CrewCodeActionProvider();
 
     // Initialize Tree Views
     // This registers 'openrouter-crew.project-view', 'openrouter-crew.crew-view', etc.
     const { crewProvider } = registerTreeViews(context, agentNetwork, costTracker);
+
+    // Initialize Memory Browser
+    const memoryBrowser = new MemoryBrowser(crewAPIService);
+    vscode.window.registerTreeDataProvider('openrouter-crew.memory-view', memoryBrowser);
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory-view.refresh', () => memoryBrowser.refresh());
 
     // Register Disposables
     context.subscriptions.push(costTracker);
@@ -108,151 +137,108 @@ export async function activateExtension(context: vscode.ExtensionContext): Promi
         vscode.languages.registerCodeLensProvider(['javascript', 'typescript', 'python', 'java', 'csharp', 'go', 'rust'], codeLensProvider)
     );
 
-    // Register Chat Panel Command (replaces sidebar focus)
+    // Register Code Action Provider
     context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.chat', () => {
-            ChatPanel.createOrShow(context.extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, context);
-        })
+        vscode.languages.registerCodeActionsProvider(['javascript', 'typescript', 'python', 'java', 'csharp', 'go', 'rust'], codeActionProvider)
     );
+
+    // Register Chat Panel Command (replaces sidebar focus)
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.chat', () => {
+        ChatPanel.createOrShow(context.extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, commandExecutor, context);
+    });
 
     if (vscode.window.registerWebviewPanelSerializer) {
         vscode.window.registerWebviewPanelSerializer(ChatPanel.viewType, {
             async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
-                ChatPanel.revive(webviewPanel, context.extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, context);
+                ChatPanel.revive(webviewPanel, context.extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, commandExecutor, context);
             }
         });
     }
 
     // Register Review Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.review', () => reviewCommand(commandExecutor, contextProvider, outputLogger, fileManager))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.review', () => reviewCommand(commandExecutor, contextProvider, outputLogger, fileManager));
 
     // Register Explain Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.explain', () => explainCommand(commandExecutor, contextProvider, outputLogger, fileManager))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.explain', () => explainCommand(commandExecutor, contextProvider, outputLogger, fileManager));
 
     // Register Generate Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.generate', () => generateCommand(commandExecutor, contextProvider, outputLogger))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.generate', () => generateCommand(commandExecutor, contextProvider, outputLogger));
 
     // Register Refactor Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.refactor', (range?: vscode.Range) => refactorCommand(commandExecutor, contextProvider, outputLogger, range))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.refactor', (range?: vscode.Range) => refactorCommand(commandExecutor, contextProvider, outputLogger, range));
 
     // Register Test Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.test', () => testCommand(commandExecutor, contextProvider, outputLogger, fileManager))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.test', () => testCommand(commandExecutor, contextProvider, outputLogger, fileManager));
 
     // Register Document Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.document', () => documentCommand(commandExecutor, contextProvider, outputLogger, fileManager))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.document', () => documentCommand(commandExecutor, contextProvider, outputLogger, fileManager));
 
     // Register Quick Fix Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.quickFix', () => quickFixCommand(commandExecutor, contextProvider, outputLogger))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.quickFix', () => quickFixCommand(commandExecutor, contextProvider, outputLogger));
 
     // Register Debug Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.debug', () => debugCommand(commandExecutor, contextProvider, outputLogger))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.debug', () => debugCommand(commandExecutor, contextProvider, outputLogger));
 
     // Register Optimize Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.optimize', () => optimizeCommand(commandExecutor, contextProvider, outputLogger, fileManager))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.optimize', () => optimizeCommand(commandExecutor, contextProvider, outputLogger, fileManager));
 
     // Register Structure Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.structure', () => structureCommand(commandExecutor, outputLogger, structureView))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.structure', () => structureCommand(commandExecutor, outputLogger, structureView));
 
     // Register Terminal Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.terminal', () => terminalCommand(commandExecutor, terminalManager, outputLogger))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.terminal', () => terminalCommand(commandExecutor, terminalManager, outputLogger));
 
     // Register Analyze Complexity Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.analyzeComplexity', () => analyzeComplexityCommand(commandExecutor, contextProvider, fileManager))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.analyzeComplexity', () => analyzeComplexityCommand(commandExecutor, contextProvider, fileManager));
 
     // Register History Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.history', () => historyCommand(historyView))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.history', () => historyCommand(historyView));
 
     // Register Explain Terminal Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.explain-terminal', () => explainTerminalCommand(commandExecutor, outputLogger))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.explain-terminal', () => explainTerminalCommand(commandExecutor, outputLogger));
 
     // Register Preview Cost Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.previewCost', () => previewCostCommand(contextProvider, costEstimator))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.previewCost', () => previewCostCommand(contextProvider, costEstimator));
 
     // Register Reset Cost Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.resetCost', () => resetCostCommand(costTracker))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.resetCost', () => resetCostCommand(costTracker));
 
     // Register Update Daily Budget Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.updateDailyBudget', () => updateDailyBudgetCommand())
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.updateDailyBudget', () => updateDailyBudgetCommand());
 
     // Register Cost Report Commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.showCostReport', () => showCostReportCommand(costReportView))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.showCostReport', () => CostReportPanel.createOrShow(context.extensionUri, costTracker));
 
     // Register Crew Commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.crew.roster', () => rosterCommand(crewAPIService, crewProvider))
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.crew.consult', () => consultCommand(crewAPIService))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.crew.roster', () => rosterCommand(crewAPIService, crewProvider));
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.crew.consult', () => consultCommand(crewAPIService));
 
     // Register Settings Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.settings', () => settingsCommand())
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.settings', () => settingsCommand());
 
     // Register Memory Commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.memory.create', () => createMemoryCommand(crewAPIService))
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.memory.search', () => searchMemoryCommand(crewAPIService))
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.memory.compliance', () => complianceCheckCommand(crewAPIService))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory.create', () => createMemoryCommand(crewAPIService));
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory.search', () => searchMemoryCommand(crewAPIService));
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory.compliance', () => complianceCheckCommand(crewAPIService));
 
     // Register Project Commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.project.create', () => createProjectCommand(cliExecutor))
-    );
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.project.feature', () => createFeatureCommand(cliExecutor))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.create', () => createProjectCommand(cliExecutor));
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.feature', () => createFeatureCommand(cliExecutor));
 
     // Register Find Related Files Command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.findRelatedFiles', () => findRelatedFilesCommand(commandExecutor, contextProvider, fileManager))
-    );
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.findRelatedFiles', () => findRelatedFilesCommand(commandExecutor, contextProvider, fileManager));
+
+    // Register Welcome Command
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.welcome', () => WelcomePanel.createOrShow(context.extensionUri));
+
+    // Check for API Key on startup
+    const config = vscode.workspace.getConfiguration('openrouterCrew');
+    const apiKey = config.get<string>('apiKey');
+    if (!apiKey) {
+        vscode.commands.executeCommand('openrouter-crew.welcome');
+    }
 
     // Log initialization
+    telemetryService.sendActivationEvent();
     console.log('✅ OpenRouter Crew Services initialized');
 }

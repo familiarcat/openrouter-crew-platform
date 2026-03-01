@@ -1,6 +1,7 @@
 import { CrewAgent, AgentNetworkService } from '../services/agent-network.js';
 import { CostTracker } from '../services/cost-tracker.js';
 import { FileManager } from '../services/file-manager.js';
+import { Intent, Complexity, FileContext, ImageContext, Provider } from './llm-router.js';
 
 export interface ToolDependencies {
     fileManager: FileManager;
@@ -21,15 +22,26 @@ export interface AgentExecutionResult {
 }
 
 export interface LLMRequest {
-    messages: any[];
+    prompt: string;
+    files?: FileContext[];
+    images?: ImageContext[];
+    language?: string;
+    intent?: Intent;
+    complexity?: Complexity;
     tools?: any[];
-    hint?: 'speed' | 'quality' | 'code';
+    canonicalForm?: string;
+    // Legacy fields for compatibility
+    messages?: any[];
+    hint?: 'speed' | 'quality' | 'code'; 
 }
 
 export interface LLMResponse {
-    content: string | null;
+    content: string;
     model: string;
-    usage: { prompt_tokens: number; completion_tokens: number };
+    provider?: Provider;
+    costUSD: number;
+    executionTimeMs: number;
+    cached: boolean;
     tool_calls?: any[];
-    cached?: boolean;
+    usage?: { prompt_tokens: number; completion_tokens: number };
 }

@@ -2,13 +2,13 @@
 import 'dotenv/config';
 import { Command } from 'commander';
 import { optimizeCommand } from './commands/optimize';
-import { budgetCommand } from './commands/budget';
-import { memoryCommand } from './commands/memory';
-import { analyticsCommand } from './commands/analytics';
-import { upgradeCommand } from './commands/upgrade';
-import { historyCommand } from './commands/history';
-import { configCommand } from './commands/config';
-import { helpCommand } from './commands/help';
+import './commands/budget.js';
+import './commands/memory.js';
+import './commands/analytics.js';
+import './commands/upgrade.js';
+import './commands/history.js';
+import './commands/config.js';
+import './commands/help.js';
 
 const program = new Command();
 
@@ -18,13 +18,7 @@ program
   .version('1.0.0');
 
 program.addCommand(optimizeCommand);
-program.addCommand(budgetCommand);
-program.addCommand(memoryCommand);
-program.addCommand(analyticsCommand);
-program.addCommand(upgradeCommand);
-program.addCommand(historyCommand);
-program.addCommand(configCommand);
-program.addCommand(helpCommand);
+// Other commands are added via side-effect imports
 
 program.parse(process.argv);
 

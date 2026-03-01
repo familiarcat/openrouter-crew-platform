@@ -14,7 +14,6 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { CrewAPIClient } from '../CrewAPIClient';
 import { MemoryDecayService } from '../services/memory-decay';
 import { AuthContext } from '../types';
 
@@ -51,12 +50,10 @@ export interface CleanupJobResult {
 export class MemoryCleanupJob {
   private supabase: SupabaseClient;
   private decayService: MemoryDecayService;
-  private crewAPIClient: CrewAPIClient;
 
   constructor(supabase: SupabaseClient) {
     this.supabase = supabase;
     this.decayService = new MemoryDecayService(supabase);
-    this.crewAPIClient = new CrewAPIClient(supabase);
   }
 
   /**

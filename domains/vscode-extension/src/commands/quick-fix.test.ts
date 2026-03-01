@@ -1,20 +1,30 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { quickFixCommand } from './quick-fix.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 suite('Quick Fix Command Test Suite', () => {
     let testContext: CommandTestContext;
     let originalGetDiagnostics: any;
+    let askedPrompt: string | undefined;
 
     setup(() => {
         testContext = new CommandTestContext();
         originalGetDiagnostics = vscode.languages.getDiagnostics;
+        askedPrompt = undefined;
+        // Mock ChatPanel
+        ChatPanel.currentPanel = {
+            ask: async (prompt: string) => {
+                askedPrompt = prompt;
+            }
+        } as any;
     });
 
     teardown(() => {
         testContext.restore();
         (vscode.languages as any).getDiagnostics = originalGetDiagnostics;
+        ChatPanel.currentPanel = undefined;
     });
 
     test('should apply fix for single diagnostic', async () => {
@@ -34,20 +44,14 @@ suite('Quick Fix Command Test Suite', () => {
             fileName: '/test/file.ts'
         });
 
-        let capturedInstruction = '';
-        testContext.commandExecutor.refactor = async (code: string, file: string, instruction: string) => {
-            capturedInstruction = instruction;
-            return { success: true, output: 'fixed code', model: 'test', costUSD: 0 };
-        };
-        testContext.commandExecutor.extractCode = () => 'fixed code';
-
         await quickFixCommand(
             testContext.commandExecutor,
             testContext.contextProvider,
             testContext.outputLogger
         );
 
-        assert.ok(capturedInstruction.includes('Missing semicolon'));
+        assert.ok(askedPrompt);
+        assert.ok(askedPrompt.includes('Missing semicolon'));
     });
 
     test('should allow selection for multiple diagnostics', async () => {
@@ -68,19 +72,13 @@ suite('Quick Fix Command Test Suite', () => {
 
         testContext.mockQuickPick({ label: 'Error 1', diagnostic: d1 });
 
-        let capturedInstruction = '';
-        testContext.commandExecutor.refactor = async (code: string, file: string, instruction: string) => {
-            capturedInstruction = instruction;
-            return { success: true, output: 'fixed code', model: 'test', costUSD: 0 };
-        };
-        testContext.commandExecutor.extractCode = () => 'fixed code';
-
         await quickFixCommand(
             testContext.commandExecutor,
             testContext.contextProvider,
             testContext.outputLogger
         );
 
-        assert.ok(capturedInstruction.includes('Error 1'));
+        assert.ok(askedPrompt);
+        assert.ok(askedPrompt.includes('Error 1'));
     });
 });

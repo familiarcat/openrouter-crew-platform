@@ -1,16 +1,26 @@
 import * as assert from 'assert';
 import { translateCommand } from './translate.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 suite('Translate Command Test Suite', () => {
     let testContext: CommandTestContext;
+    let askedPrompt: string | undefined;
 
     setup(() => {
         testContext = new CommandTestContext();
+        askedPrompt = undefined;
+        // Mock ChatPanel
+        ChatPanel.currentPanel = {
+            ask: async (prompt: string) => {
+                askedPrompt = prompt;
+            }
+        } as any;
     });
 
     teardown(() => {
         testContext.restore();
+        ChatPanel.currentPanel = undefined;
     });
 
     test('should translate selected code', async () => {
@@ -25,23 +35,14 @@ suite('Translate Command Test Suite', () => {
         // Mock language selection
         testContext.mockQuickPick('Spanish');
 
-        let capturedCode = '';
-        let capturedLanguage = '';
-        testContext.commandExecutor.translate = async (code: string, language: string) => {
-            capturedCode = code;
-            capturedLanguage = language;
-            return { success: true, output: '```\n// comentario\n```', model: 'test', costUSD: 0 };
-        };
-        
-        testContext.commandExecutor.extractCode = (output: string) => '// comentario';
-
         await translateCommand(
             testContext.commandExecutor,
             testContext.contextProvider,
             testContext.outputLogger
         );
 
-        assert.strictEqual(capturedCode, '// comment');
-        assert.strictEqual(capturedLanguage, 'Spanish');
+        assert.ok(askedPrompt);
+        assert.ok(askedPrompt.includes('Translate the comments in the following code to Spanish'));
+        assert.ok(askedPrompt.includes('// comment'));
     });
 });

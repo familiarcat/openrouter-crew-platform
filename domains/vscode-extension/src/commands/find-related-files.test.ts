@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { findRelatedFilesCommand } from './find-related-files.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
 import { ChatPanel } from '../ui/chat-panel.js';
 
 suite('Find Related Files Command Test Suite', () => {
@@ -54,7 +54,7 @@ suite('Find Related Files Command Test Suite', () => {
         await findRelatedFilesCommand(
             testContext.commandExecutor,
             testContext.contextProvider,
-            test.fileManager
+            testContext.fileManager
         );
 
         assert.ok(askedPrompt);

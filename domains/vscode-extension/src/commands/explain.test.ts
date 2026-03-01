@@ -1,16 +1,26 @@
 import * as assert from 'assert';
 import { explainCommand } from './explain.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 suite('Explain Command Test Suite', () => {
     let testContext: CommandTestContext;
+    let askedPrompt: string | undefined;
 
     setup(() => {
         testContext = new CommandTestContext();
+        askedPrompt = undefined;
+        // Mock ChatPanel
+        ChatPanel.currentPanel = {
+            ask: async (prompt: string) => {
+                askedPrompt = prompt;
+            }
+        } as any;
     });
 
     teardown(() => {
         testContext.restore();
+        ChatPanel.currentPanel = undefined;
     });
 
     test('should explain selected code', async () => {
@@ -21,18 +31,14 @@ suite('Explain Command Test Suite', () => {
             languageId: 'typescript'
         });
 
-        let capturedCode = '';
-        testContext.commandExecutor.explain = async (code: string) => {
-            capturedCode = code;
-            return { success: true, output: 'Explanation', model: 'test', costUSD: 0 };
-        };
-
         await explainCommand(
             testContext.commandExecutor,
             testContext.contextProvider,
             testContext.outputLogger
         );
 
-        assert.strictEqual(capturedCode, 'function test() {}');
+        assert.ok(askedPrompt);
+        assert.ok(askedPrompt.includes('function test() {}'));
+        assert.ok(askedPrompt.includes('Explain the selected code'));
     });
 });

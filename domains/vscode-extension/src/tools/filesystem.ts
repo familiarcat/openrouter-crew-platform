@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TextDecoder, TextEncoder } from 'util';
-import { ToolDefinition } from './types.js';
+import { ToolDefinition } from '../services/types.js';
 
 export const fsTools: ToolDefinition[] = [
     {

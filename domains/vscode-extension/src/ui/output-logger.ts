@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
  * Defines the structure for logging an exchange with an AI model.
  */
 export interface LogExchange {
+    title?: string;
     model: string;
     cost: number;
     content: string;

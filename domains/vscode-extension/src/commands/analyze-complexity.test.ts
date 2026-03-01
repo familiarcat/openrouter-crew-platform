@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { analyzeComplexityCommand } from './analyze-complexity.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
 
 suite('Analyze Complexity Command Test Suite', () => {
     let testContext: CommandTestContext;

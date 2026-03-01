@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 export async function refactorCommand(
     commandExecutor: CommandExecutor,

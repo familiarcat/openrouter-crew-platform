@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { previewCostCommand } from './preview-cost.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
 
 suite('Preview Cost Command Test Suite', () => {
     let testContext: CommandTestContext;
@@ -25,14 +25,8 @@ suite('Preview Cost Command Test Suite', () => {
         });
 
         // Mock estimator
-        testContext.costEstimator.estimateRequestCost = (text: string, intent: string) => {
-            return {
-                cost: 0.0005,
-                model: 'claude-3-sonnet',
-                inputTokens: 50,
-                outputTokens: 100,
-                complexity: 'LOW'
-            };
+        testContext.costEstimator.estimateRequestCost = (request: any, model: string) => {
+            return 0.0005;
         };
 
         // Mock info message
@@ -44,7 +38,7 @@ suite('Preview Cost Command Test Suite', () => {
         await previewCostCommand(testContext.contextProvider, testContext.costEstimator);
 
         assert.ok(infoMessage.includes('$0.000500'));
-        assert.ok(infoMessage.includes('claude-3-sonnet'));
+        assert.ok(infoMessage.includes('openai/gpt-4o'));
     });
 
     test('should warn if no code selected', async () => {

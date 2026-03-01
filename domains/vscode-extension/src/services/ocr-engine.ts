@@ -360,16 +360,14 @@ export class OCRWithNLP {
     const codeContext = this.ocrEngine.convertToCodeContext(analysisResult);
 
     // Step 4: Perform NLP analysis on the prompt
-    const nlpAnalysis = this.nlpProcessor.analyze(codeContext.prompt, {
-      selectedCode: codeContext.selectedCode,
-    });
+    const nlpAnalysis = await this.nlpProcessor.detectIntent(codeContext.prompt);
 
     return {
       ocr: analysisResult,
       nlp: nlpAnalysis,
       codeContext,
       combined: {
-        intent: nlpAnalysis.intent.intent,
+        intent: nlpAnalysis.intent,
         detectedLanguage: codeContext.language || nlpAnalysis.language,
         confidence: Math.min(analysisResult.confidence, nlpAnalysis.confidence),
       },

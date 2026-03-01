@@ -72,8 +72,11 @@ export class WelcomePanel {
         if (settings.supabaseUrl) {
             await config.update('supabaseUrl', settings.supabaseUrl, vscode.ConfigurationTarget.Global);
         }
-        if (settings.supabaseKey) {
-            await config.update('supabaseKey', settings.supabaseKey, vscode.ConfigurationTarget.Global);
+        if (settings.supabaseAnonKey) {
+            await config.update('supabaseAnonKey', settings.supabaseAnonKey, vscode.ConfigurationTarget.Global);
+        }
+        if (settings.supabaseServiceKey) {
+            await config.update('supabaseServiceKey', settings.supabaseServiceKey, vscode.ConfigurationTarget.Global);
         }
         
         vscode.window.showInformationMessage('Configuration saved! You can now use OpenRouter Crew.');
@@ -122,7 +125,7 @@ export class WelcomePanel {
         <body>
             <div class="container">
                 <h1>Welcome to OpenRouter Crew 🚀</h1>
-                <p class="info">Configure your API keys to get started with your AI crew.</p>
+                <p class="info">Configure your API keys to get started with your AI crew. You need an OpenRouter API key for LLM access and Supabase credentials for memory persistence.</p>
                 
                 <label>OpenRouter API Key</label>
                 <input type="password" id="apiKey" placeholder="sk-or-..." />
@@ -130,8 +133,11 @@ export class WelcomePanel {
                 <label>Supabase URL</label>
                 <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co" />
                 
-                <label>Supabase Key</label>
-                <input type="password" id="supabaseKey" placeholder="your-anon-key" />
+                <label>Supabase Anon Key</label>
+                <input type="password" id="supabaseAnonKey" placeholder="your-public-anon-key" />
+
+                <label>Supabase Service Role Key</label>
+                <input type="password" id="supabaseServiceKey" placeholder="your-secret-service-role-key" />
                 
                 <button onclick="testConnection()" style="margin-top: 10px; background-color: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground);">Test Connection</button>
                 <button onclick="save()">Save Configuration</button>
@@ -141,13 +147,14 @@ export class WelcomePanel {
                 function save() {
                     const apiKey = document.getElementById('apiKey').value;
                     const supabaseUrl = document.getElementById('supabaseUrl').value;
-                    const supabaseKey = document.getElementById('supabaseKey').value;
+                    const supabaseAnonKey = document.getElementById('supabaseAnonKey').value;
+                    const supabaseServiceKey = document.getElementById('supabaseServiceKey').value;
                     if (!apiKey) {
                         return;
                     }
                     vscode.postMessage({
                         command: 'saveSettings',
-                        settings: { apiKey, supabaseUrl, supabaseKey }
+                        settings: { apiKey, supabaseUrl, supabaseAnonKey, supabaseServiceKey }
                     });
                 }
                 function testConnection() {

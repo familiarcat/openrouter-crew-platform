@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { configService } from '../services/config-service';
+import { configService } from './config-service.js';
 
 export const configCommand = new Command('config')
   .description('View and edit the local crew configuration file (.mock-crew-config.json)');

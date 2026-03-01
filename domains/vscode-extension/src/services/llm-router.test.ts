@@ -1,69 +1,97 @@
-/// <reference types="mocha" />
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { LLMRouter } from './llm-router.js';
-import { LLMRequest } from './types.js';
 import { CostTracker } from './cost-tracker.js';
-import { CostEstimator } from './cost-estimator.js';
 import { ResponseCache } from './cache.js';
+import { ModelRouter } from '@openrouter-crew/shared-cost-tracking';
 
-// Mock dependencies
-class MockCostTracker {
-    async checkBudget(cost: number) {
-        return { allowed: true };
-    }
-}
-class MockResponseCache {
-    generateKey(content: string) { return 'key'; }
-    get(key: string) { return undefined; }
-    async set(key: string, value: any) {}
-}
-class MockCostEstimator {
-    estimateRequestCost() { return 0.01; }
-}
+suite('LLMRouter Service Test Suite', () => {
+    let router: LLMRouter;
+    let mockCostTracker: any;
+    let mockCache: any;
+    let capturedSharedRouterArgs: any;
+    let originalSelectBestModel: any;
 
-suite('LLMRouter Service', () => {
-  let router: LLMRouter;
-  let mockCostTracker: any;
-  let mockCostEstimator: any;
-  let mockResponseCache: any;
+    setup(() => {
+        mockCostTracker = {
+            recordUsage: async () => {}
+        };
+        mockCache = {
+            get: () => undefined,
+            set: async () => {}
+        };
 
-  setup(() => {
-    mockCostTracker = new MockCostTracker();
-    mockCostEstimator = new MockCostEstimator();
-    mockResponseCache = new MockResponseCache();
+        // Mock the shared ModelRouter's prototype to intercept calls
+        originalSelectBestModel = ModelRouter.prototype.selectBestModel;
+        ModelRouter.prototype.selectBestModel = (args: any) => {
+            capturedSharedRouterArgs = args;
+            // Return a predictable model for the test
+            return { id: 'mock/model-for-test', provider: 'mock' };
+        };
 
-    // Mock vscode configuration
-    (vscode.workspace as any).getConfiguration = (section: string) => {
-        return {
+        // Mock VSCode config
+        (vscode.workspace as any).getConfiguration = (section: string) => ({
             get: (key: string) => {
                 if (key === 'apiKey') return 'test-key';
                 return undefined;
             }
+        });
+        
+        router = new LLMRouter(
+            mockCostTracker as CostTracker,
+            mockCache as ResponseCache
+        );
+
+        // Mock the internal API call to prevent actual network requests
+        (router as any).callOpenRouter = async (request: any, model: string) => {
+            return {
+                content: 'mock response',
+                model: model,
+                provider: 'openrouter',
+                costUSD: 0.00123,
+                executionTimeMs: 50,
+                cached: false
+            };
         };
-    };
-
-    router = new LLMRouter(
-      mockCostTracker as unknown as CostTracker,
-      mockCostEstimator as unknown as CostEstimator,
-      mockResponseCache as unknown as ResponseCache
-    );
-  });
-
-  test('route should throw error if API key is missing', async () => {
-    (vscode.workspace as any).getConfiguration = () => ({
-        get: (key: string) => undefined
     });
 
-    const request: LLMRequest = {
-        messages: [{ role: 'user', content: 'test' }]
-    };
+    teardown(() => {
+        // Restore the original method
+        ModelRouter.prototype.selectBestModel = originalSelectBestModel;
+        capturedSharedRouterArgs = undefined;
+    });
 
-    try {
-        await router.route(request);
-        assert.fail('Should have thrown error');
-    } catch (e: any) {
-        assert.ok(e.message.includes('API Key missing'));
-    }
-  });
+    test('should use "budget" tier for simple, small requests', async () => {
+        await router.route({ prompt: 'short prompt' });
+        assert.strictEqual(capturedSharedRouterArgs.costTier, 'budget');
+    });
+
+    test('should use "premium" tier for DEBUG intent', async () => {
+        await router.route({ prompt: 'fix this bug', intent: 'DEBUG' });
+        assert.strictEqual(capturedSharedRouterArgs.costTier, 'premium');
+    });
+
+    test('should use "premium" tier for HIGH complexity', async () => {
+        await router.route({ prompt: 'long prompt', complexity: 'HIGH' });
+        assert.strictEqual(capturedSharedRouterArgs.costTier, 'premium');
+    });
+
+    test('should use "premium" tier for large context size (>4000 chars)', async () => {
+        const longPrompt = 'a'.repeat(4001);
+        await router.route({ prompt: longPrompt });
+        assert.strictEqual(capturedSharedRouterArgs.costTier, 'premium');
+        assert.ok(capturedSharedRouterArgs.contextWindow >= 4001, 'Context window should be passed to shared router');
+    });
+
+    test('should call costTracker.recordUsage with the cost from the response', async () => {
+        let recordedCost: number | undefined;
+        mockCostTracker.recordUsage = async (cost: number) => {
+            recordedCost = cost;
+        };
+
+        await router.route({ prompt: 'test' });
+
+        // The mocked callOpenRouter returns 0.00123
+        assert.strictEqual(recordedCost, 0.00123);
+    });
 });

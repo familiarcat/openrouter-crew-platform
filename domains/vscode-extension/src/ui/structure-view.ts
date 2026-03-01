@@ -95,7 +95,7 @@ export class StructureView {
 <body>
     <div class="meta">
         <strong>Model:</strong> ${analysis.model} | 
-        <strong>Cost:</strong> $${analysis.cost.toFixed(6)}
+        <strong>Cost:</strong> $${analysis.costUSD.toFixed(6)}
     </div>
     <div class="content">
         ${contentHtml}

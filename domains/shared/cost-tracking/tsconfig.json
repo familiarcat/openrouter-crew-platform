@@ -5,9 +5,11 @@
     "rootDir": "./src",
     "composite": true,
     "incremental": true,
-    "moduleResolution": "Bundler",
+    "moduleResolution": "Node",
     "module": "ESNext",
-    "target": "ES2022"
+    "target": "ES2022",
+    "declaration": true,
+    "declarationMap": true
   },
   "include": [
     "src/**/*"

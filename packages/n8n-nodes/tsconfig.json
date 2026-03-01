@@ -16,7 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "Bundler",
+    "moduleResolution": "Node",
     "composite": true
   },
   "include": [

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from './command-executor.js';
 import { ContextProvider } from '../services/context-provider.js';
 import { OutputLogger } from '../ui/output-logger.js';
+import { ChatPanel } from '../ui/chat-panel.js';
 
 export async function translateCommand(
     commandExecutor: CommandExecutor,
@@ -32,40 +33,18 @@ export async function translateCommand(
 
     if (!selectedLanguage) return;
 
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: `Translating comments to ${selectedLanguage}...`,
-        cancellable: false
-    }, async () => {
-        try {
-            const result = await commandExecutor.translate(context.selectedCode!, selectedLanguage);
+    const prompt = `Translate the comments in the following code to ${selectedLanguage}.
 
-            if (!result.success) {
-                throw new Error(result.output);
-            }
+Code:
+\`\`\`${context.languageId}
+${context.selectedCode}
+\`\`\`
+`;
 
-            const translatedCode = commandExecutor.extractCode(result.output, true);
-
-            if (translatedCode) {
-                await editor.edit(editBuilder => {
-                    editBuilder.replace(context.selectionRange, translatedCode);
-                });
-            } else {
-                vscode.window.showWarningMessage('No code block found in translation response.');
-            }
-
-            outputLogger.logExchange({
-                title: `Translate Comments to ${selectedLanguage}`,
-                model: result.model,
-                cost: result.costUSD,
-                content: result.output,
-                contextCode: {
-                    language: context.languageId,
-                    code: context.selectedCode!
-                }
-            });
-        } catch (error) {
-            vscode.window.showErrorMessage(`Translation failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    });
+    await vscode.commands.executeCommand('openrouter-crew.chat');
+    if (ChatPanel.currentPanel) {
+        ChatPanel.currentPanel.ask(prompt);
+    } else {
+        vscode.window.showErrorMessage('Failed to open Chat Panel.');
+    }
 }

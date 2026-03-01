@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { applyRefactoringCommand } from './apply-refactoring.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
 
 suite('Apply Refactoring Command Test Suite', () => {
     let testContext: CommandTestContext;

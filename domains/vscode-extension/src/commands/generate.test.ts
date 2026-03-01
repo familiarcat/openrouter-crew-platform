@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { generateCommand } from './generate.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
 
 suite('Generate Command Test Suite', () => {
     let testContext: CommandTestContext;
@@ -13,14 +13,13 @@ suite('Generate Command Test Suite', () => {
         testContext.restore();
     });
 
-    test('should construct prompt correctly for Generic Code', async () => {
-        testContext.mockQuickPick({ label: 'Generic Code' });
-        testContext.mockInputBox('Create a function');
+    test('should call executeTask with user input', async () => {
+        testContext.mockInputBox('Create a function to sum numbers');
 
-        let capturedPrompt = '';
-        testContext.commandExecutor.generate = async (prompt: string) => {
-            capturedPrompt = prompt;
-            return { success: true, output: 'done', model: 'test', costUSD: 0 };
+        let capturedTask = '';
+        testContext.commandExecutor.executeTask = async (task: string) => {
+            capturedTask = task;
+            return { output: 'done', model: 'test', cost: 0, executionTimeMs: 100 };
         };
 
         await generateCommand(
@@ -29,27 +28,6 @@ suite('Generate Command Test Suite', () => {
             testContext.outputLogger
         );
 
-        // For Generic Code, promptPrefix is empty
-        assert.strictEqual(capturedPrompt, 'Create a function');
-    });
-
-    test('should construct prompt correctly for React Component', async () => {
-        testContext.mockQuickPick({ label: 'React Component' });
-        testContext.mockInputBox('UserProfile');
-
-        let capturedPrompt = '';
-        testContext.commandExecutor.generate = async (prompt: string) => {
-            capturedPrompt = prompt;
-            return { success: true, output: 'done', model: 'test', costUSD: 0 };
-        };
-
-        await generateCommand(
-            testContext.commandExecutor,
-            testContext.contextProvider,
-            testContext.outputLogger
-        );
-
-        // For React Component, promptPrefix is "Create a React Component: "
-        assert.strictEqual(capturedPrompt, 'Create a React Component: UserProfile');
+        assert.strictEqual(capturedTask, 'Create a function to sum numbers');
     });
 });

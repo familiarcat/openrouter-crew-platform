@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { createClient } from '@supabase/supabase-js';
-import { CrewAPIClient, AuthContext, MemoryDecayService } from '@openrouter-crew/crew-api-client';
+import { CrewAPIClient, MemoryDecayService } from '@openrouter-crew/crew-api-client';
+import type { AuthContext } from '@openrouter-crew/crew-api-client';
 
 /**
  * CrewAPIClient service for VSCode extension
@@ -129,7 +130,6 @@ export class CrewAPIService {
               crew_id: context.crew_id,
               retention_tier: 'short_term' as any
             }
-            // context // Removed due to type mismatch
           );
 
           this.outputChannel.appendLine(`✓ Memory created: ${result.id}`);
@@ -140,6 +140,23 @@ export class CrewAPIService {
       const message = error instanceof Error ? error.message : String(error);
       this.outputChannel.appendLine(`✗ Failed to create memory: ${message}`);
       vscode.window.showErrorMessage(`Failed to create memory: ${message}`);
+    }
+  }
+
+  /**
+   * Get recent memories for the browser
+   */
+  async getMemories(limit: number = 50): Promise<any[]> {
+    try {
+      const client = await this.initializeClient();
+      // Use empty query to fetch recent memories
+      const results = await client.search_memories({
+        query: '',
+        limit
+      });
+      return results || [];
+    } catch (error) {
+      return [];
     }
   }
 
@@ -177,7 +194,6 @@ export class CrewAPIService {
               query: searchQuery,
               limit: 10,
             }
-            // context // Removed due to type mismatch
           );
         }
       );
@@ -385,7 +401,6 @@ export class CrewAPIService {
               crew_id: context.crew_id,
               input: crewInput,
             }
-            // context // Removed due to type mismatch
           );
         }
       );

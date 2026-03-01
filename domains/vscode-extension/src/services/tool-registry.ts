@@ -12,7 +12,6 @@ import { FileManager } from './file-manager.js';
 import { ToolDefinition } from './types.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import { fsTools } from './filesystem.js';
 
 /**
  * A tool the agent can use (e.g., "readFile", "runTest")
@@ -41,7 +40,6 @@ export class ToolRegistry {
 
     public async initialize(): Promise<void> {
         if (this.isInitialized) return;
-        this.registerTools(fsTools);
         await this.registerAllTools();
         this.isInitialized = true;
     }

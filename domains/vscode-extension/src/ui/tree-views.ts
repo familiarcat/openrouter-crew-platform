@@ -192,6 +192,13 @@ export function registerTreeViews(context: vscode.ExtensionContext, agentNetwork
     let refreshInterval: NodeJS.Timeout | undefined;
 
     const startRefreshing = () => {
+        const config = vscode.workspace.getConfiguration('openrouterCrew');
+        const autoRefreshEnabled = config.get<boolean>('treeView.autoRefresh', true);
+
+        if (!autoRefreshEnabled) {
+            return;
+        }
+
         if (!refreshInterval) {
             refreshInterval = setInterval(() => {
                 projectProvider.refresh();

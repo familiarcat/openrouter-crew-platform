@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { explainTerminalCommand } from './explain-terminal.js';
-import { CommandTestContext } from '../test/command-test-utils.js';
+import { CommandTestContext } from './command-test-utils.js';
 
 suite('Explain Terminal Command Test Suite', () => {
     let testContext: CommandTestContext;

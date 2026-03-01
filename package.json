@@ -24,6 +24,7 @@
     "fix:deps": "bash scripts/system/fix-lucide-deps.sh",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "test:scripts": "jest scripts/system",
     "test:integration": "pnpm --filter @openrouter-crew/integration-tests test",
     "test:e2e": "pnpm --filter @openrouter-crew/e2e-tests test",
     "supabase:start": "supabase start",

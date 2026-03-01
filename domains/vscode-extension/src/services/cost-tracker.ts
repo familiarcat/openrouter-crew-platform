@@ -1,19 +1,24 @@
 import * as vscode from 'vscode';
-
-// Prices per million tokens (input/output)
-const MODEL_PRICES: Record<string, { input: number; output: number }> = {
-    'anthropic/claude-3.5-sonnet': { input: 3.00, output: 15.00 },
-    'openai/gpt-4o': { input: 5.00, output: 15.00 },
-    'google/gemini-flash-1.5': { input: 0.35, output: 0.70 },
-    'google/gemini-1.5-pro-latest': { input: 3.50, output: 10.50 },
-    'default': { input: 5.00, output: 15.00 } // Fallback price
-};
+import { CostCalculator } from '@openrouter-crew/shared-cost-tracking';
 
 export interface CostMetrics {
     totalCost: number;
     remaining: number;
     percentUsed: number;
     budget: number;
+}
+
+export interface UsageRecord {
+    timestamp: string;
+    cost: number;
+    model: string;
+    tokens: number;
+    command?: string;
+    intent?: string;
+    promptLength?: number;
+    executionTimeMs?: number;
+    costUSD: number;
+    cached?: boolean;
 }
 
 export class CostTracker implements vscode.Disposable {
@@ -51,10 +56,7 @@ export class CostTracker implements vscode.Disposable {
     }
 
     public estimateCost(inputTokens: number, outputTokens: number, model: string): number {
-        const prices = MODEL_PRICES[model] || MODEL_PRICES['default'] || { input: 5.00, output: 15.00 };
-        const inputCost = (inputTokens / 1_000_000) * prices.input;
-        const outputCost = (outputTokens / 1_000_000) * prices.output;
-        return inputCost + outputCost;
+        return CostCalculator.calculateActualCost(model, inputTokens, outputTokens);
     }
 
     public async getCostMetrics(period: 'daily' | 'monthly'): Promise<CostMetrics> {
@@ -88,6 +90,15 @@ export class CostTracker implements vscode.Disposable {
         const storageKey = this.getStorageKey(period);
         await this.context.globalState.update(storageKey, 0);
         this._onDidCostUpdate.fire();
+    }
+
+    public async resetDailyUsage(): Promise<void> {
+        await this.resetCost('daily');
+    }
+
+    public getLocalHistory(): UsageRecord[] {
+        // TODO: Implement actual history persistence. For now returning empty to satisfy interface.
+        return [];
     }
 
     dispose() {

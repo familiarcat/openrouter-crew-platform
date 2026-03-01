@@ -1,22 +1,21 @@
 {
-  "extends": "../../tsconfig.server.json",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "composite": true,
-    "baseUrl": ".",
-    "incremental": true,
-    "moduleResolution": "Bundler",
-    "module": "ESNext",
-    "target": "ES2022"
+    "outDir": "dist",
+    "types": ["node"],
+    "moduleResolution": "Node",
+    "target": "ES2022",
+    "strictNullChecks": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "composite": false,
+    "declaration": false
   },
   "include": [
     "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "tests"
-  ],
-  "ignoreDeprecations": "6.0"
+    "dist"
+  ]
 }
