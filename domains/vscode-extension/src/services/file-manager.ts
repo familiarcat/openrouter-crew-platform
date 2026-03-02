@@ -61,9 +61,17 @@ export interface PatchOperation {
 /**
  * File Manager for code manipulation
  */
+/**
+ * LLM Router dependency injected for cost-optimized API calls
+ * See: domains/vscode-extension/src/services/llm-router.ts
+ */
+import type { LLMRouter } from './llm-router';
+
 export class FileManager {
   private parserInitialized = false;
   private languages: Map<string, Parser.Language> = new Map();
+
+  constructor(private llmRouter?: LLMRouter) {}
 
   /**
    * Initialize and get a Tree-sitter parser for the specific language
@@ -556,27 +564,22 @@ ${original}
 Return ONLY the refactored code. Do not include any explanations or markdown formatting outside the code block.`;
 
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://github.com/openrouter-crew/vscode-extension',
-          'X-Title': 'OpenRouter Crew VSCode',
-        },
-        body: JSON.stringify({
-          model: 'openai/gpt-4o',
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
+      // Delegated to LLMRouter for proper cost tracking and model optimization
+      // Assigned to: Geordi La Forge (Infrastructure engineering)
+      // This replaces hardcoded GPT-4o with intelligent model routing
 
-      if (!response.ok) {
-        throw new Error(`Refactoring request failed: ${response.statusText}`);
+      if (!this.llmRouter) {
+        throw new Error('LLMRouter not configured. FileManager requires router for cost-optimized API calls.');
       }
 
-      const data = await response.json() as any;
-      const content = data.choices?.[0]?.message?.content;
+      const response = await this.llmRouter.route({
+        prompt,
+        intent: 'REFACTOR',
+        complexity: 'MEDIUM',
+        canonicalForm: original
+      });
 
+      const content = response.content || '';
       if (!content) return original;
 
       // Extract code from markdown block if present

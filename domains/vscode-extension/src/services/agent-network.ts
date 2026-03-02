@@ -52,7 +52,8 @@ export class AgentNetworkService {
             supabaseUrl,
             supabaseKey
         );
-        this.fileManager = new FileManager();
+        // Pass llmRouter to FileManager for cost-optimized refactoring (Geordi La Forge fix)
+        this.fileManager = new FileManager(llmRouter);
         this.toolRegistry = new ToolRegistry(this.fileManager, this.costTracker, this);
     }
 

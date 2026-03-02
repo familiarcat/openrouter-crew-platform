@@ -163,50 +163,35 @@ export const analysisTools: ToolDefinition[] = [
                 }
             }
         },
-        execute: async (args) => {
+        execute: async (args, agent) => {
             try {
                 const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
                 if (!workspaceFolder) return "Error: No workspace open.";
-                
+
                 const sourceUri = vscode.Uri.joinPath(workspaceFolder.uri, args.path);
                 const contentUint8 = await vscode.workspace.fs.readFile(sourceUri);
                 const sourceCode = new TextDecoder().decode(contentUint8);
 
-                const config = vscode.workspace.getConfiguration('openrouterCrew');
-                const apiKey = config.get<string>('apiKey');
-                if (!apiKey) return "Error: API Key missing.";
-
                 // Construct prompt
-                const prompt = `Generate a comprehensive unit test file for the following code. 
+                const prompt = `Generate a comprehensive unit test file for the following code.
                 Use the existing project testing framework (assume Jest/Mocha/Vitest based on file extension or standard practices).
                 Include happy paths and error cases.
-                
+
                 File: ${args.path}
                 Code:
                 \`\`\`
                 ${sourceCode}
                 \`\`\`
-                
+
                 Return ONLY the code for the test file.`;
 
-                // Call LLM
-                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json',
-                        'HTTP-Referer': 'https://github.com/openrouter-crew/vscode-extension',
-                        'X-Title': 'OpenRouter Crew VSCode',
-                    },
-                    body: JSON.stringify({
-                        model: 'openai/gpt-4o', // Use high quality model for code gen
-                        messages: [{ role: 'user', content: prompt }]
-                    })
-                });
+                // Delegated to LLMRouter for proper cost tracking and model optimization
+                // Assigned to: Commander Data (Analytical, code generation optimization)
+                // This replaces hardcoded GPT-4o with intelligent model routing
 
-                const data = await response.json() as any;
-                const generatedContent = data.choices?.[0]?.message?.content;
-                
+                const response = await agent.performWork(`Generate unit tests for ${args.path}`, prompt, 'TEST');
+                const generatedContent = response;
+
                 if (!generatedContent) return "Error: Failed to generate test content.";
 
                 // Extract code block
