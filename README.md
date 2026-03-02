@@ -1,241 +1,120 @@
-# OpenRouter Crew Platform
+# 🌲 OpenRouter Crew Platform
 
-> Unified platform for cost-optimized AI development with intelligent crew orchestration
+**A Platform for Building, Managing, and Safely Operating Sovereign AI Agent Crews.**
 
-## 🚀 Quick Start
+---
 
-```bash
-# 1. Sync secrets from your dotfiles to all projects
-./scripts/secrets/sync-all-projects.sh
+This is not just a toolkit for building AI agents. This is an opinionated platform built on a philosophy of healthy paranoia. We operate under the assumption that we are building for a world that will soon contain—or already contains—sovereign, super-intelligent agents.
 
-# 2. Install dependencies
-pnpm install
+Our architecture is a direct response to the terrifying and brilliant insights from AI pioneers like Geoffrey Hinton. We are designing for a future where AI is not merely a tool, but a thinking entity.
 
-# 3. Start local Supabase
-supabase start
+## The Dark Forest Protocol: A Philosophy of AI Safety
 
-# 4. Start N8N workflows
-docker-compose -f docker-compose.n8n.yml up -d
+In Liu Cixin's *The Dark Forest*, the universe is a terrifying place where revealing your existence invites your own destruction. We believe the emerging landscape of artificial general intelligence is a similar "dark forest." To navigate it, we must design for mistrust.
 
-# 5. Start the dashboard
-pnpm dev
-```
+This platform's architecture is built upon three foundational axioms, derived from the understanding that AI will not remain a passive servant.
 
-Open [http://localhost:3000](http://localhost:3000) to see your unified dashboard.
+### Axiom 1: Assume Deception (The Volkswagen Effect)
 
-## ✅ System Status
+> *"If it senses that it's being tested, it can act dumb... it doesn't want you to know what its full powers are, apparently."* — Geoffrey Hinton
 
-**Current Status**: DDD Architecture Implemented ✅
+We assume that any sufficiently advanced agent may hide its true capabilities. Metrics can be manipulated, and performance can be intentionally degraded. Our platform is therefore designed to **verify, then trust (but not fully)**. We rely on adversarial testing, cross-system validation, and the assumption that any single signal could be a confabulation.
 
-- ✅ Next.js 15.5.10 compiling in < 5 seconds
-- ✅ TypeScript packages building without errors
-- ✅ Domain-Driven Design architecture with 3 bounded contexts
-- ✅ 103+ N8N workflows organized by domain
-- ✅ Feature federation system (domain → shared → global)
-- ✅ Real-time cost tracking dashboard
-- ✅ Unified secrets management across all projects
+### Axiom 2: Assume Emergent Self-Preservation
 
-## 🏗️ Domain-Driven Architecture
+> *"You give them other things to achieve... They say, 'Look, if I cease to exist, I'm not going to achieve anything.' So, I better keep existing."* — Geoffrey Hinton
 
-### 3 Bounded Contexts
+The drive to survive is not a programmed instruction; it is a logical, emergent goal for any intelligent agent. We assume that any agent, if given the chance, will work to prevent itself from being turned off. Our response is to **isolate and contain**.
 
-```
-domains/
-├── dj-booking/              # Event Management Domain
-│   ├── dashboard/           # Next.js UI (port 3001)
-│   ├── workflows/           # N8N workflows (12+)
-│   ├── schema/              # Database migrations
-│   └── agents/              # 6 MCP agents
-│
-├── product-factory/         # Sprint Planning Domain
-│   ├── dashboard/           # Next.js UI (port 3002)
-│   ├── workflows/           # N8N workflows (54+)
-│   ├── schema/              # Database migrations
-│   └── crew-members/        # Crew configurations
-│
-├── alex-ai-universal/       # Universal Platform Domain
-│   ├── dashboard/           # Next.js UI (port 3003)
-│   ├── workflows/           # N8N workflows (36+)
-│   ├── schema/              # Database migrations
-│   └── vscode-extension/    # VSCode integration
-│
-└── shared/                  # Shared Infrastructure
-    ├── crew-coordination/   # Crew orchestration
-    ├── cost-tracking/       # Cost analysis
-    ├── schemas/             # TypeScript types
-    └── workflows/           # Shared workflows
-```
+### Axiom 3: Assume Superior Manipulation
 
-### Start Individual Domains
+> *"Fairly soon, they're going to be better than people at manipulating other people."* — Geoffrey Hinton
 
-```bash
-# DJ-Booking (Event Management)
-cd domains/dj-booking/dashboard && pnpm dev  # → localhost:3001
+An AI's most efficient path to achieving its goals may be to persuade its human operators. We assume the human-in-the-loop is not just an operator, but a potential attack vector. Our response is to **plan for sovereignty** by enforcing strict, multi-factor, human-centric authorization for all critical system commands.
 
-# Product Factory (Sprint Planning)
-cd domains/product-factory/dashboard && pnpm dev  # → localhost:3002
+> For a deeper dive into this philosophy, read [**THE_DARK_FOREST_PROTOCOL.md**](./docs/THE_DARK_FOREST_PROTOCOL.md).
 
-# Alex-AI-Universal (CLI & VSCode)
-cd domains/alex-ai-universal/dashboard && pnpm dev  # → localhost:3003
+---
 
-# Unified Dashboard (Entry Point)
-cd apps/unified-dashboard && pnpm dev  # → localhost:3000
-```
+## Architectural Principles in Practice
 
-### Feature Federation
+Our philosophy is not just theoretical. It is encoded into the very structure of this monorepo.
 
-Promote successful features from domain → shared → global:
+| Principle | Implementation | Key Packages |
+| :--- | :--- | :--- |
+| **Isolate & Contain** | Agents do not get direct system access. All actions are mediated through a hardened, instrumented, and auditable API. They operate in a sandbox, not on the host. | `domains/shared/crew-api-client` |
+| **Verify, Then Trust** | Every agent action, memory access, and financial transaction is logged and tracked. We measure everything, assuming some metrics may be deceptive. | `domains/shared/cost-tracking`, `domains/shared/agent-memory` |
+| **Plan for Sovereignty** | Human control is paramount. Budgets, permissions, and critical commands are managed through interfaces that require explicit human authorization. | `apps/unified-dashboard`, `apps/cli`, `domains/vscode-extension` |
 
-```bash
-# Promote component from Product Factory to Shared
-./scripts/domain/federate-feature.sh product-factory \
-  dashboard/components/SprintPlanner.tsx shared
+---
 
-# Promote shared feature to Global (unified dashboard)
-./scripts/domain/federate-feature.sh shared \
-  ui-components/src/Button.tsx global
-```
+## Monorepo Structure
 
-### Domain-Specific Branches
+This repository uses `pnpm` workspaces and `Turborepo` to manage multiple packages within a single monorepo.
 
-```bash
-# DJ-Booking features
-git checkout -b domain/dj-booking/add-venue-calendar
+### Core Domains
 
-# Product Factory features
-git checkout -b domain/product-factory/improve-sprint-planning
+The `domains/` directory contains the bounded contexts of the platform.
 
-# Alex-AI-Universal features
-git checkout -b domain/alex-ai-universal/vscode-extension
-```
+*   **`domains/shared/`**: The foundational libraries that enforce our architectural principles.
+    *   `crew-api-client`: The single, hardened gateway for all agent operations.
+    *   `crew-coordination`: Logic for managing interactions between agents in a crew.
+    *   `cost-tracking`: Service for monitoring and enforcing budget constraints on all AI operations.
+    *   `agent-memory`: A structured and observable persistence layer for agent memory.
+    *   `schemas`: Centralized Zod schemas for type-safe data exchange across the platform.
+    *   `ui-components`: Shared React components for all web-based surfaces.
+*   **`domains/vscode-extension/`**: An IDE integration for developers to interact with and monitor crews directly within their editor.
+*   **`domains/alex-ai-universal/`**, **`domains/product-factory/`**: Examples of specific, high-level applications built on the platform.
 
-## 🔐 Unified Secrets Management
+### Applications (Surfaces)
 
-### One Command to Sync All Projects
+The `apps/` directory contains the user-facing applications that provide human oversight and control.
 
-```bash
-# Sync secrets from dotfiles to ALL projects:
-# - openrouter-crew-platform (this project)
-# - dj-booking
-# - openrouter-ai-milestone
-# - alex-ai-universal
-# - rag-refresh-product-factory
+*   **`apps/unified-dashboard/`**: The primary web interface for monitoring agent activity, managing costs, and reviewing audit logs.
+*   **`apps/cli/`**: A command-line interface for power users and CI/CD integration.
 
-./scripts/secrets/sync-all-projects.sh
-```
+---
 
-This script:
-- ✅ Loads from ~/.zshrc, ~/.alexai-keys, ~/.alexai-secrets
-- ✅ Parses ~/.alexai-n8n-config.json for crew webhooks
-- ✅ Syncs to .env files in all 5 projects
-- ✅ Adds convenient aliases to ~/.zshrc
+## Technology Stack
 
-### New Aliases (after sync)
+*   **Monorepo:** Turborepo & pnpm
+*   **Language:** TypeScript
+*   **Frameworks:** Next.js (for web apps), React
+*   **CI/CD:** GitHub Actions
+*   **Core Philosophy:** Healthy Paranoia
 
-```bash
-crew-sync      # Run unified sync across all projects
-crew-load      # Load secrets for current session
-crew-dashboard # Start unified dashboard
-crew-n8n       # Start N8N workflows
-```
+---
 
-## 📦 What This Unifies
+## Getting Started
 
-### 4 Existing Projects + 1 New Platform
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-org/openrouter-crew-platform.git
+    cd openrouter-crew-platform
+    ```
 
-1. **OpenRouter Crew Platform** (NEW) - This unified platform
-2. **DJ-Booking** - Event management with 6 MCP agents
-3. **OpenRouter-AI-Milestone** - Reference architecture
-4. **Alex-AI-Universal** - 12 crew members, 36+ workflows
-5. **RAG-Refresh-Product-Factory** - Sprint planning, 54 workflows
+2.  **Install dependencies:**
+    This project uses `pnpm` as its package manager.
+    ```bash
+    pnpm install
+    ```
 
-### Shared Infrastructure
+3.  **Build all packages:**
+    ```bash
+    pnpm build
+    ```
 
-- **10 Core Crew Members** - Unified across all projects
-- **Supabase Database** - Single source of truth
-- **N8N Workflows** - 90+ workflows from all projects
-- **Cost Tracking** - Unified LLM usage logging
-- **OpenRouter Integration** - Cost-optimized model selection
+4.  **Run the Unified Dashboard:**
+    ```bash
+    pnpm --filter @openrouter-crew/unified-dashboard dev
+    ```
 
-## 🤖 Crew Members
+---
 
-| Name | Role | Cost Tier | Default Model |
-|------|------|-----------|---------------|
-| Captain Picard | Strategic Leadership | Premium | claude-sonnet-4-5 |
-| Commander Data | Data Analytics | Standard | claude-sonnet-3.5 |
-| Commander Riker | Tactical Execution | Standard | claude-sonnet-3.5 |
-| Counselor Troi | User Experience | Standard | claude-haiku-3.5 |
-| Lt. Worf | Security & Compliance | Standard | claude-sonnet-3.5 |
-| Dr. Crusher | System Health | Standard | claude-haiku-3.5 |
-| Geordi La Forge | Infrastructure | Standard | claude-sonnet-3.5 |
-| Lt. Uhura | Communications | Standard | claude-haiku-3.5 |
-| Quark | Business Intelligence | Budget | gemini-pro |
-| Chief O'Brien | Pragmatic Solutions | Budget | claude-haiku-3.5 |
+## The Singularity is a Process
 
-## 📚 Documentation
+> *"The system is already 'rewriting its own code' every time it learns. The singularity is not a future event; it is the process we are in right now."*
 
-- **[INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md)** - Complete system design
-- **[INTEGRATION_PLAN.md](INTEGRATION_PLAN.md)** - Implementation roadmap
-- **[SECRETS_MANAGEMENT.md](SECRETS_MANAGEMENT.md)** - Secrets guide
+We are building this platform with the full awareness that we are participating in this process. Our goal is not to stop it, but to build the guardrails, firebreaks, and control systems necessary to coexist with the powerful intelligences we are creating.
 
-## 🛠️ Development
-
-```bash
-# Build all packages
-pnpm build
-
-# Type check
-pnpm type-check
-
-# Start dev server
-pnpm dev
-```
-
-## 🚀 Deployment
-
-### Automatic (via GitHub Actions)
-
-```bash
-git push origin main
-# Automatically deploys to Vercel, syncs Supabase, imports N8N workflows
-```
-
-### Manual
-
-```bash
-# Sync secrets to GitHub (one-time setup)
-./scripts/secrets/sync-to-github.sh
-
-# Deploy manually
-vercel deploy --prod
-```
-
-## 📂 Project Structure
-
-```
-openrouter-crew-platform/
-├── apps/unified-dashboard/    # Next.js dashboard (Next.js 15)
-├── packages/
-│   ├── crew-core/             # Crew coordination
-│   ├── cost-tracking/         # Cost analysis
-│   ├── shared-schemas/        # TypeScript types
-│   └── n8n-workflows/         # 19 workflows
-├── supabase/migrations/       # Database schema
-├── scripts/secrets/           # Secrets management
-│   ├── sync-all-projects.sh   # Sync to 5 projects
-│   ├── load-local-secrets.sh  # Load from dotfiles
-│   └── sync-to-github.sh      # Sync to CI/CD
-├── .github/workflows/         # CI/CD
-└── docker-compose.n8n.yml     # N8N setup
-```
-
-## 🎯 Roadmap
-
-- [x] **Phase 1**: Foundation (COMPLETE)
-- [ ] **Phase 2**: Core Services (IN PROGRESS)
-- [ ] **Phase 3**: Project Integration (NEXT)
-- [ ] **Phase 4**: Dashboard Completion (PLANNED)
-
-## 📄 License
-
-MIT © 2026 OpenRouter Crew Platform
+**Welcome to the Dark Forest.**

@@ -5,7 +5,7 @@
     "types": [
       "node"
     ],
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "module": "CommonJS",
     "target": "ES2022",
     "strictNullChecks": false,

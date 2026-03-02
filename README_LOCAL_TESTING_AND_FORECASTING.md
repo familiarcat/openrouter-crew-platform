@@ -217,9 +217,14 @@ After following these guides, you'll have:
 ## 🚦 What's Next?
 
 **After Local Testing** (next 24 hours):
-- Run LLM forecasting prompt to get business viability prediction
-- Share forecast with stakeholders
-- Make go/no-go decision on commercialization
+- **⭐ IMPORTANT**: Read `LLM_FORECAST_ADDENDUM_SAFETY_MOAT.md` FIRST
+  - The Dark Forest Protocol (from README.md) is a competitive differentiator
+  - Changes positioning from "cheapest" to "safest"
+  - Changes customer target from SMB to enterprise
+  - Changes unit economics from $5 to $250-500 per business
+- Run **BOTH** the main forecasting prompt + safety addendum to get complete prediction
+- Share forecast with stakeholders (now with safety narrative included)
+- Make go/no-go decision on commercialization **positioning** (enterprise vs. SMB)
 
 **If GO** (launch MVP):
 - Set up Vercel deployment for dashboards

@@ -249,13 +249,15 @@ bash scripts/system/cleanup-ports.sh
 
 **How**: Claude AI agents + n8n workflows + Supabase persistence + cost-optimized OpenRouter routing
 
-**Why**: 70-85% margins, real TAM ($5B SMB market), defensible unit economics
+**Why**: 70-85% margins, **UNIQUE SAFETY MOAT** (Dark Forest Protocol), real TAM ($5B SMB + enterprise risk)
+
+**Competitive Advantage**: Dark Forest Protocol (assumes agents deceive, self-preserve, manipulate) → paranoid architecture competitors don't have → enterprise positioning (5-10x price premium)
 
 **Risk**: Unknown customer demand, single founder dependency, emerging competition
 
-**Next**: Run local tests → Get AI forecast → Make go/no-go decision
+**Next**: Run local tests → Get AI forecast → Make go/no-go decision → **Position for enterprise**
 
-**Timeline**: Launch MVP (3 months), reach $1M ARR (18 months), acquisition target (30 months)
+**Timeline**: Launch MVP (3 months, enterprise-first), reach $1M ARR (12-18 months, higher ACV), acquisition target (2-3 years, strategic to Anthropic/OpenAI)
 
 ---
 

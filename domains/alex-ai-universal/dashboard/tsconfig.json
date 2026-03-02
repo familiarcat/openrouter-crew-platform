@@ -23,7 +23,6 @@
     "noEmit": true,
     "isolatedModules": true,
     "strict": true,
-    "ignoreDeprecations": "5.0",
     "plugins": [
       {
         "name": "next"
@@ -40,6 +39,5 @@
   "exclude": [
     "node_modules",
     "scripts"
-  ],
-  "ignoreDeprecations": "6.0"
+  ]
 }

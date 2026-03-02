@@ -8,7 +8,7 @@
     ],
     "jsx": "react-jsx",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "outDir": "./dist",
     "rootDir": "./src",
     "composite": true,

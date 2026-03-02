@@ -7,7 +7,7 @@
       "DOM.Iterable"
     ],
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "esModuleInterop": true,
     "strict": true,
     "noUnusedLocals": true,
@@ -53,8 +53,7 @@
       "@dashboard/*": [
         "apps/unified-dashboard/*"
       ]
-    },
-    "ignoreDeprecations": "5.0"
+    }
   },
   "exclude": [
     "node_modules",
@@ -62,6 +61,7 @@
     ".next",
     "out"
   ],
+  "ignoreDeprecations": "5.0",
   "files": [],
   "references": [
     {

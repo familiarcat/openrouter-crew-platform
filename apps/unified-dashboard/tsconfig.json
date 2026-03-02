@@ -1,23 +1,14 @@
 {
   "extends": "../../tsconfig.web.json",
   "compilerOptions": {
-    "strict": true,
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
-    "noEmit": true,
-    "moduleResolution": "Bundler",
-    "module": "ESNext",
-    "target": "ES2022",
     "baseUrl": ".",
-    "ignoreDeprecations": "5.0"
+    "paths": { "@/*": ["./*"] },
+    "strict": true
   },
   "include": [
     "next-env.d.ts",
