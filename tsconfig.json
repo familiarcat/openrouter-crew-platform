@@ -7,7 +7,7 @@
       "DOM.Iterable"
     ],
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "Node",
     "esModuleInterop": true,
     "strict": true,
     "noUnusedLocals": true,
@@ -52,6 +52,12 @@
       ],
       "@dashboard/*": [
         "apps/unified-dashboard/*"
+      ],
+      "@openrouter-crew/agent-memory": [
+        "domains/shared/agent-memory/src/index.ts"
+      ],
+      "@openrouter-crew/agent-memory/*": [
+        "domains/shared/agent-memory/src/*"
       ]
     }
   },
@@ -66,6 +72,9 @@
   "references": [
     {
       "path": "./apps/cli"
+    },
+    {
+      "path": "./domains/shared/agent-orchestration"
     },
     {
       "path": "./domains/shared/crew-coordination"
@@ -86,7 +95,16 @@
       "path": "./domains/vscode-extension"
     },
     {
+      "path": "./domains/shared/agent-memory"
+    },
+    {
+      "path": "./domains/shared/openrouter-client"
+    },
+    {
       "path": "./domains/shared/n8n-integration"
+    },
+    {
+      "path": "./domains/shared/workflows"
     }
   ]
 }

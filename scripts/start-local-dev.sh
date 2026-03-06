@@ -194,13 +194,13 @@ PORT=3002 pnpm --filter @openrouter-crew/dj-booking-dashboard dev > "$LOG_DIR/dj
 DJ_PID=$!
 SERVICES+=($DJ_PID)
 
-# Product Factory (3003)
-PORT=3003 pnpm --filter @openrouter-crew/test-event-venue-dashboard dev > "$LOG_DIR/product-factory.log" 2>&1 &
+# Product Factory (3004)
+PORT=3004 pnpm --filter @openrouter-crew/test-event-venue-dashboard dev > "$LOG_DIR/product-factory.log" 2>&1 &
 PF_PID=$!
 SERVICES+=($PF_PID)
 
-# Alex AI (3004)
-PORT=3004 pnpm --filter @openrouter-crew/alex-ai-universal-dashboard dev > "$LOG_DIR/alex-ai.log" 2>&1 &
+# Alex AI (3003)
+PORT=3003 pnpm --filter @openrouter-crew/alex-ai-universal-dashboard dev > "$LOG_DIR/alex-ai.log" 2>&1 &
 ALEX_PID=$!
 SERVICES+=($ALEX_PID)
 
@@ -208,7 +208,7 @@ SERVICES+=($ALEX_PID)
 log_info "Starting n8n..."
 cd "$PROJECT_ROOT"
 if docker-compose -f docker-compose.yml up -d n8n > "$LOG_DIR/n8n.log" 2>&1; then
-    log_success "n8n starting (http://localhost:5194)"
+    log_success "n8n starting (http://localhost:5678)"
     sleep 5
 else
     log_warning "n8n startup had issues. Check $LOG_DIR/n8n.log"
@@ -232,9 +232,9 @@ log_header "PHASE 4: Service Verification"
 check_service "API Server" "http://localhost:3001/api/health" 60 "$LOG_DIR/api-server.log" || log_error "API Server failed to start. Check logs."
 check_service "Web Portal" "http://localhost:3000/api/health" 60 "$LOG_DIR/web-portal.log" || log_error "Web Portal failed to start. Check logs."
 check_service "DJ Booking" "http://localhost:3002" 30 "$LOG_DIR/dj-booking.log" || log_warning "DJ Booking dashboard taking a while..."
-check_service "Product Factory" "http://localhost:3003" 30 "$LOG_DIR/product-factory.log" || log_warning "Product Factory dashboard taking a while..."
-check_service "Alex AI" "http://localhost:3004" 30 "$LOG_DIR/alex-ai.log" || log_warning "Alex AI dashboard taking a while..."
-check_service "n8n" "http://localhost:5194" 90 "$LOG_DIR/n8n.log" || log_error "n8n failed to start. Check logs."
+check_service "Product Factory" "http://localhost:3004" 30 "$LOG_DIR/product-factory.log" || log_warning "Product Factory dashboard taking a while..."
+check_service "Alex AI" "http://localhost:3003" 30 "$LOG_DIR/alex-ai.log" || log_warning "Alex AI dashboard taking a while..."
+check_service "n8n" "http://localhost:5678" 90 "$LOG_DIR/n8n.log" || log_error "n8n failed to start. Check logs."
 
 ###############################################################################
 # Phase 5: Ready State
@@ -247,9 +247,9 @@ echo -e "${GREEN}Service URLs:${NC}"
 echo "  • Web Portal:   ${BLUE}http://localhost:3000${NC}"
 echo "  • API Server:   ${BLUE}http://localhost:3001${NC}"
 echo "  • DJ Booking:   ${BLUE}http://localhost:3002${NC}"
-echo "  • Prod Factory: ${BLUE}http://localhost:3003${NC}"
-echo "  • Alex AI:      ${BLUE}http://localhost:3004${NC}"
-echo "  • n8n:          ${BLUE}http://localhost:5194${NC}"
+echo "  • Alex AI:      ${BLUE}http://localhost:3003${NC}"
+echo "  • Prod Factory: ${BLUE}http://localhost:3004${NC}"
+echo "  • n8n:          ${BLUE}http://localhost:5678${NC}"
 echo "  • Supabase:     ${BLUE}${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:54321}${NC}"
 echo ""
 echo -e "${GREEN}Log Files:${NC}"

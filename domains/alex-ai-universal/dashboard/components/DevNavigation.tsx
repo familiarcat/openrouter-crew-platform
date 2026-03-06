@@ -24,9 +24,8 @@ export default function DevNavigation() {
     setIsNarrow(window.innerWidth < 1200);
   }, []);
 
-  // Only show in development
+  // Show in both dev and production, but hide debug tools in production
   const isDev = process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_DEV_MODE === 'true';
-  if (!isDev) return null;
 
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path);
 
@@ -68,7 +67,7 @@ export default function DevNavigation() {
     <nav style={navStyle}>
       <div style={containerStyle}>
         <span style={{ fontWeight: 700, color: 'var(--heading, var(--text))', fontSize: '15px' }}>
-          🖖 ALEX AI DEV MODE
+          🖖 ALEX AI {isDev ? 'DEV MODE' : ''}
         </span>
         
         <Link href="/dashboard" style={linkStyle(isActive('/dashboard'))}>
@@ -176,9 +175,9 @@ export default function DevNavigation() {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <IntentThemeSwitcher />
-          <GlobalThemeSwitcher />
-          {mounted && !isNarrow && <span style={{ fontSize: '12px', opacity: 0.7 }}>Current: {pathname}</span>}
+          {isDev && <IntentThemeSwitcher />}
+          {isDev && <GlobalThemeSwitcher />}
+          {isDev && mounted && !isNarrow && <span style={{ fontSize: '12px', opacity: 0.7 }}>Current: {pathname}</span>}
         </div>
       </div>
     </nav>

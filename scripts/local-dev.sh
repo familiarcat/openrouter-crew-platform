@@ -60,12 +60,12 @@ echo "🚀 STARTING LOCAL DEVELOPMENT ENVIRONMENT"
 echo "════════════════════════════════════════════════════════════════════════════"
 echo ""
 
-# Port assignments
+# Port assignments (canonical assignment)
 declare -A DOMAIN_PORTS=(
   ["unified-dashboard"]="3000"
-  ["product-factory"]="3001"
+  ["product-factory"]="3004"
   ["alex-ai-universal"]="3003"
-  ["dj-booking"]="3004"
+  ["dj-booking"]="3002"
 )
 
 # Service ports

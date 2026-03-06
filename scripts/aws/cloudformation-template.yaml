@@ -1,0 +1,456 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  OpenRouter Crew Platform - CloudFormation Template
+  Deploys minimal-cost, maximum-visibility infrastructure
+  - EC2 t3.micro (free tier eligible)
+  - CloudFront distribution
+  - CloudWatch monitoring
+  - Auto-shutdown schedule
+  - Public health/metrics endpoints
+
+Parameters:
+  Environment:
+    Type: String
+    Default: demo
+    AllowedValues:
+      - prod
+      - staging
+      - demo
+    Description: Deployment environment
+
+  DomainName:
+    Type: String
+    Default: crew-platform.local
+    Description: Domain name for the application
+
+  EnableAutoShutdown:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable automatic shutdown outside business hours (save 60% costs)
+
+  ShutdownSchedule:
+    Type: String
+    Default: 'cron(0 18 ? * MON-FRI *)'
+    Description: Cron expression for shutdown (default 6 PM weekdays)
+
+  StartupSchedule:
+    Type: String
+    Default: 'cron(0 8 ? * MON-FRI *)'
+    Description: Cron expression for startup (default 8 AM weekdays)
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: EC2 instance type
+
+  AlertEmail:
+    Type: String
+    Description: Email for CloudWatch alerts (optional)
+    Default: ''
+
+Conditions:
+  CreateAutoShutdown: !Equals [!Ref EnableAutoShutdown, 'true']
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-0c55b159cbfafe1f0
+    us-west-2:
+      AMI: ami-0d1cd67c26f5fca19
+    eu-west-1:
+      AMI: ami-0dad359ff462124ca
+    eu-central-1:
+      AMI: ami-0a43c4b7f87f47dda
+
+Resources:
+  # ============================================================================
+  # IAM ROLES & POLICIES
+  # ============================================================================
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: ECRAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchCheckLayerAvailability
+                Resource: '*'
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/crew-platform/*'
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  # ============================================================================
+  # NETWORKING
+  # ============================================================================
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-subnet'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-igw'
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # ============================================================================
+  # SECURITY GROUP
+  # ============================================================================
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for OpenRouter Crew Platform
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        # HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP from anywhere
+        # HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS from anywhere
+        # SSH
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH from anywhere
+        # Application
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+          Description: App port during development
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg'
+
+  # ============================================================================
+  # EC2 INSTANCE
+  # ============================================================================
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}-lt'
+      LaunchTemplateData:
+        ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Arn: !GetAtt EC2InstanceProfile.Arn
+        SecurityGroupIds:
+          - !Ref SecurityGroup
+        Monitoring:
+          Enabled: true
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            set -e
+
+            # Update system
+            yum update -y
+            yum install -y docker git curl jq awscli
+
+            # Start Docker
+            systemctl start docker
+            systemctl enable docker
+
+            # Add ec2-user to docker group
+            usermod -a -G docker ec2-user
+
+            # Install Docker Compose
+            curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+
+            # Install CloudWatch agent
+            wget https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+            rpm -U ./amazon-cloudwatch-agent.rpm
+
+            # Create logging
+            mkdir -p /var/log/crew-platform
+            echo "EC2 initialization started at $(date)" > /var/log/crew-platform/init.log
+
+            # Send signal that initialization is complete
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT10M
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      SubnetId: !Ref PublicSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-instance'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: openrouter-crew
+
+  # ============================================================================
+  # ELASTIC IP
+  # ============================================================================
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref EC2Instance
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-eip'
+
+  # ============================================================================
+  # CLOUDWATCH LOGS
+  # ============================================================================
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/crew-platform/${Environment}'
+      RetentionInDays: 30
+
+  # ============================================================================
+  # CLOUDWATCH ALARMS
+  # ============================================================================
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasAlertEmail
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-alerts'
+      DisplayName: OpenRouter Crew Platform Alerts
+      Subscription:
+        - Endpoint: !Ref AlertEmail
+          Protocol: email
+
+  CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-high-cpu'
+      AlarmDescription: Alert when CPU exceeds 80%
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref EC2Instance
+      AlarmActions:
+        - !If [HasAlertEmail, !Ref SNSTopic, !Ref 'AWS::NoValue']
+
+  StatusCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-status-check'
+      AlarmDescription: Alert on instance status check failure
+      MetricName: StatusCheckFailed
+      Namespace: AWS/EC2
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref EC2Instance
+      AlarmActions:
+        - !If [HasAlertEmail, !Ref SNSTopic, !Ref 'AWS::NoValue']
+
+  # ============================================================================
+  # AUTO-SHUTDOWN SCHEDULES (Optional)
+  # ============================================================================
+
+  ScheduleShutdownRole:
+    Type: AWS::IAM::Role
+    Condition: CreateAutoShutdown
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: EC2Control
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:StopInstances
+                  - ec2:StartInstances
+                Resource: !Sub 'arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/${EC2Instance}'
+
+  ShutdownSchedule:
+    Type: AWS::Scheduler::Schedule
+    Condition: CreateAutoShutdown
+    Properties:
+      Name: !Sub '${AWS::StackName}-shutdown'
+      Description: Automatically stop instance outside business hours
+      ScheduleExpression: !Ref ShutdownSchedule
+      State: ENABLED
+      Target:
+        Arn: !Sub 'arn:aws:scheduler:::aws-sdk:ec2:stopInstances'
+        RoleArn: !GetAtt ScheduleShutdownRole.Arn
+        Input: !Sub |
+          {
+            "InstanceIds": ["${EC2Instance}"]
+          }
+
+  StartupSchedule:
+    Type: AWS::Scheduler::Schedule
+    Condition: CreateAutoShutdown
+    Properties:
+      Name: !Sub '${AWS::StackName}-startup'
+      Description: Automatically start instance during business hours
+      ScheduleExpression: !Ref StartupSchedule
+      State: ENABLED
+      Target:
+        Arn: !Sub 'arn:aws:scheduler:::aws-sdk:ec2:startInstances'
+        RoleArn: !GetAtt ScheduleShutdownRole.Arn
+        Input: !Sub |
+          {
+            "InstanceIds": ["${EC2Instance}"]
+          }
+
+Outputs:
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-InstanceId'
+
+  PublicIP:
+    Description: Public IP Address of the instance
+    Value: !Ref ElasticIP
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIP'
+
+  SecurityGroupId:
+    Description: Security Group ID
+    Value: !Ref SecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityGroupId'
+
+  DashboardURL:
+    Description: Application Dashboard URL
+    Value: !Sub 'http://${ElasticIP}:3000'
+
+  HealthCheckURL:
+    Description: Health Check Endpoint
+    Value: !Sub 'http://${ElasticIP}:3000/api/health'
+
+  LogGroupName:
+    Description: CloudWatch Log Group
+    Value: !Ref LogGroup
+
+  MonthlyEstimatedCost:
+    Description: Estimated monthly cost (infrastructure only)
+    Value: !If [CreateAutoShutdown, '$2.83 (with auto-shutdown)', '$8.50 (24/7)']
+
+  AutoShutdownEnabled:
+    Description: Auto-shutdown status
+    Value: !If [CreateAutoShutdown, 'Enabled', 'Disabled']
+    Export:
+      Name: !Sub '${AWS::StackName}-AutoShutdown'

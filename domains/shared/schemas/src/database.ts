@@ -17,6 +17,9 @@ export type CostTier = 'premium' | 'standard' | 'budget' | 'ultra_budget';
 export type MemoryType = 'observation' | 'decision' | 'learning' | 'context';
 export type WorkflowType = 'crew' | 'system' | 'coordination' | 'project-specific' | 'subflow';
 export type WorkflowStatus = 'running' | 'success' | 'failed' | 'timeout';
+export type SprintStatus = 'planning' | 'active' | 'completed' | 'cancelled';
+export type StoryStatus = 'backlog' | 'planned' | 'in_progress' | 'in_review' | 'completed' | 'blocked' | 'todo' | 'review' | 'done';
+export type StoryType = 'user_story' | 'developer_story' | 'technical_task' | 'bug_fix' | 'feature' | 'bug' | 'tech_debt' | 'spike' | 'documentation';
 
 export interface Database {
   public: {
@@ -66,6 +69,97 @@ export interface Database {
           metadata?: Json;
           budget_usd?: number | null;
           total_cost_usd?: number;
+        };
+      };
+      sprints: {
+        Row: {
+          id: string;
+          project_id: string;
+          name: string;
+          sprint_number: number;
+          start_date: string;
+          end_date: string;
+          goals: string[];
+          status: SprintStatus;
+          velocity_target: number;
+          velocity_actual: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          name: string;
+          sprint_number: number;
+          start_date: string;
+          end_date: string;
+          goals?: string[];
+          status?: SprintStatus;
+          velocity_target?: number;
+          velocity_actual?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          name?: string;
+          sprint_number?: number;
+          start_date?: string;
+          end_date?: string;
+          goals?: string[];
+          status?: SprintStatus;
+          velocity_target?: number;
+          velocity_actual?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      stories: {
+        Row: {
+          id: string;
+          project_id: string;
+          sprint_id: string | null;
+          title: string;
+          description: string | null;
+          story_type: StoryType;
+          status: StoryStatus;
+          priority: number;
+          story_points: number | null;
+          assigned_crew_member: string | null;
+          estimated_hours: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          sprint_id?: string | null;
+          title: string;
+          description?: string | null;
+          story_type?: StoryType;
+          status?: StoryStatus;
+          priority?: number;
+          story_points?: number | null;
+          assigned_crew_member?: string | null;
+          estimated_hours?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          sprint_id?: string | null;
+          title?: string;
+          description?: string | null;
+          story_type?: StoryType;
+          status?: StoryStatus;
+          priority?: number;
+          story_points?: number | null;
+          assigned_crew_member?: string | null;
+          estimated_hours?: number | null;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       llm_usage_events: {

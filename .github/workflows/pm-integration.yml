@@ -1,0 +1,153 @@
+name: PM Integration Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/unified-dashboard/**'
+      - 'domains/shared/project-management/**'
+      - '.github/workflows/pm-integration.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/unified-dashboard/**'
+      - 'domains/shared/project-management/**'
+
+jobs:
+  type-check:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check unified-dashboard
+        run: pnpm --filter @openrouter-crew/unified-dashboard type-check
+
+      - name: Type check project-management
+        run: pnpm --filter @openrouter-crew/project-management type-check
+
+  build:
+    name: Build Unified Dashboard
+    runs-on: ubuntu-latest
+    needs: type-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dashboard
+        run: pnpm --filter @openrouter-crew/unified-dashboard build
+
+  sprint-api-tests:
+    name: Sprint API Route Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run sprint API tests
+        run: pnpm --filter @openrouter-crew/unified-dashboard test -- sprint-api.test.ts
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+  project-service-tests:
+    name: Project Service Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run project service tests
+        run: pnpm --filter @openrouter-crew/unified-dashboard test -- project-service.test.ts
+
+  sprint-planner-tests:
+    name: Sprint Planner Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run sprint planner tests
+        run: pnpm --filter @openrouter-crew/unified-dashboard test -- sprint-planner.test.ts
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  all-tests:
+    name: All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [sprint-api-tests, project-service-tests, sprint-planner-tests]
+    if: success()
+    steps:
+      - name: Report success
+        run: echo "✅ All PM integration tests passed"
+
+  all-tests-failed:
+    name: Tests Failed
+    runs-on: ubuntu-latest
+    needs: [sprint-api-tests, project-service-tests, sprint-planner-tests]
+    if: failure()
+    steps:
+      - name: Report failure
+        run: exit 1

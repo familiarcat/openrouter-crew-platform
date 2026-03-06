@@ -33,11 +33,11 @@ interface PlanningSession {
     perspective: string;
     storiesSuggested: number;
   }>;
-  deliberation: { consensus: string; adjustmentsMade: number };
+  deliberation: { consensus: string; adjustmentsMade: string[] };
   totalStories: number;
   totalPoints: number;
   totalBudget: number;
-  crewInvolved: number;
+  crewInvolved: string[];
   estimatedROI: number;
   quarkAnalysis?: string;
   rikerPlan?: string;

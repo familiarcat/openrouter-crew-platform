@@ -3,16 +3,19 @@
 @tailwind utilities;
 
 :root {
-  /* Unified Design System Tokens */
-  --background: #0b0d11;
-  --foreground: #ffffff;
-  --card-bg: #16181d;
-  --card: #16181d;
-  --border: rgba(255, 255, 255, 0.1);
+  /* Unified Design System Tokens (HSL format for Tailwind) */
+  --background: 220 14% 6%;
+  --foreground: 0 0% 100%;
+  --card: 222 13% 10%;
+  --card-bg: 222 13% 10%;
+  --card-foreground: 0 0% 100%;
+  --border: 220 13% 91% / 0.1;
   --radius: 0.75rem;
-  --accent: #60a5fa;
-  --text-muted: #9ca3af;
-  --text: #ffffff;
+  --accent: 213 94% 68%;
+  --muted-foreground: 220 9% 63%;
+  --text: 0 0% 100%;
+  --primary: 213 94% 68%;
+  --primary-foreground: 0 0% 0%;
 
   /* Legacy/Specific Alex AI Vars (Preserved for component compatibility) */
   --alex-purple: #7c5cff;

@@ -11,9 +11,9 @@ export default function ReleaseNotesPage() {
           <h1 className="text-2xl font-bold text-white">Release Notes</h1>
           <p className="text-gray-400">Version history and changelogs</p>
         </div>
-        <a 
-          href="http://localhost:3003" 
-          target="_blank" 
+        <a
+          href="http://localhost:3002"
+          target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors border border-white/10"
         >
@@ -23,8 +23,8 @@ export default function ReleaseNotesPage() {
       </div>
 
       <div className="flex-1 bg-[var(--card-bg)] rounded-xl border border-[var(--border)] overflow-hidden relative min-h-[500px]">
-        <iframe 
-          src="http://localhost:3003" 
+        <iframe
+          src="http://localhost:3002"
           className="w-full h-full border-0"
           title="Release Notes"
         />

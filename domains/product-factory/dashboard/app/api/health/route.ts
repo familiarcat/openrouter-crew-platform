@@ -33,7 +33,7 @@ interface HealthCheck {
   errors?: string[];
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const health: HealthCheck = {
     status: "healthy",
     timestamp: new Date().toISOString(),

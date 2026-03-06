@@ -1,0 +1,57 @@
+[Unit]
+Description=OpenRouter Crew Agents - MCP Server Hub
+Documentation=file:///docs/CREW_AGENT_DEPLOYMENT.md
+Requires=network-online.target
+After=network-online.target
+StartLimitBurst=3
+StartLimitIntervalSec=60s
+
+[Service]
+Type=simple
+User=crew-agents
+Group=crew-agents
+WorkingDirectory=/opt/openrouter-crew/agents
+
+# Environment variables
+EnvironmentFile=/etc/crew-agents/environment
+EnvironmentFile=-/etc/crew-agents/environment.local
+
+# Main process
+ExecStart=/usr/bin/node /opt/openrouter-crew/agents/dist/mcp/server.js
+
+# Process management
+Restart=on-failure
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crew-agents
+
+# Security
+PrivateTmp=yes
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/openrouter-crew/agents/logs
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryLimit=2G
+CPUQuota=200%
+
+# Health checking
+ExecHealthCheck=/usr/bin/curl -f http://localhost:3000/health || exit 1
+HealthCheckInterval=30s
+HealthCheckTimeout=10s
+HealthCheckRetries=3
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crew-agents
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,418 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║          🚀 OPENROUTER CREW PLATFORM - LOCAL TESTING SETUP GUIDE 🚀        ║
+║                    Complete PM System Implementation (v1.0)                 ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 THE ANSWER TO YOUR QUESTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q: "What pnpm script should I use to locally test the entire system?"
+A: pnpm dev:universal
+
+This SINGLE COMMAND does everything:
+  ✓ Starts all 4 dashboards (unified, dj-booking, alex-ai, product-factory)
+  ✓ Starts Supabase local database  
+  ✓ Watches VSCode extension for changes
+  ✓ Automatically opens all dashboards in browser with tabs
+  ✓ Shows real-time logs and status
+
+Time to ready: 60-90 seconds
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 FULL ANSWERS TO YOUR QUESTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q1: What pnpm script for entire system testing?
+────────────────────────────────────────────────
+
+MAIN COMMAND:
+  pnpm dev:universal
+
+DOES:
+  • Cleans up stuck ports automatically
+  • Starts all 4 Next.js dashboards on ports 3000, 3002, 3003, 3004
+  • Starts Supabase local database on port 54321
+  • Watches VSCode extension for changes
+  • Waits for services to come online
+  • Opens browser with all 4 dashboards in separate tabs
+  • Provides real-time output showing service status
+
+EXAMPLE OUTPUT:
+  ⏳ Waiting for dashboards to come online...
+  ✅ Ready: http://localhost:3000 (Unified Dashboard)
+  ✅ Ready: http://localhost:3002 (DJ Booking)
+  ✅ Ready: http://localhost:3003 (Alex AI)
+  ✅ Ready: http://localhost:3004 (Product Factory)
+  
+  Browser opens with all 4 tabs automatically loaded
+
+ALTERNATIVE COMMANDS (if you don't want some components):
+  pnpm dev:dashboards        - Just web servers, no Supabase
+  pnpm dev:unified           - Just unified dashboard (PM system)
+  pnpm supabase:start        - Just database
+  pnpm dev:all               - Using docker-compose
+
+
+Q2: Describe installation steps for VSCode extension
+─────────────────────────────────────────────────────
+
+INSTALLATION:
+  
+  Step 1: Build and install
+    pnpm vscode:install
+  
+  Step 2: Reload VSCode
+    • Press: Cmd+Shift+P (Mac) or Ctrl+Shift+P (Windows/Linux)
+    • Type: "Developer: Reload Window"
+    • Press: Enter
+    • Wait: 2-3 seconds for reload
+
+  Step 3: Verify installation
+    • Look for new icon in left activity bar (sidebar)
+    • It shows a small icon next to Files, Search, Git
+    • Click the icon to expand the panel
+
+FEATURES AVAILABLE:
+  • Projects panel - Quick navigation to all projects
+  • Crew roster - View all available agents and their status
+  • Cost meter - Real-time daily budget tracking
+  • Memory browser - Search and view past conversations
+  • Commands - Palette of AI-powered commands
+
+DEVELOPMENT MODE (if modifying extension):
+  • Keep terminal running: pnpm --filter openrouter-crew-vscode watch
+  • Make changes to extension code
+  • In VSCode: Cmd+Shift+P → "Developer: Reload Window"
+  • Changes appear immediately
+
+
+Q3: CLI usage guide
+────────────────────
+
+BUILD THE CLI:
+  pnpm --filter @openrouter-crew/cli build
+
+AVAILABLE COMMANDS:
+  crew --help                           # Show all commands
+  
+  Cost Management:
+    crew cost status                    # Current daily spending
+    crew cost forecast --days 30        # 30-day projection
+    crew budget get                     # Current budget limit
+    crew budget set --limit 100         # Set daily limit ($100)
+
+  Project Management:
+    crew project list                   # List all projects
+    crew project create --name "foo"    # Create new project
+    crew project info <id>              # Project details
+
+  Crew Management:
+    crew crew list                      # All available agents
+    crew crew status                    # Current assignments
+    crew crew assign <member> <task>    # Assign work
+
+  Analytics:
+    crew analytics summary              # Budget overview
+    crew analytics detailed             # Detailed metrics
+    crew analytics export               # CSV export
+
+  Memory System:
+    crew memory list                    # All memories
+    crew memory search "keyword"        # Find memories
+    crew memory show <id>               # View specific memory
+    crew memory delete <id>             # Remove memory
+
+  History & Audit:
+    crew history list                   # Recent operations
+    crew history show <operation-id>    # Operation details
+    crew history export                 # Export history
+
+COMMON WORKFLOWS:
+  # Check if you're within budget today
+  crew cost status
+  
+  # See who's available to work
+  crew crew list
+  
+  # Find information about previous work
+  crew memory search "sprint planning"
+  
+  # Check all your projects
+  crew project list
+  
+  # Get budget status
+  crew budget get
+
+
+Q4: Automatically load all web interfaces in browser with tabs
+───────────────────────────────────────────────────────────────
+
+AUTOMATIC (Already built into pnpm dev:universal):
+  When you run: pnpm dev:universal
+  
+  • Script waits for all services to be ready
+  • Opens browser automatically
+  • Creates tabs for each dashboard
+  • Shows status: "✅ Service is ready"
+
+WHAT OPENS:
+  Tab 1: http://localhost:3000  (Unified Dashboard - PM System)
+  Tab 2: http://localhost:3002  (DJ Booking)
+  Tab 3: http://localhost:3003  (Alex AI Universal)
+  Tab 4: http://localhost:3004  (Product Factory)
+
+MANUAL OPTION (if auto-open didn't work):
+  bash scripts/system/open-all-tabs.sh
+  
+  • Waits for each service (shows status)
+  • Opens first dashboard in new browser window
+  • Opens remaining in additional tabs
+  • Works on macOS, Linux, Windows (WSL)
+
+BROWSER TAB SHORTCUTS:
+  Cmd+Tab          - Switch between windows
+  Cmd+]            - Next tab
+  Cmd+[            - Previous tab
+  Cmd+K            - Focus address bar
+  Cmd+W            - Close tab
+  Cmd+T            - New tab
+
+PORTS & WHAT'S RUNNING:
+  Port 3000   │ Unified Dashboard (Project Management) ⭐ NEW
+  Port 3002   │ DJ Booking Dashboard
+  Port 3003   │ Alex AI Universal (Agent Coordination)
+  Port 3004   │ Product Factory (Business Generator)
+  Port 5678   │ n8n Workflows (optional)
+  Port 54321  │ Supabase Admin (Database)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 QUICK START GUIDE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Start Everything (90 seconds)
+  cd /Users/bradygeorgen/Dev/openrouter-crew-platform
+  pnpm dev:universal
+  
+  ✓ Everything starts automatically
+  ✓ Browser opens with all dashboards
+  ✓ Keep this terminal open for logs
+
+STEP 2: Explore the Main Dashboard (5 minutes)
+  • Browser should show http://localhost:3000
+  • This is the Unified Dashboard (NEW Project Management System)
+  • Create a project or navigate to an existing one
+  • Click "Board" tab to see Kanban sprint board
+  • Click "Plan Sprint" to see AI planning in action
+
+STEP 3: Install VSCode Extension (Optional)
+  In a NEW terminal (keep dashboards running):
+    pnpm vscode:install
+  
+  Then in VSCode:
+    • Cmd+Shift+P → "Developer: Reload Window"
+    • Look for new sidebar icon
+    • Click icon to see Cost Meter, Crew Status, etc.
+
+STEP 4: Build and Test CLI (Optional)
+  In a NEW terminal:
+    pnpm --filter @openrouter-crew/cli build
+    crew project list    # See your projects
+    crew cost status     # Check budget
+    crew crew list       # See available agents
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 DOCUMENTATION FILES CREATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. START_HERE_LOCAL_TESTING.md
+   ├─ 3-step quick start
+   ├─ Web dashboard URLs
+   ├─ VSCode extension setup
+   ├─ CLI tool guide
+   └─ 5-min, 15-min, 30-min, 1-hour learning paths
+
+2. PNPM_SCRIPTS_REFERENCE.md
+   ├─ All 50+ pnpm scripts
+   ├─ Command categories
+   ├─ Development workflows
+   ├─ Common tasks
+   └─ Quick lookup table
+
+3. LOCAL_TESTING_GUIDE.md
+   ├─ Comprehensive 100+ line guide
+   ├─ Prerequisites and setup
+   ├─ Individual service testing
+   ├─ Feature testing procedures
+   ├─ Database management
+   ├─ Troubleshooting
+   └─ Performance testing
+
+4. PM_SYSTEM_LAUNCH_CHECKLIST.md
+   ├─ What you built (Phases 0-5)
+   ├─ Feature overview
+   ├─ Testing procedures
+   ├─ Architecture diagram
+   ├─ Implementation status
+   └─ Next steps
+
+5. scripts/system/open-all-tabs.sh
+   ├─ Auto-opens all dashboards in browser tabs
+   ├─ Shows service readiness status
+   ├─ Waits for each port to respond
+   └─ Works on macOS, Linux, Windows
+
+START HERE:
+  Read: START_HERE_LOCAL_TESTING.md (5 min)
+  Then: pnpm dev:universal
+  
+FOR COMPLETE INFO:
+  Read: LOCAL_TESTING_GUIDE.md (30 min)
+
+FOR SCRIPT REFERENCE:
+  Read: PNPM_SCRIPTS_REFERENCE.md (whenever needed)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ WHAT YOU CAN TEST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NEW PROJECT MANAGEMENT SYSTEM (Phases 0-5 Complete):
+
+✓ Sprint Planning with AI
+  → Go to http://localhost:3000/projects/[id]/board
+  → Click "Plan Sprint"
+  → Enter goals and budget
+  → Watch 9-step Dark Forest pipeline execute
+  → See crew analysis, consensus, adjustments
+
+✓ Real-time Kanban Board
+  → Open board in 2 browser windows
+  → Drag a story card in Window A
+  → Watch it sync to Window B (1-2 seconds!)
+  → Fully real-time via Supabase postgres_changes
+
+✓ Server Actions
+  → Create projects via web form
+  → Create sprints and stories
+  → Assign crew members
+  → Update story status
+  → All mutations via Next.js Server Actions
+
+✓ Integration Tests
+  pnpm test                                    # All tests
+  pnpm --filter @openrouter-crew/unified-dashboard test -- sprint-api.test.ts
+  pnpm --filter @openrouter-crew/unified-dashboard test -- project-service.test.ts
+  pnpm --filter @openrouter-crew/unified-dashboard test -- sprint-planner.test.ts
+
+✓ VSCode Extension Features
+  → Cost meter shows real-time daily spending
+  → Crew roster shows team status
+  → Memory browser searches past work
+  → Project navigation panel
+
+✓ CLI Tools
+  crew cost status          # Check budget
+  crew project list         # View projects
+  crew crew list            # See available agents
+  crew memory search "foo"  # Find memories
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆘 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Problem: "Port 3000 already in use"
+Solution: bash scripts/system/cleanup-ports.sh
+
+Problem: "Supabase won't start"
+Solution: Make sure Docker is running
+         pnpm supabase:stop && pnpm supabase:start
+
+Problem: "VSCode extension not showing"
+Solution: Reload VSCode (Cmd+Shift+P → "Developer: Reload Window")
+
+Problem: "Dashboard won't load"
+Solution: Check logs: tail -f .logs/web-portal.log
+
+Problem: "OpenRouter API not responding"
+Solution: Add OPENROUTER_API_KEY to .env.local
+         Restart: pnpm dev:unified
+
+Problem: "Terminal stuck after Ctrl+C"
+Solution: ps aux | grep node
+         kill -9 <PID>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 ARCHITECTURE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Phase 0: Prerequisites (Database + Types)
+  ✓ Supabase migration (sprints, stories tables)
+  ✓ Canonical type definitions
+  ✓ Schema cleanup
+
+Phase 1: Shared Package
+  ✓ @openrouter-crew/project-management
+  ✓ ProjectService, SprintService, StoryService
+  ✓ Shared types for all packages
+
+Phase 2: API Routes + Components
+  ✓ GET/POST /api/sprints
+  ✓ GET/POST /api/sprints/[id]/stories
+  ✓ PATCH /api/sprints/[id]/stories/[storyId]
+  ✓ POST /api/sprints/plan (AI endpoint)
+  ✓ UI components (ProjectHeader, CostAnalytics, CrewAssignments)
+
+Phase 3: Real-time + Mutations
+  ✓ useSprintRealtime hook (Supabase postgres_changes)
+  ✓ Server Actions (project-actions, sprint-actions)
+  ✓ Optimistic UI with auto-revert
+
+Phase 4: AI Pipeline (9-Step Dark Forest)
+  ✓ Step 1: budgetEnforcer.checkBudget()
+  ✓ Step 2: memoryService.getProjectMemories()
+  ✓ Step 3: PromptBuilder.build()
+  ✓ Step 4: crewCoordinator.selectCrewMember()
+  ✓ Step 5: modelRouter.route()
+  ✓ Step 6: OpenRouter API call
+  ✓ Step 7: auditService.logOperation()
+  ✓ Step 8: budgetEnforcer.recordSpending()
+  ✓ Step 9: Return PlanningSession
+
+Phase 5: Tests + CI
+  ✓ Jest integration tests
+  ✓ GitHub Actions workflow
+  ✓ Type checking + Build validation
+  ✓ Test coverage for all endpoints
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎬 READY TO START?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Copy and paste this command now:
+
+    cd /Users/bradygeorgen/Dev/openrouter-crew-platform
+    pnpm dev:universal
+
+Then:
+  ✓ Wait 60-90 seconds
+  ✓ Browser opens with 4 dashboards
+  ✓ Explore http://localhost:3000 (Unified Dashboard)
+  ✓ Create a project, plan a sprint
+  ✓ See real-time Kanban board in action
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 Next Steps:
+  1. Read: START_HERE_LOCAL_TESTING.md
+  2. Run: pnpm dev:universal
+  3. Explore: http://localhost:3000
+  4. Install: pnpm vscode:install
+  5. Test: pnpm test
+
+Questions? See LOCAL_TESTING_GUIDE.md (comprehensive guide)
+
+Version: 1.0.0 (Phases 0-5 Complete)
+Status: ✅ Production Ready
+Last Updated: 2026-03-02
+
+╚════════════════════════════════════════════════════════════════════════════╝

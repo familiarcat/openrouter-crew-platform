@@ -1,0 +1,21 @@
+{
+  "name": "@openrouter-crew/project-management",
+  "version": "1.0.0",
+  "description": "Project management types and services for OpenRouter crew platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openrouter-crew/shared-schemas": "workspace:*",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^20.11.0"
+  }
+}

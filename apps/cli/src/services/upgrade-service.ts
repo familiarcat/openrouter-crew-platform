@@ -3,11 +3,11 @@ export class UpgradeService {
         return false;
     }
 
-    async getStatus() {
+    async getStatus(): Promise<{ tier: string; active: boolean; expiresAt: Date | null }> {
         return {
             tier: 'starter',
             active: true,
-            expiresAt: undefined
+            expiresAt: null
         };
     }
 

@@ -1,0 +1,83 @@
+# OpenRouter Crew Agents - Production Environment Configuration
+
+# Server Configuration
+NODE_ENV=production
+CREW_AGENTS_PORT=3000
+CREW_AGENTS_HOST=0.0.0.0
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_FORMAT=json
+LOG_OUTPUT=/opt/openrouter-crew/agents/logs/crew-agents.log
+
+# MCP Server Configuration
+MCP_SERVERS=data,worf,troi,geordi,crusher
+MCP_AUTO_START=true
+MCP_HEALTH_CHECK_INTERVAL=30
+
+# Supabase Integration
+# These should be set in environment.local with actual values
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# OpenRouter API
+OPENROUTER_API_KEY=
+OPENROUTER_API_BASE_URL=https://openrouter.ai/api/v1
+
+# Observation Lounge Integration
+OBSERVATION_LOUNGE_PROJECT_ID=proj_crew_agents
+OBSERVATION_LOUNGE_ENABLED=true
+
+# Agent Memory Integration
+AGENT_MEMORY_ENABLED=true
+AGENT_MEMORY_RETENTION_DAYS=30
+
+# Cost Tracking
+COST_TRACKING_ENABLED=true
+COST_BUDGET_DAILY_USD=100
+COST_ALERT_THRESHOLD_USD=80
+
+# Performance Tuning
+CLAUDE_MAX_ITERATIONS=10
+CLAUDE_TIMEOUT_SECONDS=60
+MCP_TOOL_TIMEOUT_SECONDS=30
+MCP_CONCURRENT_TOOLS=5
+
+# Security
+CORS_ENABLED=false
+TLS_ENABLED=true
+TLS_CERT_PATH=/etc/crew-agents/certs/server.crt
+TLS_KEY_PATH=/etc/crew-agents/certs/server.key
+
+# Monitoring & Alerting
+PROMETHEUS_ENABLED=true
+PROMETHEUS_PORT=9090
+SENTRY_DSN=
+DATADOG_ENABLED=false
+
+# Feature Flags
+FEATURE_CLAUDE_INTEGRATION=true
+FEATURE_MULTI_AGENT_SYNTHESIS=true
+FEATURE_OBSERVATION_LOUNGE=true
+FEATURE_AUTO_CONFLICT_RESOLUTION=true
+
+# Database Connection Pool
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+DB_CONNECTION_TIMEOUT_MS=5000
+DB_IDLE_TIMEOUT_MS=30000
+
+# Cache Configuration
+REDIS_ENABLED=false
+REDIS_URL=
+CACHE_TTL_SECONDS=300
+
+# Rate Limiting
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_WINDOW_SECONDS=60
+RATE_LIMIT_MAX_REQUESTS=1000
+
+# Graceful Shutdown
+SHUTDOWN_TIMEOUT_SECONDS=30
+DRAIN_EXISTING_CONNECTIONS=true

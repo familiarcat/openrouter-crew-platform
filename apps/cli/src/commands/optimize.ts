@@ -23,7 +23,7 @@ optimizeCommand
   .option('-d, --days <days>', 'Number of days to analyze', '30')
   .option('--since <date>', 'Start date for analysis (YYYY-MM-DD)')
   .action(async (options) => {
-    console.log(chalk.blue('\n🔍 Analyzing usage patterns...'));
+    console.log(chalk.cyan('\n🔍 Analyzing usage patterns...'));
 
     try {
       // Fetch recent events from the database
@@ -96,7 +96,7 @@ optimizeCommand
       console.log(chalk.gray('To apply a suggestion, run: `crew optimize apply <ID>`'));
 
     } catch (error: any) {
-      console.error(chalk.red(`❌ Error running optimization analysis: ${error.message}`));
+      console.error(chalk.red(`✗ Error running optimization analysis: ${error.message}`));
       process.exit(1);
     }
   });
@@ -105,7 +105,7 @@ optimizeCommand
   .command('revert <suggestionId>')
   .description('Revert an applied optimization')
   .action(async (suggestionId) => {
-    console.log(chalk.blue(`\n⏪ Reverting optimization: ${suggestionId}`));
+    console.log(chalk.cyan(`\n⏪ Reverting optimization: ${suggestionId}`));
 
     try {
       // Re-run analysis to find the suggestion details
@@ -114,7 +114,7 @@ optimizeCommand
       const suggestion = suggestions.find((s: OptimizationSuggestion) => s.id === suggestionId);
 
       if (!suggestion) {
-        console.error(chalk.red(`\n❌ Optimization suggestion with ID '${suggestionId}' not found.`));
+        console.error(chalk.red(`\n✗ Optimization suggestion with ID '${suggestionId}' not found.`));
         process.exit(1);
       }
 
@@ -145,7 +145,7 @@ optimizeCommand
       console.log('');
 
     } catch (error: any) {
-      console.error(chalk.red(`\n❌ Error reverting optimization: ${error.message}`));
+      console.error(chalk.red(`\n✗ Error reverting optimization: ${error.message}`));
       process.exit(1);
     }
   });
@@ -154,7 +154,7 @@ optimizeCommand
   .command('apply <suggestionId>')
   .description('Apply a specific optimization suggestion')
   .action(async (suggestionId) => {
-    console.log(chalk.blue(`\n⚙️  Applying optimization: ${suggestionId}`));
+    console.log(chalk.cyan(`\n⚙️  Applying optimization: ${suggestionId}`));
 
     try {
       // Re-run analysis to find the suggestion. In a real app, this might be cached or fetched.
@@ -163,7 +163,7 @@ optimizeCommand
       const suggestion = suggestions.find((s: OptimizationSuggestion) => s.id === suggestionId);
 
       if (!suggestion) {
-        console.error(chalk.red(`\n❌ Optimization suggestion with ID '${suggestionId}' not found.`));
+        console.error(chalk.red(`\n✗ Optimization suggestion with ID '${suggestionId}' not found.`));
         console.log(chalk.gray('   Run `crew optimize analyze` to see available suggestions.'));
         process.exit(1);
       }
@@ -202,7 +202,7 @@ optimizeCommand
       console.log('');
 
     } catch (error: any) {
-      console.error(chalk.red(`\n❌ Error applying optimization: ${error.message}`));
+      console.error(chalk.red(`\n✗ Error applying optimization: ${error.message}`));
       process.exit(1);
     }
   });

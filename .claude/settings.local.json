@@ -54,7 +54,11 @@
       "Bash(/tmp/file_manifest.txt:*)",
       "Bash(./scripts/unify-platform.sh --quick)",
       "Bash(pnpm clean)",
-      "Bash(pnpm type-check)"
+      "Bash(pnpm type-check)",
+      "Bash(pnpm --filter @openrouter-crew/vscode-extension compile)",
+      "Bash(bash scripts/system/setup-universal-memory.sh)",
+      "Bash(bash /Users/bradygeorgen/Dev/openrouter-crew-platform/scripts/system/setup-universal-memory.sh:*)",
+      "Bash(npm --version)"
     ]
   }
 }

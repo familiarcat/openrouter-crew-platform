@@ -1,20 +1,13 @@
 {
   "name": "@openrouter-crew/shared-crew-coordination",
   "version": "1.0.0",
-  "description": "Shared crew member logic and coordination (10 Star Trek crew members)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
-    "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@openrouter-crew/shared-schemas": "workspace:*"
+    "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "@types/node": "^20.11.0"
+    "typescript": "^5.9.3"
   }
 }

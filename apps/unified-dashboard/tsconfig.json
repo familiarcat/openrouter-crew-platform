@@ -7,8 +7,30 @@
       }
     ],
     "baseUrl": ".",
-    "paths": { "@/*": ["./*"] },
-    "strict": true
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@crew/*": [
+        "../../domains/shared/crew-api-client/src/*"
+      ],
+      "@shared/crew-coordination/*": [
+        "../../domains/shared/crew-coordination/src/*"
+      ],
+      "@shared/cost-tracking/*": [
+        "../../domains/shared/cost-tracking/src/*"
+      ],
+      "@shared/schemas/*": [
+        "../../domains/shared/schemas/src/*"
+      ],
+      "@shared/ui-components/*": [
+        "../../domains/shared/ui-components/src/*"
+      ]
+    },
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "target": "ES2022"
   },
   "include": [
     "next-env.d.ts",
@@ -20,5 +42,6 @@
     "node_modules",
     ".next",
     "scripts"
-  ]
+  ],
+  "ignoreDeprecations": "5.0"
 }
