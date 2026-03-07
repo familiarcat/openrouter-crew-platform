@@ -3,6 +3,7 @@
  * Verify cost optimization, analytics, and archival working together
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { CostOptimizationService } from '../src/services/cost-optimization';
 import { MemoryAnalyticsService } from '../src/services/memory-analytics';
 import { MemoryArchivalService } from '../src/services/memory-archival';
@@ -30,7 +31,7 @@ describe('Phase 3 Sprint 3 Integration', () => {
       strategy: 'automatic',
       minAgeDays: 30,
       compressionEnabled: true,
-    });
+    }) as any;
 
     embeddingProvider = new EmbeddingProvider({ cache: { enabled: true } });
     clusteringService = new SemanticClusteringService(embeddingProvider);

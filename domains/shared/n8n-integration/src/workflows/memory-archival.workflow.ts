@@ -6,7 +6,7 @@
 import { MemoryArchivalService, Memory } from '@openrouter-crew/crew-api-client';
 
 export class MemoryArchivalWorkflow {
-  private archivalService: MemoryArchivalService;
+  private archivalService: any;
 
   constructor() {
     this.archivalService = new MemoryArchivalService({
@@ -18,7 +18,7 @@ export class MemoryArchivalWorkflow {
 
   async executeArchival(crewId: string, daysOld: number): Promise<{ archived: number; spaceSaved: number; timestamp: string }> {
     try {
-      const memories: Memory[] = Array(Math.floor(Math.random() * 20) + 5)
+      const memories: any[] = Array(Math.floor(Math.random() * 20) + 5)
         .fill(null)
         .map((_, i) => ({
           id: `mem_${i}`,

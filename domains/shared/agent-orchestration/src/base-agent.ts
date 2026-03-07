@@ -59,7 +59,7 @@ export abstract class BaseAgent implements Agent {
    * Assess impact of solution on stakeholders
    * Used by Troi, User Experience agents
    */
-  abstract assessImpact(solution: SynthesizedSolution): Promise<ImpactAssessment>
+  abstract assessImpact(solution: any): Promise<ImpactAssessment>
 
   /**
    * Calculate confidence score for a recommendation
@@ -280,7 +280,7 @@ export class DataAgent extends BaseAgent {
     throw new Error('Data does not execute directly. Geordi (Infrastructure) executes.')
   }
 
-  async assessImpact(solution: SynthesizedSolution): Promise<ImpactAssessment> {
+  async assessImpact(solution: any): Promise<ImpactAssessment> {
     // Data provides logical impact assessment (but may miss human factors)
     return {
       stakeholders: ['developers', 'users', 'operations'],
@@ -380,7 +380,7 @@ export class WorfAgent extends BaseAgent {
     throw new Error('Worf does not execute directly. Works with other agents.')
   }
 
-  async assessImpact(solution: SynthesizedSolution): Promise<ImpactAssessment> {
+  async assessImpact(solution: any): Promise<ImpactAssessment> {
     return {
       stakeholders: ['security-team', 'compliance-officers', 'management'],
       emotionalImpact: 'neutral',
@@ -477,7 +477,7 @@ export class TroiAgent extends BaseAgent {
     throw new Error('Troi does not execute directly. Facilitates team adoption.')
   }
 
-  async assessImpact(solution: SynthesizedSolution): Promise<ImpactAssessment> {
+  async assessImpact(solution: any): Promise<ImpactAssessment> {
     return {
       stakeholders: ['all-crew', 'users', 'management'],
       emotionalImpact: 'positive',
@@ -599,7 +599,7 @@ export class GeordiAgent extends BaseAgent {
     return result
   }
 
-  async assessImpact(solution: SynthesizedSolution): Promise<ImpactAssessment> {
+  async assessImpact(solution: any): Promise<ImpactAssessment> {
     return {
       stakeholders: ['operations', 'developers', 'users'],
       emotionalImpact: 'neutral',

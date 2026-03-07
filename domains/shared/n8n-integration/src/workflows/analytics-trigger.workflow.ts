@@ -22,7 +22,7 @@ interface AnalyticsResult {
 }
 
 export class AnalyticsTriggerWorkflow {
-  private analyticsService: MemoryAnalyticsService;
+  private analyticsService: any;
 
   constructor() {
     this.analyticsService = new MemoryAnalyticsService();
@@ -86,7 +86,7 @@ export class AnalyticsTriggerWorkflow {
   /**
    * Detect trending topics
    */
-  detectTrends(memories: Memory[]): Map<string, number> {
+  detectTrends(memories: any[]): Map<string, number> {
     const trends = new Map<string, number>();
 
     // Simulate topic trend detection

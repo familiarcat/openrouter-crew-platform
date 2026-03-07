@@ -3,6 +3,7 @@
  * Verify MemoryCompressionService, EmbeddingProvider, and BatchProcessorService work together
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { MemoryCompressionService } from '../src/services/memory-compression';
 import { EmbeddingProvider } from '../src/services/embedding-provider';
 import { BatchProcessorService, BatchItem } from '../src/services/batch-processor';
@@ -14,7 +15,7 @@ describe('Phase 3 Integration', () => {
   let batchProcessor: BatchProcessorService<Memory, string>;
 
   beforeEach(() => {
-    compressionService = new MemoryCompressionService();
+    compressionService = new MemoryCompressionService() as any;
     embeddingProvider = new EmbeddingProvider({
       cache: { enabled: true, ttlMs: 60 * 60 * 1000 },
     });

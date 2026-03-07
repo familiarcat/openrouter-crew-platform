@@ -20,7 +20,7 @@
 
 import { BaseMCPServer } from './base-mcp-server'
 import { createClient } from '@supabase/supabase-js'
-import type { ToolResult } from '../types'
+import type { ToolResult } from './base-mcp-server'
 
 interface FeasibilityAssessment {
   technicallyFeasible: boolean
@@ -96,7 +96,8 @@ interface PerformanceMetrics {
 }
 
 export class GeordiAgentServer extends BaseMCPServer {
-  private supabase
+  protected supabase
+  getToolDefinition(toolName: string): any { return null; }
 
   constructor(supabaseUrl?: string, supabaseKey?: string) {
     super('geordi', 'Infrastructure & Technical Implementation')
@@ -135,7 +136,7 @@ export class GeordiAgentServer extends BaseMCPServer {
         },
         required: ['proposal']
       },
-      handler: (input) => this.checkFeasibility(input)
+      handler: (input: any) => this.checkFeasibility(input)
     })
 
     this.registerTool({
@@ -169,7 +170,7 @@ export class GeordiAgentServer extends BaseMCPServer {
         },
         required: ['solution']
       },
-      handler: (input) => this.implementSolution(input)
+      handler: (input: any) => this.implementSolution(input)
     })
 
     this.registerTool({
@@ -195,7 +196,7 @@ export class GeordiAgentServer extends BaseMCPServer {
         },
         required: ['solution', 'targetEnvironment']
       },
-      handler: (input) => this.validateDeployment(input)
+      handler: (input: any) => this.validateDeployment(input)
     })
 
     this.registerTool({
@@ -220,7 +221,7 @@ export class GeordiAgentServer extends BaseMCPServer {
         },
         required: ['system']
       },
-      handler: (input) => this.monitorPerformance(input)
+      handler: (input: any) => this.monitorPerformance(input)
     })
   }
 
@@ -257,11 +258,11 @@ export class GeordiAgentServer extends BaseMCPServer {
         confidence: 0.88
       }
 
-      await this.logToolCall('check-feasibility', input, assessment, 0.88)
+      await this.logToolCall('check-feasibility', input, { success: true })
       return { success: true, data: assessment }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('check-feasibility', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('check-feasibility', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -292,11 +293,11 @@ export class GeordiAgentServer extends BaseMCPServer {
         confidence: 0.87
       }
 
-      await this.logToolCall('implement-solution', input, plan, 0.87)
+      await this.logToolCall('implement-solution', input, { success: true })
       return { success: true, data: plan }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('implement-solution', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('implement-solution', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -335,11 +336,11 @@ export class GeordiAgentServer extends BaseMCPServer {
         confidence: 0.91
       }
 
-      await this.logToolCall('validate-deployment', input, validation, 0.91)
+      await this.logToolCall('validate-deployment', input, { success: true })
       return { success: true, data: validation }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('validate-deployment', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('validate-deployment', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -380,11 +381,11 @@ export class GeordiAgentServer extends BaseMCPServer {
         confidence: 0.85
       }
 
-      await this.logToolCall('monitor-performance', input, performanceMetrics, 0.85)
+      await this.logToolCall('monitor-performance', input, { success: true })
       return { success: true, data: performanceMetrics }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('monitor-performance', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('monitor-performance', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }

@@ -20,7 +20,7 @@
 
 import { BaseMCPServer } from './base-mcp-server'
 import { createClient } from '@supabase/supabase-js'
-import type { ToolResult } from '../types'
+import type { ToolResult } from './base-mcp-server'
 
 interface ImpactAssessment {
   userExperienceScore: number // 0-100
@@ -69,7 +69,8 @@ interface ConsensusPlan {
 }
 
 export class TroiAgentServer extends BaseMCPServer {
-  private supabase
+  protected supabase
+  getToolDefinition(toolName: string): any { return null; }
 
   constructor(supabaseUrl?: string, supabaseKey?: string) {
     super('troi', 'User Experience & Organizational Impact')
@@ -109,7 +110,7 @@ export class TroiAgentServer extends BaseMCPServer {
         },
         required: ['proposal', 'targetUsers']
       },
-      handler: (input) => this.assessImpact(input)
+      handler: (input: any) => this.assessImpact(input)
     })
 
     this.registerTool({
@@ -142,7 +143,7 @@ export class TroiAgentServer extends BaseMCPServer {
         },
         required: ['change', 'organizationSize']
       },
-      handler: (input) => this.predictAdoption(input)
+      handler: (input: any) => this.predictAdoption(input)
     })
 
     this.registerTool({
@@ -167,7 +168,7 @@ export class TroiAgentServer extends BaseMCPServer {
         },
         required: ['proposal', 'stakeholders']
       },
-      handler: (input) => this.identifyConcerns(input)
+      handler: (input: any) => this.identifyConcerns(input)
     })
 
     this.registerTool({
@@ -197,7 +198,7 @@ export class TroiAgentServer extends BaseMCPServer {
         },
         required: ['proposal', 'conflictingParties']
       },
-      handler: (input) => this.facilitateConsensus(input)
+      handler: (input: any) => this.facilitateConsensus(input)
     })
   }
 
@@ -234,11 +235,11 @@ export class TroiAgentServer extends BaseMCPServer {
         confidence: 0.87
       }
 
-      await this.logToolCall('assess-impact', input, assessment, 0.87)
+      await this.logToolCall('assess-impact', input, { success: true })
       return { success: true, data: assessment }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('assess-impact', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('assess-impact', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -286,11 +287,11 @@ export class TroiAgentServer extends BaseMCPServer {
         confidence: 0.84
       }
 
-      await this.logToolCall('predict-adoption', input, forecast, 0.84)
+      await this.logToolCall('predict-adoption', input, { success: true })
       return { success: true, data: forecast }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('predict-adoption', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('predict-adoption', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -389,7 +390,7 @@ export class TroiAgentServer extends BaseMCPServer {
       const result = {
         totalConcerns: concerns.length,
         byScore: {
-          critical: concerns.filter(c => c.severity === 'critical').length,
+          critical: concerns.filter(c => (c.severity as string) === 'critical').length,
           high: concerns.filter(c => c.severity === 'high').length,
           medium: concerns.filter(c => c.severity === 'medium').length,
           low: concerns.filter(c => c.severity === 'low').length
@@ -398,11 +399,11 @@ export class TroiAgentServer extends BaseMCPServer {
         confidence: 0.89
       }
 
-      await this.logToolCall('identify-concerns', input, result, 0.89)
+      await this.logToolCall('identify-concerns', input, { success: true })
       return { success: true, data: result }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('identify-concerns', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('identify-concerns', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -441,11 +442,11 @@ export class TroiAgentServer extends BaseMCPServer {
         confidence: 0.86
       }
 
-      await this.logToolCall('facilitate-consensus', input, plan, 0.86)
+      await this.logToolCall('facilitate-consensus', input, { success: true })
       return { success: true, data: plan }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('facilitate-consensus', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('facilitate-consensus', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }

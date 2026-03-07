@@ -49,7 +49,9 @@ export class ConflictDetector {
     // Compare each pair of recommendations
     for (let i = 0; i < recommendations.length; i++) {
       for (let j = i + 1; j < recommendations.length; j++) {
-        const conflict = this.detectPairwiseConflict(recommendations[i], recommendations[j])
+        const rec1 = recommendations[i]; const rec2 = recommendations[j];
+        if (!rec1 || !rec2) continue;
+        const conflict = this.detectPairwiseConflict(rec1, rec2)
         if (conflict) {
           conflicts.push(conflict)
         }
@@ -83,8 +85,8 @@ export class ConflictDetector {
 
     for (const [term1, term2] of contradictionPairs) {
       if (
-        (terms1.includes(term1) && terms2.includes(term2)) ||
-        (terms1.includes(term2) && terms2.includes(term1))
+        (term1 && term2 && terms1.includes(term1) && terms2.includes(term2)) ||
+        (term1 && term2 && terms1.includes(term2) && terms2.includes(term1))
       ) {
         return {
           id: `conflict_${rec1.agentId}_${rec2.agentId}`,
@@ -155,7 +157,9 @@ export class ConflictDetector {
 
     for (let i = 0; i < recommendations.length; i++) {
       for (let j = i + 1; j < recommendations.length; j++) {
-        const synergy = this.detectPairwiseSynergy(recommendations[i], recommendations[j])
+        const rec1 = recommendations[i]; const rec2 = recommendations[j];
+        if (!rec1 || !rec2) continue;
+        const synergy = this.detectPairwiseSynergy(rec1, rec2)
         if (synergy) {
           synergies.push(synergy)
         }
@@ -185,8 +189,8 @@ export class ConflictDetector {
 
     for (const [term1, term2] of complementaryPairs) {
       if (
-        (terms1.includes(term1) && terms2.includes(term2)) ||
-        (terms1.includes(term2) && terms2.includes(term1))
+        (term1 && term2 && terms1.includes(term1) && terms2.includes(term2)) ||
+        (term1 && term2 && terms1.includes(term2) && terms2.includes(term1))
       ) {
         return {
           agent1,

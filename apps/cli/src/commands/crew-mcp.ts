@@ -77,11 +77,10 @@ export function registerCrewMCPCommands(program: Command) {
 
         // Display results
         console.log(chalk.green('\n✅ Analysis Complete\n'))
-        console.log(chalk.bold('Crew Findings:'))
-        result.findings.forEach(finding => {
-          console.log(
-            `  • ${chalk.cyan(finding.tool)} (${finding.agent}): ${JSON.stringify(finding.result).substring(0, 80)}...`
-          )
+        console.log(chalk.bold('\nFindings:'))
+        result.findings.forEach((finding: any) => {
+          console.log(`\n${chalk.cyan(finding.tool)} (${finding.agent})`)
+          console.log(JSON.stringify(finding.result, null, 2))
         })
 
         console.log('\n' + chalk.bold('Synthesis:'))

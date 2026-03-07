@@ -3,6 +3,7 @@
  * Verify memory clustering, deduplication, and duplicate detection
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { SemanticClusteringService } from '../src/services/semantic-clustering';
 import { EmbeddingProvider } from '../src/services/embedding-provider';
 import { Memory } from '../src/types';

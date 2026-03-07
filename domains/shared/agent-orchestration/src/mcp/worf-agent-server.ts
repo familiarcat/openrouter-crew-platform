@@ -11,7 +11,7 @@
  * - check-policy-adherence: Validate against policies and constraints
  */
 
-import BaseMCPServer, { ToolDefinition, ToolResult } from './base-mcp-server.js'
+import { BaseMCPServer, ToolDefinition, ToolResult } from './base-mcp-server'
 
 export class WorfAgentServer extends BaseMCPServer {
   constructor() {
@@ -24,8 +24,7 @@ export class WorfAgentServer extends BaseMCPServer {
    */
   private setupTools() {
     // Tool 1: Verify Compliance
-    this.registerTool(
-      {
+    this.registerTool({
         name: 'verify-compliance',
         description:
           'Check if a proposed change complies with security policies and standards. Returns compliance status and required mitigation.',
@@ -42,14 +41,12 @@ export class WorfAgentServer extends BaseMCPServer {
               default: 'SOC2'
             }
           }
-        }
-      },
-      this.verifyCompliance.bind(this)
-    )
+        },
+        handler: this.verifyCompliance.bind(this)
+    })
 
     // Tool 2: Assess Risks
-    this.registerTool(
-      {
+    this.registerTool({
         name: 'assess-risks',
         description:
           'Identify security and operational risks in a proposed change. Returns risk assessment with mitigation strategies.',
@@ -66,14 +63,12 @@ export class WorfAgentServer extends BaseMCPServer {
               default: 'model-selection'
             }
           }
-        }
-      },
-      this.assessRisks.bind(this)
-    )
+        },
+        handler: this.assessRisks.bind(this)
+    })
 
     // Tool 3: Validate Audit Trail
-    this.registerTool(
-      {
+    this.registerTool({
         name: 'validate-audit-trail',
         description:
           'Verify that a proposed change maintains proper audit logging and decision traceability.',
@@ -90,14 +85,12 @@ export class WorfAgentServer extends BaseMCPServer {
                 'How the decision was made: "cost-optimization", "performance-improvement", "feature-addition"'
             }
           }
-        }
-      },
-      this.validateAuditTrail.bind(this)
-    )
+        },
+        handler: this.validateAuditTrail.bind(this)
+    })
 
     // Tool 4: Check Policy Adherence
-    this.registerTool(
-      {
+    this.registerTool({
         name: 'check-policy-adherence',
         description:
           'Validate that a proposed change adheres to organizational policies and constraints.',
@@ -124,10 +117,9 @@ export class WorfAgentServer extends BaseMCPServer {
               default: true
             }
           }
-        }
-      },
-      this.checkPolicyAdherence.bind(this)
-    )
+        },
+        handler: this.checkPolicyAdherence.bind(this)
+    })
   }
 
   /**
@@ -149,7 +141,7 @@ export class WorfAgentServer extends BaseMCPServer {
       const complianceChecks = this.getComplianceChecks(compliance_framework)
       const results: any[] = []
 
-      for (const check of complianceChecks) {
+      for (const check of complianceChecks || []) {
         const passed = this.evaluateComplianceCheck(proposal, check)
         results.push({
           requirement: check.name,
@@ -299,14 +291,14 @@ export class WorfAgentServer extends BaseMCPServer {
         timeline_is_clear: true // Assume timeline is clear if other checks pass
       }
 
-      const allChecks = Object.values(auditChecks)
-      const passedChecks = allChecks.filter(c => c).length
+      const checkValues = Object.values(auditChecks)
+      const passedChecks = checkValues.filter(c => c).length
 
       return {
         success: true,
         data: {
-          audit_ready: allChecks.has_decision_authority,
-          audit_score: ((passedChecks / allChecks.length) * 100).toFixed(1) + '%',
+          audit_ready: checkValues.every(c => c),
+          audit_score: ((passedChecks / checkValues.length) * 100).toFixed(1) + '%',
           checks: {
             decision_authority: auditChecks.has_decision_authority
               ? 'VERIFIED - Change is authorized'
@@ -330,7 +322,7 @@ export class WorfAgentServer extends BaseMCPServer {
             must_log_verification: true,
             retention_period_days: 2555 // 7 years
           },
-          recommendation: allChecks.has_decision_authority
+          recommendation: auditChecks.has_decision_authority
             ? 'Change is audit-compliant and can proceed'
             : 'Change requires additional documentation before proceeding'
         },
@@ -629,61 +621,6 @@ export class WorfAgentServer extends BaseMCPServer {
   private validateDocumentation(proposal: string): boolean {
     // Documentation is handled through observation lounge
     return true
-  }
-
-  /**
-   * Get tool definition
-   */
-  protected getToolDefinition(toolName: string): ToolDefinition | null {
-    const definitions: Record<string, ToolDefinition> = {
-      'verify-compliance': {
-        name: 'verify-compliance',
-        description: 'Check compliance with security policies',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            proposal: { type: 'string' },
-            compliance_framework: { type: 'string', default: 'SOC2' }
-          }
-        }
-      },
-      'assess-risks': {
-        name: 'assess-risks',
-        description: 'Identify security and operational risks',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            proposal: { type: 'string' },
-            scope: { type: 'string', default: 'model-selection' }
-          }
-        }
-      },
-      'validate-audit-trail': {
-        name: 'validate-audit-trail',
-        description: 'Verify audit logging capability',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            proposal: { type: 'string' },
-            decision_path: { type: 'string' }
-          }
-        }
-      },
-      'check-policy-adherence': {
-        name: 'check-policy-adherence',
-        description: 'Check policy compliance',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            proposal: { type: 'string' },
-            check_budget: { type: 'boolean', default: true },
-            check_security: { type: 'boolean', default: true },
-            check_compliance: { type: 'boolean', default: true }
-          }
-        }
-      }
-    }
-    return definitions[toolName] || null
   }
 }
 

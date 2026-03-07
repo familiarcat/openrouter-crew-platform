@@ -20,7 +20,7 @@
 
 import { BaseMCPServer } from './base-mcp-server'
 import { createClient } from '@supabase/supabase-js'
-import type { ToolResult } from '../types'
+import type { ToolResult } from './base-mcp-server'
 
 interface Diagnosis {
   primarySymptom: string
@@ -87,7 +87,8 @@ interface HealthAssessment {
 }
 
 export class CrusherAgentServer extends BaseMCPServer {
-  private supabase
+  protected supabase
+  getToolDefinition(toolName: string): any { return null; }
 
   constructor(supabaseUrl?: string, supabaseKey?: string) {
     super('crusher', 'System Health & Diagnostics')
@@ -126,7 +127,7 @@ export class CrusherAgentServer extends BaseMCPServer {
         },
         required: ['symptom']
       },
-      handler: (input) => this.diagnoseIssues(input)
+      handler: (input: any) => this.diagnoseIssues(input)
     })
 
     this.registerTool({
@@ -155,7 +156,7 @@ export class CrusherAgentServer extends BaseMCPServer {
         },
         required: ['systemDescription']
       },
-      handler: (input) => this.predictProblems(input)
+      handler: (input: any) => this.predictProblems(input)
     })
 
     this.registerTool({
@@ -184,7 +185,7 @@ export class CrusherAgentServer extends BaseMCPServer {
         },
         required: ['healthGoal']
       },
-      handler: (input) => this.recommendPrevention(input)
+      handler: (input: any) => this.recommendPrevention(input)
     })
 
     this.registerTool({
@@ -209,7 +210,7 @@ export class CrusherAgentServer extends BaseMCPServer {
         },
         required: ['system']
       },
-      handler: (input) => this.assessHealth(input)
+      handler: (input: any) => this.assessHealth(input)
     })
   }
 
@@ -239,11 +240,11 @@ export class CrusherAgentServer extends BaseMCPServer {
         confidence: 0.86
       }
 
-      await this.logToolCall('diagnose-issues', input, diagnosis, 0.86)
+      await this.logToolCall('diagnose-issues', input, { success: true })
       return { success: true, data: diagnosis }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('diagnose-issues', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('diagnose-issues', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -272,11 +273,11 @@ export class CrusherAgentServer extends BaseMCPServer {
         confidence: 0.81
       }
 
-      await this.logToolCall('predict-problems', input, prediction, 0.81)
+      await this.logToolCall('predict-problems', input, { success: true })
       return { success: true, data: prediction }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('predict-problems', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('predict-problems', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -306,11 +307,11 @@ export class CrusherAgentServer extends BaseMCPServer {
         confidence: 0.84
       }
 
-      await this.logToolCall('recommend-prevention', input, plan, 0.84)
+      await this.logToolCall('recommend-prevention', input, { success: true })
       return { success: true, data: plan }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('recommend-prevention', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('recommend-prevention', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }
@@ -339,11 +340,11 @@ export class CrusherAgentServer extends BaseMCPServer {
         confidence: 0.88
       }
 
-      await this.logToolCall('assess-health', input, assessment, 0.88)
+      await this.logToolCall('assess-health', input, { success: true })
       return { success: true, data: assessment }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      await this.logToolCall('assess-health', input, { error: errorMsg }, 0.3)
+      await this.logToolCall('assess-health', input, { success: false })
       return { success: false, error: errorMsg }
     }
   }

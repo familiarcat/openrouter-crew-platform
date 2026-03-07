@@ -11,7 +11,7 @@
  * - identify-anomalies: Find unusual cost patterns
  */
 
-import BaseMCPServer, { ToolDefinition, ToolResult } from './base-mcp-server.js'
+import { BaseMCPServer, ToolDefinition, ToolResult } from './base-mcp-server'
 
 export class DataAgentServer extends BaseMCPServer {
   constructor() {
@@ -24,8 +24,7 @@ export class DataAgentServer extends BaseMCPServer {
    */
   private setupTools() {
     // Tool 1: Analyze Costs
-    this.registerTool(
-      {
+    this.registerTool({
         name: 'analyze-costs',
         description:
           'Analyze cost patterns from past data. Returns total costs, per-unit costs, cost drivers, and optimization opportunities.',
@@ -43,14 +42,12 @@ export class DataAgentServer extends BaseMCPServer {
               default: 'model'
             }
           }
-        }
-      },
-      this.analyzeCosts.bind(this)
-    )
+        },
+        handler: this.analyzeCosts.bind(this)
+    })
 
     // Tool 2: Forecast Costs
-    this.registerTool(
-      {
+    this.registerTool({
         name: 'forecast-costs',
         description:
           'Project future costs based on current trends. Uses linear regression and seasonal adjustment.',
@@ -68,14 +65,12 @@ export class DataAgentServer extends BaseMCPServer {
                 'Assume a change occurs: "no-change" (default), "reduce-to-haiku", "implement-caching", "optimize-routing"'
             }
           }
-        }
-      },
-      this.forecastCosts.bind(this)
-    )
+        },
+        handler: this.forecastCosts.bind(this)
+    })
 
     // Tool 3: Calculate ROI
-    this.registerTool(
-      {
+    this.registerTool({
         name: 'calculate-roi',
         description:
           'Calculate return on investment for a proposed optimization. Returns payback period, annual savings, and ROI percentage.',
@@ -105,14 +100,12 @@ export class DataAgentServer extends BaseMCPServer {
               default: 7
             }
           }
-        }
-      },
-      this.calculateROI.bind(this)
-    )
+        },
+        handler: this.calculateROI.bind(this)
+    })
 
     // Tool 4: Identify Anomalies
-    this.registerTool(
-      {
+    this.registerTool({
         name: 'identify-anomalies',
         description:
           'Find unusual cost patterns that may indicate problems or opportunities.',
@@ -125,10 +118,9 @@ export class DataAgentServer extends BaseMCPServer {
               default: 'medium'
             }
           }
-        }
-      },
-      this.identifyAnomalies.bind(this)
-    )
+        },
+        handler: this.identifyAnomalies.bind(this)
+    })
   }
 
   /**
@@ -550,7 +542,7 @@ export class DataAgentServer extends BaseMCPServer {
     let numerator = 0
     let denominator = 0
     for (let i = 0; i < n; i++) {
-      numerator += (i - x_mean) * (data[i] - y_mean)
+      numerator += (i - x_mean) * (data[i]! - y_mean)
       denominator += Math.pow(i - x_mean, 2)
     }
 

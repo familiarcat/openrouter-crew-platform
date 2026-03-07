@@ -14,13 +14,14 @@ import {
   Tool,
   TextContent,
   ErrorContent
-} from '@modelcontextprotocol/sdk/shared/messages.js'
+} from '@modelcontextprotocol/sdk/types.js'
 import { createClient } from '@supabase/supabase-js'
 
 export interface ToolDefinition {
   name: string
   description: string
   inputSchema: Record<string, unknown>
+  handler?: (args: any) => Promise<ToolResult>
 }
 
 export interface ToolResult {
@@ -36,7 +37,7 @@ export abstract class BaseMCPServer {
   protected supabase: ReturnType<typeof createClient>
   protected agentName: string
   protected agentRole: string
-  protected tools: Map<string, (args: any) => Promise<ToolResult>> = new Map()
+  protected tools: Map<string, ToolDefinition> = new Map()
 
   constructor(agentName: string, agentRole: string) {
     this.agentName = agentName
@@ -60,8 +61,8 @@ export abstract class BaseMCPServer {
   /**
    * Register tools (called by subclasses)
    */
-  protected registerTool(definition: ToolDefinition, handler: (args: any) => Promise<ToolResult>) {
-    this.tools.set(definition.name, handler)
+  protected registerTool(definition: ToolDefinition) {
+    this.tools.set(definition.name, definition)
   }
 
   /**
@@ -69,12 +70,8 @@ export abstract class BaseMCPServer {
    */
   private setupRequestHandlers() {
     // Handle /tools/list request
-    this.server.setRequestHandler('tools/list', async () => {
-      const tools: Tool[] = Array.from(this.tools.keys()).map(toolName => {
-        const tool = this.getToolDefinition(toolName)
-        if (!tool) {
-          throw new Error(`Tool definition not found: ${toolName}`)
-        }
+    this.server.setRequestHandler('tools/list' as any, async () => {
+      const tools: Tool[] = Array.from(this.tools.values()).map(tool => {
         return {
           name: tool.name,
           description: tool.description,
@@ -86,16 +83,16 @@ export abstract class BaseMCPServer {
     })
 
     // Handle /tools/call request
-    this.server.setRequestHandler('tools/call', async (request: any) => {
+    this.server.setRequestHandler('tools/call' as any, async (request: any) => {
       try {
         const { name, arguments: args } = request.params
 
-        const handler = this.tools.get(name)
-        if (!handler) {
+        const tool = this.tools.get(name)
+        if (!tool || !tool.handler) {
           throw new Error(`Unknown tool: ${name}`)
         }
 
-        const result = await handler(args)
+        const result = await tool.handler(args)
 
         // Log tool call to observation lounge
         await this.logToolCall(name, args, result)
@@ -121,7 +118,7 @@ export abstract class BaseMCPServer {
     })
 
     // Handle /resources/list request (for context)
-    this.server.setRequestHandler('resources/list', async () => ({
+    this.server.setRequestHandler('resources/list' as any, async () => ({
       resources: [
         {
           uri: `mcp://agent/${this.agentName}`,
@@ -136,7 +133,9 @@ export abstract class BaseMCPServer {
   /**
    * Get tool definition by name (implement in subclasses)
    */
-  protected abstract getToolDefinition(toolName: string): ToolDefinition | null
+  protected getToolDefinition(toolName: string): ToolDefinition | null {
+    return this.tools.get(toolName) || null;
+  }
 
   /**
    * Log tool call to observation lounge
@@ -165,7 +164,7 @@ export abstract class BaseMCPServer {
         confidence: result.confidence || (result.success ? 0.85 : 0.4),
         tags: [this.agentName, toolName, 'mcp-execution'],
         status: 'published'
-      })
+      } as any)
 
       if (error) {
         console.error(`Failed to log tool call: ${error.message}`)

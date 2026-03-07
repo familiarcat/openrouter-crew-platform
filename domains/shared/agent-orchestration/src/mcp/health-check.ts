@@ -7,7 +7,10 @@
  * - Detailed diagnostics (connection status, dependencies)
  */
 
-import type { ToolResult } from '../types'
+import type { ToolResult } from '../types';
+import type { ToolResult as MCPToolResult } from './base-mcp-server';
+import type { ToolResult as MCPToolResult } from './base-mcp-server';
+import type { ToolResult as MCPToolResult } from './base-mcp-server'
 
 export interface HealthCheckResult {
   timestamp: string

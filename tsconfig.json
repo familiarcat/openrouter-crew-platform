@@ -1,110 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "esModuleInterop": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "useDefineForClassFields": true,
+    "target": "es2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
     "skipLibCheck": true,
+    "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "types": [
-      "node"
-    ],
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "composite": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
     "incremental": true,
-    "baseUrl": ".",
-    "paths": {
-      "@crew/*": [
-        "domains/shared/crew-api-client/src/*"
-      ],
-      "@shared/crew-coordination/*": [
-        "domains/shared/crew-coordination/src/*"
-      ],
-      "@shared/cost-tracking/*": [
-        "domains/shared/cost-tracking/src/*"
-      ],
-      "@shared/schemas/*": [
-        "domains/shared/schemas/src/*"
-      ],
-      "@shared/ui-components/*": [
-        "domains/shared/ui-components/src/*"
-      ],
-      "@vscode/*": [
-        "domains/vscode-extension/src/*"
-      ],
-      "@cli/*": [
-        "apps/cli/src/*"
-      ],
-      "@dashboard/*": [
-        "apps/unified-dashboard/*"
-      ],
-      "@openrouter-crew/agent-memory": [
-        "domains/shared/agent-memory/src/index.ts"
-      ],
-      "@openrouter-crew/agent-memory/*": [
-        "domains/shared/agent-memory/src/*"
-      ]
-    }
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    ".next",
-    "out"
-  ],
-  "ignoreDeprecations": "5.0",
-  "files": [],
-  "references": [
-    {
-      "path": "./apps/cli"
-    },
-    {
-      "path": "./domains/shared/agent-orchestration"
-    },
-    {
-      "path": "./domains/shared/crew-coordination"
-    },
-    {
-      "path": "./domains/shared/cost-tracking"
-    },
-    {
-      "path": "./domains/shared/schemas"
-    },
-    {
-      "path": "./domains/shared/crew-api-client"
-    },
-    {
-      "path": "./domains/shared/ui-components"
-    },
-    {
-      "path": "./domains/vscode-extension"
-    },
-    {
-      "path": "./domains/shared/agent-memory"
-    },
-    {
-      "path": "./domains/shared/openrouter-client"
-    },
-    {
-      "path": "./domains/shared/n8n-integration"
-    },
-    {
-      "path": "./domains/shared/workflows"
-    }
-  ]
+  "ignoreDeprecations": "6.0",
+  "exclude": ["node_modules", ".next", "dist", "build", "**/node_modules"]
 }

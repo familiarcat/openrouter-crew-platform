@@ -22,7 +22,7 @@ interface AlertEvent {
 }
 
 export class BudgetAlertWorkflow {
-  private costService: CostOptimizationService;
+  private costService: any;
 
   constructor() {
     this.costService = new CostOptimizationService();

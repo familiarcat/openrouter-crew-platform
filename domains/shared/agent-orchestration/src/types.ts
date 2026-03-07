@@ -305,3 +305,5 @@ export interface BootstrappedProject {
   observationLoungeProjectId: string
   nextSteps: string[]
 }
+
+export interface ToolResult { output: any; error?: string; }

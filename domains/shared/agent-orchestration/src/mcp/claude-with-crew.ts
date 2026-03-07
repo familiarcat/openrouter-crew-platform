@@ -10,7 +10,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import { ChildProcess, spawn } from 'child_process'
+import { ChildProcess } from 'child_process'
 
 export interface CrewAgent {
   name: string
@@ -43,7 +43,6 @@ export class CrewOrchestrator {
   private claude: Anthropic
   private agents: Map<string, CrewAgent> = new Map()
   private agentProcesses: Map<string, ChildProcess> = new Map()
-  private tools: any[] = []
 
   constructor() {
     this.claude = new Anthropic({
@@ -273,7 +272,7 @@ Provide your final synthesis that addresses all perspectives and constraints.`
       }
 
       // Process tool calls
-      const toolUseBlocks = response.content.filter(block => block.type === 'tool_use')
+      const toolUseBlocks = response.content.filter((block: any) => block.type === 'tool_use')
 
       if (toolUseBlocks.length === 0) {
         break
@@ -329,7 +328,7 @@ Provide your final synthesis that addresses all perspectives and constraints.`
     }
 
     // Extract final synthesis
-    const finalResponse = response.content.find(block => block.type === 'text')
+    const finalResponse = response.content.find((block: any) => block.type === 'text')
     const synthesis = finalResponse && finalResponse.type === 'text' ? finalResponse.text : 'No synthesis generated'
 
     const executionTime = Date.now() - startTime

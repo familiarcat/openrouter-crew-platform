@@ -143,13 +143,13 @@ class WeeklyReportGenerator {
 
     // Calculate summary statistics
     const totalCost = costs.reduce(
-      (sum, cost) => sum + (cost.estimated_cost_usd || 0),
+      (sum: number, cost: any) => sum + (cost.estimated_cost_usd || 0),
       0
     );
 
     // Group costs by crew member
     const costsByCrewMember = new Map<string, typeof costs>();
-    costs.forEach(cost => {
+    costs.forEach((cost: any) => {
       const member = cost.crew_member || 'unknown';
       if (!costsByCrewMember.has(member)) {
         costsByCrewMember.set(member, []);
@@ -161,19 +161,19 @@ class WeeklyReportGenerator {
     const byCrewMember = Array.from(costsByCrewMember.entries()).map(
       ([name, memberCosts]) => {
         const totalTokens = memberCosts.reduce(
-          (sum, c) => sum + (c.total_tokens || 0),
+          (sum: number, c: any) => sum + (c.total_tokens || 0),
           0
         );
         const memberCost = memberCosts.reduce(
-          (sum, c) => sum + (c.estimated_cost_usd || 0),
+          (sum: number, c: any) => sum + (c.estimated_cost_usd || 0),
           0
         );
-        const modelsUsed = [...new Set(memberCosts.map(c => c.model))];
+        const modelsUsed = [...new Set(memberCosts.map((c: any) => c.model))];
 
         // Find relevant observations for this crew member
         const memberObservations = observations
-          .filter(obs => obs.crew_member === name)
-          .map(obs => obs.finding);
+          .filter((obs: any) => obs.crew_member === name)
+          .map((obs: any) => obs.finding);
 
         return {
           name,
@@ -188,18 +188,18 @@ class WeeklyReportGenerator {
 
     // Extract insights from observations
     const insights = observations
-      .filter(obs => obs.insight_type === 'insight')
-      .map(obs => obs.finding)
+      .filter((obs: any) => obs.insight_type === 'insight')
+      .map((obs: any) => obs.finding)
       .slice(0, 10);
 
     const recommendations = observations
-      .filter(obs => obs.insight_type === 'recommendation')
-      .map(obs => obs.finding)
+      .filter((obs: any) => obs.insight_type === 'recommendation')
+      .map((obs: any) => obs.finding)
       .slice(0, 5);
 
     const anomalies = observations
-      .filter(obs => obs.insight_type === 'anomaly')
-      .map(obs => obs.finding)
+      .filter((obs: any) => obs.insight_type === 'anomaly')
+      .map((obs: any) => obs.finding)
       .slice(0, 5);
 
     // Determine cost trend
@@ -207,10 +207,10 @@ class WeeklyReportGenerator {
     const firstHalf = costs.slice(0, halfwayPoint);
     const secondHalf = costs.slice(halfwayPoint);
     const firstHalfAvg =
-      firstHalf.reduce((sum, c) => sum + (c.estimated_cost_usd || 0), 0) /
+      firstHalf.reduce((sum: number, c: any) => sum + (c.estimated_cost_usd || 0), 0) /
       Math.max(firstHalf.length, 1);
     const secondHalfAvg =
-      secondHalf.reduce((sum, c) => sum + (c.estimated_cost_usd || 0), 0) /
+      secondHalf.reduce((sum: number, c: any) => sum + (c.estimated_cost_usd || 0), 0) /
       Math.max(secondHalf.length, 1);
 
     let costTrend: 'increasing' | 'stable' | 'decreasing' = 'stable';
