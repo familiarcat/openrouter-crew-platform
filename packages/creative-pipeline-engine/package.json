@@ -1,0 +1,18 @@
+{
+  "name": "@openrouter-crew/creative-pipeline-engine",
+  "version": "1.0.0",
+  "description": "Generic creative pipeline runner for AI operating system modules",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "creative-pipeline": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.9.3"
+  }
+}

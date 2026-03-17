@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "runId": "20260317-205330",
+      "appId": "clippy-doom-video-builder",
+      "startedAt": "2026-03-17T20:53:30.610Z",
+      "finishedAt": "2026-03-17T20:53:42.691Z",
+      "status": "success",
+      "durationMs": 12081,
+      "renderMode": "ffmpeg",
+      "outputKind": "video",
+      "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-205330/render/clippy-doom-preview.mp4",
+      "stepDurationsMs": {
+        "python_env": 1838,
+        "audio_analysis": 43,
+        "sprite_extraction": 38,
+        "scene_plan": 38,
+        "ae_script": 39,
+        "render_preview": 10078
+      }
+    },
+    {
+      "runId": "20260317-205403",
+      "appId": "clippy-doom-video-builder",
+      "startedAt": "2026-03-17T20:54:03.251Z",
+      "finishedAt": "2026-03-17T20:54:13.838Z",
+      "status": "success",
+      "durationMs": 10587,
+      "renderMode": "ffmpeg",
+      "outputKind": "video",
+      "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-205403/render/clippy-doom-preview.mp4",
+      "stepDurationsMs": {
+        "python_env": 1091,
+        "audio_analysis": 41,
+        "sprite_extraction": 39,
+        "scene_plan": 37,
+        "ae_script": 37,
+        "render_preview": 9338
+      }
+    }
+  ],
+  "successfulConfigurations": [
+    {
+      "recordedAt": "2026-03-17T20:53:42.691Z",
+      "runId": "20260317-205330",
+      "renderMode": "ffmpeg",
+      "outputKind": "video",
+      "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-205330/render/clippy-doom-preview.mp4"
+    },
+    {
+      "recordedAt": "2026-03-17T20:54:13.838Z",
+      "runId": "20260317-205403",
+      "renderMode": "ffmpeg",
+      "outputKind": "video",
+      "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-205403/render/clippy-doom-preview.mp4"
+    }
+  ],
+  "lastRunId": "20260317-205403"
+}

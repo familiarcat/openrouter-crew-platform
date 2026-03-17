@@ -71,6 +71,8 @@ Thumbs.db
 .cache/
 temp/
 tmp/
+apps/clippy-doom-video-builder/.venv/
+apps/clippy-doom-video-builder/outputs/
 
 # Keep example files
 !.env.example

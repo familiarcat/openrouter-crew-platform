@@ -1,0 +1,10 @@
+{
+  "name": "@openrouter-crew/clippy-doom-video-builder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Creative AI operating system module for Clippy Doom video generation",
+  "scripts": {
+    "build-video": "./build_video.sh",
+    "start": "./build_video.sh"
+  }
+}

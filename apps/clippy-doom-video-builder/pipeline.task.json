@@ -1,0 +1,58 @@
+{
+  "id": "clippy-doom-video-builder",
+  "name": "Clippy Doom Video Builder",
+  "memoryFile": "analysis/pipeline_memory.json",
+  "steps": [
+    {
+      "id": "python_env",
+      "name": "Prepare Python Runtime",
+      "description": "Create a local venv and attempt optional dependency bootstrap.",
+      "agent": "chief_obrien",
+      "command": "python3 \"{{paths.appDir}}/scripts/python/bootstrap_env.py\" --venv \"{{paths.appDir}}/.venv\" --requirements \"{{paths.appDir}}/requirements.txt\" --output \"{{paths.runDir}}/python-bootstrap.json\" {{vars.installPythonFlag}}",
+      "resultFile": "{{paths.runDir}}/python-bootstrap.json",
+      "continueOnError": true
+    },
+    {
+      "id": "audio_analysis",
+      "name": "Analyze Audio",
+      "description": "Build timeline and energy cues from source audio or demo mode.",
+      "agent": "commander_data",
+      "command": "python3 \"{{paths.appDir}}/scripts/python/analyze_audio.py\" --input \"{{vars.audioInput}}\" --output \"{{paths.runDir}}/audio-analysis.json\" --events \"{{paths.runDir}}/audio-events.json\"",
+      "resultFile": "{{paths.runDir}}/audio-analysis.json"
+    },
+    {
+      "id": "sprite_extraction",
+      "name": "Extract Doom Sprites",
+      "description": "Read a WAD when available and export sprite patches to PPM images.",
+      "agent": "geordi",
+      "command": "python3 \"{{paths.appDir}}/scripts/python/extract_wad_sprites.py\" --wad \"{{vars.wadInput}}\" --output-dir \"{{paths.runDir}}/sprites\" --manifest \"{{paths.runDir}}/sprite-manifest.json\"",
+      "resultFile": "{{paths.runDir}}/sprite-manifest.json",
+      "continueOnError": true
+    },
+    {
+      "id": "scene_plan",
+      "name": "Build Scene Plan",
+      "description": "Generate demon spawns, storm beats, and camera choreography.",
+      "agent": "commander_riker",
+      "command": "python3 \"{{paths.appDir}}/scripts/python/build_scene_plan.py\" --analysis \"{{paths.runDir}}/audio-analysis.json\" --events \"{{paths.runDir}}/audio-events.json\" --sprites \"{{paths.runDir}}/sprite-manifest.json\" --memory \"{{paths.memoryFile}}\" --output \"{{paths.runDir}}/scene-plan.json\"",
+      "resultFile": "{{paths.runDir}}/scene-plan.json"
+    },
+    {
+      "id": "ae_script",
+      "name": "Generate After Effects Script",
+      "description": "Emit a JSX automation script that mirrors the scene plan for AE rendering.",
+      "agent": "dr_crusher",
+      "command": "python3 \"{{paths.appDir}}/scripts/python/generate_ae_script.py\" --scene-plan \"{{paths.runDir}}/scene-plan.json\" --sprites \"{{paths.runDir}}/sprite-manifest.json\" --output \"{{paths.runDir}}/clippy_doom_render.jsx\"",
+      "resultFile": "{{paths.runDir}}/clippy_doom_render.jsx.json",
+      "continueOnError": true
+    },
+    {
+      "id": "render_preview",
+      "name": "Render Output",
+      "description": "Render with available tooling, falling back to a frame sequence preview when needed.",
+      "agent": "quark",
+      "command": "python3 \"{{paths.appDir}}/scripts/python/render_preview.py\" --scene-plan \"{{paths.runDir}}/scene-plan.json\" --sprites \"{{paths.runDir}}/sprite-manifest.json\" --analysis \"{{paths.runDir}}/audio-analysis.json\" --output-dir \"{{paths.runDir}}/render\" --manifest \"{{paths.runDir}}/render-manifest.json\"",
+      "resultFile": "{{paths.runDir}}/render-manifest.json"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 packages:
   # Unified Dashboard (Entry Point)
   - 'apps/*'
+  - 'packages/creative-pipeline-engine'
 
   # Shared Domain (Core Infrastructure)
   - 'domains/shared/crew-api-client'

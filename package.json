@@ -11,7 +11,8 @@
     "start": "ts-node src/index.ts",
     "lint": "eslint src/**/*.ts",
     "test": "jest",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clippy": "bash apps/clippy-doom-video-builder/build_video.sh"
   },
   "keywords": [],
   "author": "",

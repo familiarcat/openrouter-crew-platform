@@ -1,0 +1,34 @@
+{
+  "notifications": {
+    "enabled": true
+  },
+  "agents": {
+    "chief_obrien": {
+      "description": "Execution and runtime preparation",
+      "webhookEnv": "N8N_CREW_CHIEF_OBRIEN_WEBHOOK"
+    },
+    "commander_data": {
+      "description": "Audio and timing analysis",
+      "webhookEnv": "N8N_CREW_COMMANDER_DATA_WEBHOOK"
+    },
+    "commander_riker": {
+      "description": "Creative scene orchestration",
+      "webhookEnv": "N8N_CREW_COMMANDER_RIKER_WEBHOOK"
+    },
+    "dr_crusher": {
+      "description": "AE automation and recovery logic",
+      "webhookEnv": "N8N_CREW_DR_CRUSHER_WEBHOOK"
+    },
+    "geordi": {
+      "description": "Rendering infrastructure and sprite extraction",
+      "webhookEnvCandidates": [
+        "N8N_CREW_GEORDI_LA_FORGE_WEBHOOK",
+        "N8N_CREW_GEORDI_WEBHOOK"
+      ]
+    },
+    "quark": {
+      "description": "Packaging and delivery",
+      "webhookEnv": "N8N_CREW_QUARK_WEBHOOK"
+    }
+  }
+}
