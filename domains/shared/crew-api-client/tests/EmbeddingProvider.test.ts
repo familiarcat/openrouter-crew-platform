@@ -3,6 +3,7 @@
  * Verify embedding generation, caching, and similarity calculation
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { EmbeddingProvider, Embedding, EmbeddingBatchResult } from '../src/services/embedding-provider';
 
 describe('EmbeddingProvider', () => {

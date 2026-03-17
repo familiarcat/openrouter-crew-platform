@@ -3,6 +3,7 @@
  * Verify analytics, insights, and recommendations
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { MemoryAnalyticsService } from '../src/services/memory-analytics';
 import { Memory } from '../src/types';
 

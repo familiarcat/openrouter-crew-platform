@@ -59,6 +59,7 @@ export const helpCommand = new Command('help')
       ],
       project: [
         'crew project list                     List all projects',
+        'crew project info <id>                Display detailed project info',
         'crew project feature <name>           Create a new feature',
         'crew project story <name>             Create a new story',
         'crew project sprint <name>            Create a new sprint'

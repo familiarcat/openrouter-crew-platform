@@ -3,6 +3,7 @@
  * Verify compression algorithms, ratios, and data integrity
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { MemoryCompressionService } from '../src/services/memory-compression';
 import { Memory } from '../src/types';
 

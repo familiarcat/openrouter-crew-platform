@@ -3,6 +3,7 @@
  * Verify cost tracking, budgeting, and optimization metrics
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { CostOptimizationService } from '../src/services/cost-optimization';
 import { Memory } from '../src/types';
 

@@ -3,6 +3,7 @@
  * Verify CrewAPIClient produces identical results across all surfaces
  */
 
+import { describe, it, expect, beforeEach, fail } from '@jest/globals';
 import { CrewAPIClient, UnauthorizedError, OperationError } from '../src/index';
 
 /**

@@ -48,7 +48,7 @@ export class MemoryArchivalWorkflow {
       }
 
       return {
-        archived: recommendations.filter(r => r.action === 'archive').length,
+        archived: recommendations.filter((r: any) => r.action === 'archive').length,
         spaceSaved,
         timestamp: new Date().toISOString(),
       };

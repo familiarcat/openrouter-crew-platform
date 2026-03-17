@@ -3,6 +3,7 @@
  * Verify archival strategies, batch operations, and retrieval
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { MemoryArchivalService } from '../src/services/memory-archival';
 import { Memory } from '../src/types';
 

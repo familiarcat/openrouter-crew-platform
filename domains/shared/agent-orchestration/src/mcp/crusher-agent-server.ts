@@ -240,7 +240,7 @@ export class CrusherAgentServer extends BaseMCPServer {
         confidence: 0.86
       }
 
-      await this.logToolCall('diagnose-issues', input, { success: true })
+      await this.logToolCall('diagnose-issues', input, { success: true, data: diagnosis })
       return { success: true, data: diagnosis }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -273,7 +273,7 @@ export class CrusherAgentServer extends BaseMCPServer {
         confidence: 0.81
       }
 
-      await this.logToolCall('predict-problems', input, { success: true })
+      await this.logToolCall('predict-problems', input, { success: true, data: prediction })
       return { success: true, data: prediction }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -307,7 +307,7 @@ export class CrusherAgentServer extends BaseMCPServer {
         confidence: 0.84
       }
 
-      await this.logToolCall('recommend-prevention', input, { success: true })
+      await this.logToolCall('recommend-prevention', input, { success: true, data: plan })
       return { success: true, data: plan }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -340,7 +340,7 @@ export class CrusherAgentServer extends BaseMCPServer {
         confidence: 0.88
       }
 
-      await this.logToolCall('assess-health', input, { success: true })
+      await this.logToolCall('assess-health', input, { success: true, data: assessment })
       return { success: true, data: assessment }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)

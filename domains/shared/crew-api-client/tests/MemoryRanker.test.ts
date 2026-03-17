@@ -3,6 +3,7 @@
  * Verify intelligent memory ranking and retrieval strategies
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { MemoryRankerService } from '../src/services/memory-ranker';
 import { EmbeddingProvider } from '../src/services/embedding-provider';
 import { Memory } from '../src/types';

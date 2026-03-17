@@ -235,7 +235,7 @@ export class TroiAgentServer extends BaseMCPServer {
         confidence: 0.87
       }
 
-      await this.logToolCall('assess-impact', input, { success: true })
+      await this.logToolCall('assess-impact', input, { success: true, data: assessment })
       return { success: true, data: assessment }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -287,7 +287,7 @@ export class TroiAgentServer extends BaseMCPServer {
         confidence: 0.84
       }
 
-      await this.logToolCall('predict-adoption', input, { success: true })
+      await this.logToolCall('predict-adoption', input, { success: true, data: forecast })
       return { success: true, data: forecast }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -399,7 +399,7 @@ export class TroiAgentServer extends BaseMCPServer {
         confidence: 0.89
       }
 
-      await this.logToolCall('identify-concerns', input, { success: true })
+      await this.logToolCall('identify-concerns', input, { success: true, data: result })
       return { success: true, data: result }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -442,7 +442,7 @@ export class TroiAgentServer extends BaseMCPServer {
         confidence: 0.86
       }
 
-      await this.logToolCall('facilitate-consensus', input, { success: true })
+      await this.logToolCall('facilitate-consensus', input, { success: true, data: plan })
       return { success: true, data: plan }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)

@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { AnalyticsTriggerWorkflow } from '../src/workflows/analytics-trigger.workflow';
 
 describe('AnalyticsTriggerWorkflow', () => {

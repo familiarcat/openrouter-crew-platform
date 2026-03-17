@@ -1,15 +1,15 @@
 /**
- * Claude with Crew MCP Integration
+ * OpenRouter with Crew MCP Integration
  *
- * Connects Claude to all crew agent MCP servers.
- * Claude can autonomously call crew member tools to solve problems.
+ * Connects OpenRouter (Claude/GPT/etc) to all crew agent MCP servers.
+ * Models can autonomously call crew member tools to solve problems.
  *
  * Architecture:
- * Problem → Claude sees available MCP tools → Claude calls crew tools →
- * Crew tools execute → Results → Claude synthesizes → Solution
+ * Problem → Model sees available MCP tools → Model calls crew tools →
+ * Crew tools execute → Results → Model synthesizes → Solution
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { ChildProcess } from 'child_process'
 
 export interface CrewAgent {
@@ -24,7 +24,7 @@ export interface ToolResult {
   content: string
 }
 
-export interface ClaudeResponse {
+export interface OrchestratorResponse {
   success: boolean
   synthesis: string
   findings: Array<{
@@ -40,13 +40,18 @@ export interface ClaudeResponse {
 }
 
 export class CrewOrchestrator {
-  private claude: Anthropic
+  private openai: OpenAI
   private agents: Map<string, CrewAgent> = new Map()
   private agentProcesses: Map<string, ChildProcess> = new Map()
 
   constructor() {
-    this.claude = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY || ''
+    this.openai = new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: process.env.OPENROUTER_API_KEY || '',
+      defaultHeaders: {
+        'HTTP-Referer': 'https://openrouter-crew-platform.local',
+        'X-Title': 'OpenRouter Crew Platform'
+      }
     })
   }
 
@@ -96,18 +101,16 @@ export class CrewOrchestrator {
         name: 'analyze-costs',
         description:
           'Analyze cost patterns from past data. Returns total costs, per-unit costs, cost drivers, and optimization opportunities.',
-        input_schema: {
+        parameters: {
           type: 'object',
           properties: {
             timeframe: {
               type: 'string',
-              description: 'Time period: "last-7-days", "last-30-days", "last-90-days"',
-              default: 'last-7-days'
+              description: 'Time period: "last-7-days", "last-30-days", "last-90-days"'
             },
             group_by: {
               type: 'string',
-              description: 'Group by: "model", "crew_member", "workflow", "day"',
-              default: 'model'
+              description: 'Group by: "model", "crew_member", "workflow", "day"'
             }
           }
         }
@@ -115,13 +118,12 @@ export class CrewOrchestrator {
       {
         name: 'forecast-costs',
         description: 'Project future costs based on trends using linear regression.',
-        input_schema: {
+        parameters: {
           type: 'object',
           properties: {
             projection_days: {
               type: 'number',
-              description: 'Days to project',
-              default: 30
+              description: 'Days to project'
             },
             assume_change: {
               type: 'string',
@@ -134,7 +136,7 @@ export class CrewOrchestrator {
       {
         name: 'calculate-roi',
         description: 'Calculate ROI of a proposed optimization.',
-        input_schema: {
+        parameters: {
           type: 'object',
           properties: {
             proposal: { type: 'string' },
@@ -147,13 +149,12 @@ export class CrewOrchestrator {
       {
         name: 'identify-anomalies',
         description: 'Find unusual cost patterns.',
-        input_schema: {
+        parameters: {
           type: 'object',
           properties: {
             sensitivity: {
               type: 'string',
-              description: 'Sensitivity: "low", "medium", "high"',
-              default: 'medium'
+              description: 'Sensitivity: "low", "medium", "high"'
             }
           }
         }
@@ -164,14 +165,13 @@ export class CrewOrchestrator {
       {
         name: 'verify-compliance',
         description: 'Check if a change complies with security policies.',
-        input_schema: {
+        parameters: {
           type: 'object',
           properties: {
             proposal: { type: 'string' },
             compliance_framework: {
               type: 'string',
-              description: 'Framework: "SOC2", "HIPAA", "GDPR", "general-security"',
-              default: 'SOC2'
+              description: 'Framework: "SOC2", "HIPAA", "GDPR", "general-security"'
             }
           }
         }
@@ -179,7 +179,7 @@ export class CrewOrchestrator {
       {
         name: 'assess-risks',
         description: 'Identify security and operational risks.',
-        input_schema: {
+        parameters: {
           type: 'object',
           properties: {
             proposal: { type: 'string' },
@@ -193,7 +193,7 @@ export class CrewOrchestrator {
       {
         name: 'validate-audit-trail',
         description: 'Verify audit logging capability.',
-        input_schema: {
+        parameters: {
           type: 'object',
           properties: {
             proposal: { type: 'string' },
@@ -204,7 +204,7 @@ export class CrewOrchestrator {
       {
         name: 'check-policy-adherence',
         description: 'Check policy compliance.',
-        input_schema: {
+        parameters: {
           type: 'object',
           properties: {
             proposal: { type: 'string' },
@@ -216,19 +216,26 @@ export class CrewOrchestrator {
       }
     ]
 
-    return [...dataTools, ...worfTools]
+    // Convert to OpenAI tool format
+    return [...dataTools, ...worfTools].map(tool => ({
+      type: 'function',
+      function: tool
+    }))
   }
 
   /**
    * Solve a problem using crew agents
    */
-  async solveProblem(problem: string): Promise<ClaudeResponse> {
+  async solveProblem(problem: string): Promise<OrchestratorResponse> {
     console.log(`\n🎯 Problem: ${problem}\n`)
 
     const startTime = Date.now()
     const tools = await this.getAvailableTools()
 
-    const messages: Anthropic.Messages.MessageParam[] = [
+    // Use a high-capability model for orchestration via OpenRouter
+    const model = 'anthropic/claude-3.5-sonnet'
+
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       {
         role: 'user',
         content: `You are working with a crew of specialized agents. Each agent is an MCP tool provider.
@@ -252,11 +259,10 @@ Provide your final synthesis that addresses all perspectives and constraints.`
       result: any
     }> = []
 
-    let response = await this.claude.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 4096,
-      tools: tools as any,
-      messages
+    let response = await this.openai.chat.completions.create({
+      model,
+      messages,
+      tools: tools as any
     })
 
     // Process tool calls in a loop until Claude provides final response
@@ -266,70 +272,54 @@ Provide your final synthesis that addresses all perspectives and constraints.`
     while (iterations < maxIterations) {
       iterations++
 
+      const message = response.choices[0].message
+
       // Check if we're done (no more tool use)
-      if (response.stop_reason === 'end_turn') {
+      if (!message.tool_calls || message.tool_calls.length === 0) {
         break
       }
 
-      // Process tool calls
-      const toolUseBlocks = response.content.filter((block: any) => block.type === 'tool_use')
-
-      if (toolUseBlocks.length === 0) {
-        break
-      }
+      // Add assistant message to history
+      messages.push(message)
 
       // Execute all tools in parallel
-      const toolResults: ToolResult[] = []
+      // const toolResults: ToolResult[] = []
 
-      for (const toolBlock of toolUseBlocks) {
-        if (toolBlock.type === 'tool_use') {
-          const { id, name, input } = toolBlock as any
+      for (const toolCall of message.tool_calls) {
+        const functionName = toolCall.function.name
+        const functionArgs = JSON.parse(toolCall.function.arguments)
 
-          console.log(`📞 Claude calling: ${name}`)
-          console.log(`   Input: ${JSON.stringify(input).substring(0, 100)}...`)
+        console.log(`📞 Orchestrator calling: ${functionName}`)
+        console.log(`   Input: ${JSON.stringify(functionArgs).substring(0, 100)}...`)
 
-          // Simulate tool execution
-          const result = await this.executeTool(name, input)
+        // Simulate tool execution
+        const result = await this.executeTool(functionName, functionArgs)
 
-          console.log(`   Result: ${JSON.stringify(result).substring(0, 100)}...`)
+        console.log(`   Result: ${JSON.stringify(result).substring(0, 100)}...`)
 
-          findings.push({
-            tool: name,
-            agent: this.getAgentForTool(name),
-            result
-          })
+        findings.push({
+          tool: functionName,
+          agent: this.getAgentForTool(functionName),
+          result
+        })
 
-          toolResults.push({
-            type: 'tool_result',
-            tool_use_id: id,
-            content: JSON.stringify(result)
-          })
-        }
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(result)
+        })
       }
 
-      // Add assistant message and tool results
-      messages.push({
-        role: 'assistant',
-        content: response.content
-      })
-
-      messages.push({
-        role: 'user',
-        content: toolResults
-      })
-
       // Get next response
-      response = await this.claude.messages.create({
-        model: 'claude-opus-4-6',
-        max_tokens: 4096,
-        tools: tools as any,
-        messages
+      response = await this.openai.chat.completions.create({
+        model,
+        messages,
+        tools: tools as any
       })
     }
 
     // Extract final synthesis
-    const finalResponse = response.content.find((block: any) => block.type === 'text')
-    const synthesis = finalResponse && finalResponse.type === 'text' ? finalResponse.text : 'No synthesis generated'
+    const synthesis = response.choices[0].message.content || 'No synthesis generated'
 
     const executionTime = Date.now() - startTime
 
@@ -338,8 +328,8 @@ Provide your final synthesis that addresses all perspectives and constraints.`
       synthesis,
       findings,
       metadata: {
-        tokens_used: 0, // Would get from response.usage
-        model: 'claude-opus-4-6',
+        tokens_used: response.usage?.total_tokens || 0,
+        model,
         execution_time_ms: executionTime
       }
     }

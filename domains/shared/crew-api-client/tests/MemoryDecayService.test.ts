@@ -3,6 +3,7 @@
  * Verify correct confidence decay, expiration, and retention tier enforcement
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { MemoryDecayService, DEFAULT_DECAY_POLICIES } from '../src/services/memory-decay';
 import { Memory, RetentionTier } from '../src/types';
 

@@ -3,6 +3,7 @@
  * Verify batch queuing, processing, and retry logic
  */
 
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { BatchProcessorService, BatchItem, BatchResult, BatchProcessor } from '../src/services/batch-processor';
 
 describe('BatchProcessorService', () => {

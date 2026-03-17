@@ -258,7 +258,7 @@ export class GeordiAgentServer extends BaseMCPServer {
         confidence: 0.88
       }
 
-      await this.logToolCall('check-feasibility', input, { success: true })
+      await this.logToolCall('check-feasibility', input, { success: true, data: assessment })
       return { success: true, data: assessment }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -293,7 +293,7 @@ export class GeordiAgentServer extends BaseMCPServer {
         confidence: 0.87
       }
 
-      await this.logToolCall('implement-solution', input, { success: true })
+      await this.logToolCall('implement-solution', input, { success: true, data: plan })
       return { success: true, data: plan }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -336,7 +336,7 @@ export class GeordiAgentServer extends BaseMCPServer {
         confidence: 0.91
       }
 
-      await this.logToolCall('validate-deployment', input, { success: true })
+      await this.logToolCall('validate-deployment', input, { success: true, data: validation })
       return { success: true, data: validation }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -381,7 +381,7 @@ export class GeordiAgentServer extends BaseMCPServer {
         confidence: 0.85
       }
 
-      await this.logToolCall('monitor-performance', input, { success: true })
+      await this.logToolCall('monitor-performance', input, { success: true, data: performanceMetrics })
       return { success: true, data: performanceMetrics }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
