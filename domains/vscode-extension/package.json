@@ -167,6 +167,21 @@
         "command": "openrouter-crew.openCodebaseAnalysis",
         "title": "OpenRouter Crew: Open Codebase Analysis",
         "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.project.workbench",
+        "title": "OpenRouter Crew: Project Workbench",
+        "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.project.create",
+        "title": "OpenRouter Crew: Create Project",
+        "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.project.feature",
+        "title": "OpenRouter Crew: Create Feature",
+        "category": "OpenRouter Crew"
       }
     ],
     "configuration": {
@@ -258,6 +273,7 @@
   },
   "dependencies": {
     "@openrouter-crew/crew-api-client": "workspace:*",
+    "@openrouter-crew/shared-ui-components": "workspace:*",
     "@openrouter-crew/shared-cost-tracking": "workspace:^",
     "@openrouter-crew/shared-crew-coordination": "workspace:^",
     "@openrouter-crew/shared-schemas": "workspace:^",

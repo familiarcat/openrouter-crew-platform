@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
     "noUnusedLocals": false,
@@ -27,6 +27,12 @@
       ],
       "@openrouter-crew/shared-crew-coordination": [
         "../shared/crew-coordination/src/index.ts"
+      ],
+      "@openrouter-crew/shared-ui-components": [
+        "../shared/ui-components/src/index.ts"
+      ],
+      "@openrouter-crew/shared-ui-components/*": [
+        "../shared/ui-components/src/*"
       ]
     },
     "baseUrl": "."

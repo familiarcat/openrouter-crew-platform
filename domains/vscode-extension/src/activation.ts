@@ -51,6 +51,7 @@ import { WelcomePanel } from './ui/welcome-panel.js';
 import { CrewCodeActionProvider } from './providers/code-action.js';
 import { CostReportPanel } from './ui/cost-report-panel.js';
 import { MemoryBrowser } from './ui/memory-browser.js';
+import { ProjectWorkbenchPanel } from './ui/project-workbench-panel.js';
 
 function registerCommandWithTelemetry(
     context: vscode.ExtensionContext,
@@ -105,7 +106,7 @@ export async function activateExtension(context: vscode.ExtensionContext): Promi
 
     // Initialize Tree Views
     // This registers 'openrouter-crew.project-view', 'openrouter-crew.crew-view', etc.
-    const { crewProvider } = registerTreeViews(context, agentNetwork, costTracker);
+    const { crewProvider } = registerTreeViews(context, agentNetwork, costTracker, crewAPIService);
 
     // Initialize Memory Browser
     const memoryBrowser = new MemoryBrowser(crewAPIService);
@@ -222,8 +223,23 @@ export async function activateExtension(context: vscode.ExtensionContext): Promi
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory.compliance', () => complianceCheckCommand(crewAPIService));
 
     // Register Project Commands
-    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.create', () => createProjectCommand(cliExecutor));
-    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.feature', () => createFeatureCommand(cliExecutor));
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.workbench', () => {
+        ProjectWorkbenchPanel.createOrShow(context.extensionUri, agentNetwork);
+    });
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.create', async () => {
+        await createProjectCommand(cliExecutor);
+        await vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
+        if (ProjectWorkbenchPanel.currentPanel) {
+            await ProjectWorkbenchPanel.currentPanel.refresh();
+        }
+    });
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.feature', async () => {
+        await createFeatureCommand(cliExecutor);
+        await vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
+        if (ProjectWorkbenchPanel.currentPanel) {
+            await ProjectWorkbenchPanel.currentPanel.refresh();
+        }
+    });
 
     // Register Find Related Files Command
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.findRelatedFiles', () => findRelatedFilesCommand(commandExecutor, contextProvider, fileManager));

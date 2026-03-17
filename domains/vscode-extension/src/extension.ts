@@ -15,6 +15,9 @@ import { CommandExecutor } from './commands/command-executor';
 import { TerminalManager } from './services/terminal-manager';
 import { CrewAPIService } from './services/crew-api-service';
 import { registerTreeViews } from './ui/tree-views';
+import { CLIExecutor } from './services/cli-executor';
+import { createProjectCommand, createFeatureCommand } from './commands/project';
+import { ProjectWorkbenchPanel } from './ui/project-workbench-panel';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -32,8 +35,10 @@ export function activate(context: vscode.ExtensionContext) {
     const toolRegistry = new ToolRegistry(fileManager, costTracker, agentNetwork);
     const terminalManager = new TerminalManager();
     const outputChannel = vscode.window.createOutputChannel('OpenRouter Crew');
+    const cliOutputChannel = vscode.window.createOutputChannel('OpenRouter Crew CLI');
     const crewAPIService = new CrewAPIService(outputChannel);
     const commandExecutor = new CommandExecutor(agentNetwork, toolRegistry, terminalManager, outputChannel, llmRouter, nlpProcessor);
+    const cliExecutor = new CLIExecutor(cliOutputChannel);
     costEstimator; // Keep instance for potential future use
 
     toolRegistry.initialize();
@@ -225,6 +230,23 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('openrouter-crew.showCostReport', () => {
             CostReportPanel.createOrShow(context.extensionUri, costTracker);
+        }),
+        vscode.commands.registerCommand('openrouter-crew.project.workbench', () => {
+            ProjectWorkbenchPanel.createOrShow(context.extensionUri, agentNetwork);
+        }),
+        vscode.commands.registerCommand('openrouter-crew.project.create', async () => {
+            await createProjectCommand(cliExecutor);
+            vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
+            if (ProjectWorkbenchPanel.currentPanel) {
+                void ProjectWorkbenchPanel.currentPanel.refresh();
+            }
+        }),
+        vscode.commands.registerCommand('openrouter-crew.project.feature', async () => {
+            await createFeatureCommand(cliExecutor);
+            vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
+            if (ProjectWorkbenchPanel.currentPanel) {
+                void ProjectWorkbenchPanel.currentPanel.refresh();
+            }
         }),
         vscode.commands.registerCommand('openrouter-crew.history', () => {
             vscode.window.showInformationMessage('Interaction history available in sidebar');

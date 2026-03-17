@@ -16,7 +16,13 @@ class ProjectTreeItem extends vscode.TreeItem {
     this.tooltip = `${project.description || 'No description'}`;
     this.description = project.status;
     this.contextValue = 'project';
-    this.iconPath = new vscode.ThemeIcon('repo');
+    this.iconPath = new vscode.ThemeIcon(project.isWorkbench ? 'dashboard' : 'repo');
+    if (project.isWorkbench) {
+      this.command = {
+        command: 'openrouter-crew.project.workbench',
+        title: 'Open Project Workbench',
+      };
+    }
   }
 }
 
@@ -41,15 +47,31 @@ export class ProjectTreeViewProvider implements vscode.TreeDataProvider<ProjectT
     }
 
     const projects = await this.agentNetwork.getProjects();
+    const workbenchEntry = new ProjectTreeItem(
+      'Project Workbench',
+      vscode.TreeItemCollapsibleState.None,
+      {
+        description: 'Open the shared creation and management interface',
+        status: 'shared',
+        isWorkbench: true,
+      }
+    );
+
     if (projects.length === 0) {
-        return [new vscode.TreeItem('No projects found in Supabase.', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem];
+        return [
+          workbenchEntry,
+          new vscode.TreeItem('No projects found in Supabase.', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem,
+        ];
     }
 
-    return projects.map(p => new ProjectTreeItem(
-        p.name,
-        vscode.TreeItemCollapsibleState.None,
-        p
-    ));
+    return [
+      workbenchEntry,
+      ...projects.map(p => new ProjectTreeItem(
+          p.name,
+          vscode.TreeItemCollapsibleState.None,
+          p
+      )),
+    ];
   }
 }
 

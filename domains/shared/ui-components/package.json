@@ -12,7 +12,9 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./navigation": "./dist/navigation/index.js"
+    "./navigation": "./dist/navigation/index.js",
+    "./project-workbench": "./dist/project-workbench/index.js",
+    "./project-workbench/react": "./dist/project-workbench/react.js"
   },
   "dependencies": {
     "lucide-react": "^0.563.0",
