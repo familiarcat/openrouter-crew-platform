@@ -38,6 +38,46 @@
         "ae_script": 37,
         "render_preview": 9338
       }
+    },
+    {
+      "runId": "20260317-210035",
+      "appId": "clippy-doom-video-builder",
+      "startedAt": "2026-03-17T21:00:35.360Z",
+      "finishedAt": "2026-03-17T21:00:50.907Z",
+      "status": "success",
+      "durationMs": 15547,
+      "audioInput": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/assets/audio/Michael_McBurgerking.wav",
+      "renderMode": "ffmpeg",
+      "outputKind": "video",
+      "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-210035/render/clippy-doom-preview.mp4",
+      "stepDurationsMs": {
+        "python_env": 1496,
+        "audio_analysis": 4365,
+        "sprite_extraction": 64,
+        "scene_plan": 42,
+        "ae_script": 41,
+        "render_preview": 9530
+      }
+    },
+    {
+      "runId": "20260317-210130",
+      "appId": "clippy-doom-video-builder",
+      "startedAt": "2026-03-17T21:01:30.339Z",
+      "finishedAt": "2026-03-17T21:01:40.822Z",
+      "status": "success",
+      "durationMs": 10483,
+      "audioInput": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/assets/audio/Michael_McBurgerking.wav",
+      "renderMode": "ffmpeg",
+      "outputKind": "video",
+      "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-210130/render/clippy-doom-preview.mp4",
+      "stepDurationsMs": {
+        "python_env": 1084,
+        "audio_analysis": 44,
+        "sprite_extraction": 38,
+        "scene_plan": 40,
+        "ae_script": 36,
+        "render_preview": 9237
+      }
     }
   ],
   "successfulConfigurations": [
@@ -54,7 +94,21 @@
       "renderMode": "ffmpeg",
       "outputKind": "video",
       "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-205403/render/clippy-doom-preview.mp4"
+    },
+    {
+      "recordedAt": "2026-03-17T21:00:50.907Z",
+      "runId": "20260317-210035",
+      "renderMode": "ffmpeg",
+      "outputKind": "video",
+      "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-210035/render/clippy-doom-preview.mp4"
+    },
+    {
+      "recordedAt": "2026-03-17T21:01:40.822Z",
+      "runId": "20260317-210130",
+      "renderMode": "ffmpeg",
+      "outputKind": "video",
+      "outputPath": "/Users/bradygeorgen/Dev/openrouter-crew-platform/apps/clippy-doom-video-builder/outputs/20260317-210130/render/clippy-doom-preview.mp4"
     }
   ],
-  "lastRunId": "20260317-205403"
+  "lastRunId": "20260317-210130"
 }

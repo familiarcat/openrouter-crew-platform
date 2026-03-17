@@ -66,6 +66,46 @@ def synthesize_demo():
     }, events
 
 
+def load_reference_analysis(audio_path):
+    audio_name = Path(audio_path).name
+    app_dir = Path(__file__).resolve().parents[2]
+    reference_path = app_dir / "analysis" / "reference" / "music_events.json"
+    if audio_name != "Michael_McBurgerking.wav" or not reference_path.exists():
+        return None
+
+    reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    beats = [round(float(value), 3) for value in reference.get("beats", [])]
+    if not beats:
+        return None
+
+    duration = max(beats[-1] + 1.0, 1.0)
+    intensity_curve = []
+    for beat in beats:
+        normalized = min(1.0, beat / duration)
+        intensity = 0.55 + 0.35 * abs(math.sin(normalized * math.pi * 4))
+        intensity_curve.append({"time": beat, "intensity": round(intensity, 3)})
+
+    events = [
+        {
+            "time": item["time"],
+            "label": "beat",
+            "intensity": item["intensity"],
+        }
+        for item in intensity_curve
+    ]
+
+    return {
+        "mode": "reference",
+        "source": audio_path,
+        "duration_seconds": round(duration, 3),
+        "bpm_estimate": round(float(reference.get("tempo", 0))),
+        "beat_count": len(beats),
+        "beats": beats,
+        "intensity_curve": intensity_curve,
+        "warnings": ["Used imported Zantigo reference timing data for the bundled song asset."],
+    }, events
+
+
 def analyze_wave(audio_path):
     with wave.open(audio_path, "rb") as wav_file:
         frame_rate = wav_file.getframerate()
@@ -135,6 +175,10 @@ def analyze(audio_path):
         return synthesize_demo()
 
     extension = Path(audio_path).suffix.lower()
+    reference_result = load_reference_analysis(audio_path)
+    if reference_result:
+        return reference_result
+
     if extension == ".wav":
         return analyze_wave(audio_path)
 

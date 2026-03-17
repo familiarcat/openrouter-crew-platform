@@ -50,6 +50,28 @@ async function readJsonFile<T>(filePath: string): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
+async function discoverFirstExistingFile(patterns: string[]): Promise<string> {
+  for (const pattern of patterns) {
+    if (await fileExists(pattern)) {
+      return pattern;
+    }
+  }
+  return '';
+}
+
+async function isValidWad(filePath: string): Promise<boolean> {
+  try {
+    const handle = await fs.open(filePath, 'r');
+    const buffer = Buffer.alloc(4);
+    await handle.read(buffer, 0, 4, 0);
+    await handle.close();
+    const header = buffer.toString('ascii');
+    return header === 'IWAD' || header === 'PWAD';
+  } catch {
+    return false;
+  }
+}
+
 function getValueByPath(source: TemplateContext, token: string): unknown {
   return token.split('.').reduce<unknown>((value, key) => {
     if (value && typeof value === 'object' && key in (value as Record<string, unknown>)) {
@@ -233,8 +255,19 @@ export async function executePipeline(options: ExecutePipelineOptions): Promise<
 
   await fs.mkdir(runDir, { recursive: true });
 
-  const audioInput = options.audioInput ? path.resolve(options.audioInput) : '';
-  const wadInput = options.wadInput ? path.resolve(options.wadInput) : '';
+  const discoveredAudioInput = await discoverFirstExistingFile([
+    path.join(appDir, 'assets', 'audio', 'Michael_McBurgerking.wav'),
+    path.join(appDir, 'assets', 'audio', 'Michael_McBurgerking.aiff'),
+    path.join(appDir, 'assets', 'audio', 'Michael_McBurgerking.mp3'),
+    path.join(appDir, 'assets', 'audio', 'Michael_McBurgerking.m4a'),
+  ]);
+  const discoveredWadInput = await discoverFirstExistingFile([
+    path.join(appDir, 'assets', 'wad', 'freedoom2.wad'),
+  ]);
+
+  const audioInput = options.audioInput ? path.resolve(options.audioInput) : discoveredAudioInput;
+  const candidateWadInput = options.wadInput ? path.resolve(options.wadInput) : discoveredWadInput;
+  const wadInput = candidateWadInput && (await isValidWad(candidateWadInput)) ? candidateWadInput : '';
   const context: TemplateContext = {
     paths: {
       appDir,
