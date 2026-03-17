@@ -16,8 +16,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # Configuration
 # ==============================================================================
 
-GITHUB_REPO="openrouter-crew/platform"  # Update with your repo
-ENVIRONMENT="production"  # or "staging"
+GITHUB_REPO="familiarcat/openrouter-crew-platform"
+ENVIRONMENT="${GITHUB_ENVIRONMENT:-}"
 
 # ==============================================================================
 # Helper Functions
@@ -57,9 +57,14 @@ set_secret() {
         return
     fi
 
-    echo "$secret_value" | gh secret set "$secret_name" \
-        --repo "$GITHUB_REPO" \
-        --env "$ENVIRONMENT" 2>/dev/null
+    if [ -n "$ENVIRONMENT" ]; then
+        echo "$secret_value" | gh secret set "$secret_name" \
+            --repo "$GITHUB_REPO" \
+            --env "$ENVIRONMENT" 2>/dev/null
+    else
+        echo "$secret_value" | gh secret set "$secret_name" \
+            --repo "$GITHUB_REPO" 2>/dev/null
+    fi
 
     if [ $? -eq 0 ]; then
         log_success "Set $secret_name"
@@ -85,22 +90,38 @@ echo ""
 echo "🔐 Syncing Secrets to GitHub"
 echo "=============================="
 echo "Repo: $GITHUB_REPO"
-echo "Environment: $ENVIRONMENT"
+if [ -n "$ENVIRONMENT" ]; then
+    echo "Environment: $ENVIRONMENT"
+else
+    echo "Environment: repo-level secrets"
+fi
 echo ""
 
 # Check GitHub CLI
 check_gh_cli
+
+# Pull deployment identifiers from Terraform when they are not already exported.
+if [ -z "$EC2_INSTANCE_ID" ] && [ -d "$PROJECT_ROOT/terraform" ]; then
+    EC2_INSTANCE_ID=$(cd "$PROJECT_ROOT/terraform" && terraform output -raw instance_id 2>/dev/null || echo "")
+fi
+
+if [ -z "$EC2_PUBLIC_IP" ] && [ -d "$PROJECT_ROOT/terraform" ]; then
+    EC2_PUBLIC_IP=$(cd "$PROJECT_ROOT/terraform" && terraform output -raw instance_public_ip 2>/dev/null || echo "")
+fi
 
 # ==============================================================================
 # Supabase Secrets
 # ==============================================================================
 
 log_info "Syncing Supabase secrets..."
+set_secret "SUPABASE_URL" "$SUPABASE_URL"
+set_secret "SUPABASE_ANON_KEY" "$SUPABASE_ANON_KEY"
 set_secret "NEXT_PUBLIC_SUPABASE_URL" "$SUPABASE_URL"
 set_secret "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$SUPABASE_ANON_KEY"
 set_secret "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
 set_secret "SUPABASE_ACCESS_TOKEN" "$SUPABASE_ACCESS_TOKEN"
 set_secret "SUPABASE_PROJECT_ID" "$SUPABASE_PROJECT_ID"
+set_secret "SUPABASE_DB_PASSWORD" "$SUPABASE_DB_PASSWORD"
 
 # ==============================================================================
 # LLM Provider API Keys
@@ -118,7 +139,10 @@ set_secret "GOOGLE_API_KEY" "$GOOGLE_API_KEY"
 
 log_info "Syncing N8N configuration..."
 set_secret "N8N_BASE_URL" "$N8N_BASE_URL"
+set_secret "N8N_PROJECT_WEBHOOK_URL" "$N8N_PROJECT_WEBHOOK_URL"
+set_secret "N8N_WEBHOOK_URL" "$N8N_WEBHOOK_URL"
 set_secret "N8N_API_KEY" "$N8N_API_KEY"
+set_secret "N8N_ENCRYPTION_KEY" "$N8N_ENCRYPTION_KEY"
 
 # ==============================================================================
 # N8N Crew Webhooks (10 Core Crew Members)
@@ -129,10 +153,10 @@ set_secret "N8N_CREW_CAPTAIN_PICARD_WEBHOOK" "$N8N_CREW_CAPTAIN_PICARD_WEBHOOK"
 set_secret "N8N_CREW_COMMANDER_DATA_WEBHOOK" "$N8N_CREW_COMMANDER_DATA_WEBHOOK"
 set_secret "N8N_CREW_COMMANDER_RIKER_WEBHOOK" "$N8N_CREW_COMMANDER_RIKER_WEBHOOK"
 set_secret "N8N_CREW_COUNSELOR_TROI_WEBHOOK" "$N8N_CREW_COUNSELOR_TROI_WEBHOOK"
-set_secret "N8N_CREW_LT_WORF_WEBHOOK" "$N8N_CREW_LT_WORF_WEBHOOK"
+set_secret "N8N_CREW_LT_WORF_WEBHOOK" "${N8N_CREW_LT_WORF_WEBHOOK:-$N8N_CREW_WORF_WEBHOOK}"
 set_secret "N8N_CREW_DR_CRUSHER_WEBHOOK" "$N8N_CREW_DR_CRUSHER_WEBHOOK"
 set_secret "N8N_CREW_GEORDI_LA_FORGE_WEBHOOK" "$N8N_CREW_GEORDI_LA_FORGE_WEBHOOK"
-set_secret "N8N_CREW_LT_UHURA_WEBHOOK" "$N8N_CREW_LT_UHURA_WEBHOOK"
+set_secret "N8N_CREW_LT_UHURA_WEBHOOK" "${N8N_CREW_LT_UHURA_WEBHOOK:-$N8N_CREW_UHURA_WEBHOOK}"
 set_secret "N8N_CREW_QUARK_WEBHOOK" "$N8N_CREW_QUARK_WEBHOOK"
 set_secret "N8N_CREW_CHIEF_OBRIEN_WEBHOOK" "$N8N_CREW_CHIEF_OBRIEN_WEBHOOK"
 
@@ -145,10 +169,18 @@ set_secret "VERCEL_TOKEN" "$VERCEL_TOKEN"
 set_secret "VERCEL_ORG_ID" "$VERCEL_ORG_ID"
 set_secret "VERCEL_PROJECT_ID" "$VERCEL_PROJECT_ID"
 set_secret "GITHUB_TOKEN" "$GITHUB_TOKEN"
+set_secret "EC2_INSTANCE_ID" "$EC2_INSTANCE_ID"
+set_secret "EC2_PUBLIC_IP" "$EC2_PUBLIC_IP"
+set_secret "REDIS_PASSWORD" "$REDIS_PASSWORD"
 
 # ==============================================================================
-# AWS Secrets (Optional)
+# AWS Secrets / OIDC Configuration
 # ==============================================================================
+
+if [ -n "$AWS_OIDC_ROLE_ARN" ]; then
+    log_info "Syncing AWS OIDC configuration..."
+    set_secret "AWS_OIDC_ROLE_ARN" "$AWS_OIDC_ROLE_ARN"
+fi
 
 if [ -n "$AWS_ACCESS_KEY_ID" ]; then
     log_info "Syncing AWS secrets..."
@@ -166,5 +198,9 @@ echo "=============================="
 log_success "Secrets synced successfully!"
 echo ""
 echo "Verify secrets:"
-echo "  gh secret list --repo $GITHUB_REPO --env $ENVIRONMENT"
+if [ -n "$ENVIRONMENT" ]; then
+    echo "  gh secret list --repo $GITHUB_REPO --env $ENVIRONMENT"
+else
+    echo "  gh secret list --repo $GITHUB_REPO"
+fi
 echo ""

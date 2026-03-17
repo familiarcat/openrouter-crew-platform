@@ -82,12 +82,23 @@ load_from_alexai_keys() {
 # ==============================================================================
 
 load_from_alexai_secrets() {
-    if [ -f "$HOME/.alexai-secrets" ]; then
+    local secrets_file="$HOME/.alexai-secrets/api-keys.env"
+    local legacy_secrets_file="$HOME/.alexai-secrets"
+
+    if [ -f "$secrets_file" ]; then
+        log_info "Loading from ~/.alexai-secrets/api-keys.env..."
+        set -a
+        source "$secrets_file"
+        set +a
+        log_success "Loaded ~/.alexai-secrets/api-keys.env"
+    elif [ -f "$legacy_secrets_file" ]; then
         log_info "Loading from ~/.alexai-secrets..."
-        source "$HOME/.alexai-secrets"
+        set -a
+        source "$legacy_secrets_file"
+        set +a
         log_success "Loaded ~/.alexai-secrets"
     else
-        log_error "~/.alexai-secrets not found"
+        log_error "~/.alexai-secrets/api-keys.env not found"
     fi
 }
 
@@ -208,10 +219,10 @@ N8N_CREW_CAPTAIN_PICARD_WEBHOOK=${N8N_CREW_CAPTAIN_PICARD_WEBHOOK}
 N8N_CREW_COMMANDER_DATA_WEBHOOK=${N8N_CREW_COMMANDER_DATA_WEBHOOK}
 N8N_CREW_COMMANDER_RIKER_WEBHOOK=${N8N_CREW_COMMANDER_RIKER_WEBHOOK}
 N8N_CREW_COUNSELOR_TROI_WEBHOOK=${N8N_CREW_COUNSELOR_TROI_WEBHOOK}
-N8N_CREW_LT_WORF_WEBHOOK=${N8N_CREW_LT_WORF_WEBHOOK}
+N8N_CREW_LT_WORF_WEBHOOK=${N8N_CREW_LT_WORF_WEBHOOK:-$N8N_CREW_WORF_WEBHOOK}
 N8N_CREW_DR_CRUSHER_WEBHOOK=${N8N_CREW_DR_CRUSHER_WEBHOOK}
 N8N_CREW_GEORDI_LA_FORGE_WEBHOOK=${N8N_CREW_GEORDI_LA_FORGE_WEBHOOK}
-N8N_CREW_LT_UHURA_WEBHOOK=${N8N_CREW_LT_UHURA_WEBHOOK}
+N8N_CREW_LT_UHURA_WEBHOOK=${N8N_CREW_LT_UHURA_WEBHOOK:-$N8N_CREW_UHURA_WEBHOOK}
 N8N_CREW_QUARK_WEBHOOK=${N8N_CREW_QUARK_WEBHOOK}
 N8N_CREW_CHIEF_OBRIEN_WEBHOOK=${N8N_CREW_CHIEF_OBRIEN_WEBHOOK}
 

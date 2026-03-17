@@ -153,24 +153,27 @@ cd /home/ec2-user/openrouter-crew-platform
 
 # Create .env.prod file with secrets from the local environment
 cat > .env.production <<ENV_EOF
-IMAGE_URI=${IMAGE_URI}
+ECR_REGISTRY=${ECR_REGISTRY}
+ECR_REPOSITORY=${ECR_REPOSITORY}
+IMAGE_TAG=${IMAGE_TAG}
 SUPABASE_URL=${SUPABASE_URL}
 SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
 SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
 OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
 N8N_BASE_URL=${N8N_URL}
+N8N_WEBHOOK_URL=${N8N_URL}/webhook
 N8N_API_KEY=${N8N_API_KEY}
 N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
 REDIS_PASSWORD=${REDIS_PASSWORD}
 ENV_EOF
 
 echo "Pulling new image and restarting services..."
-docker-compose -f docker-compose.prod.yml pull
-docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+docker-compose --env-file .env.production -f docker-compose.prod.yml pull dashboard
+docker-compose --env-file .env.production -f docker-compose.prod.yml up -d --remove-orphans
 
 echo "Verifying running containers..."
-docker ps
+docker-compose --env-file .env.production -f docker-compose.prod.yml ps
 EOF
 )
 
