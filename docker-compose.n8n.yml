@@ -61,10 +61,7 @@ services:
       - n8n-data:/home/node/.n8n
 
       # Mount workflows (read-only for import)
-      - ./packages/n8n-workflows:/workflows:ro
-
-      # Mount custom nodes (if any)
-      - ./packages/n8n-workflows/custom-nodes:/home/node/.n8n/custom:ro
+      - ./domains/shared/workflows:/workflows:ro
 
     networks:
       - openrouter-crew
@@ -94,7 +91,7 @@ services:
       - N8N_USER=${N8N_BASIC_AUTH_USER:-admin}
       - N8N_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
     volumes:
-      - ./packages/n8n-workflows:/workflows:ro
+      - ./domains/shared/workflows:/workflows:ro
       - ./scripts/n8n:/scripts:ro
     working_dir: /scripts
     command: >

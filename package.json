@@ -12,7 +12,8 @@
     "lint": "eslint src/**/*.ts",
     "test": "jest",
     "type-check": "tsc --noEmit",
-    "clippy": "bash apps/clippy-doom-video-builder/build_video.sh"
+    "clippy": "bash apps/clippy-doom-video-builder/build_video.sh",
+    "verify:automation-sync": "node scripts/verify-mcp-n8n-sync.js"
   },
   "keywords": [],
   "author": "",

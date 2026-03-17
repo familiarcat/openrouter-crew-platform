@@ -5,28 +5,31 @@
 
 const fs = require('fs');
 const path = require('path');
-const { glob } = require('glob'); // Assuming glob is available or using simple recursion
 
 // Configuration
-const WORKFLOWS_DIR = path.join(__dirname, '../../packages/n8n-workflows');
+const WORKFLOWS_DIR = path.join(__dirname, '../../domains/shared/workflows');
 
 // Parse Args
 const args = process.argv.slice(2);
 const isProd = args.includes('--prod');
 const isPull = args.includes('--pull');
 const isPush = args.includes('--push');
+const directionArg = args.find((arg) => arg.startsWith('--direction='));
+const direction = directionArg ? directionArg.split('=')[1] : null;
+const shouldPush = isPush || direction === 'to-n8n';
+const shouldPull = isPull || direction === 'from-n8n';
 
 // Environment Config (Defaults to local if not set)
 const API_URL = isProd 
-    ? (process.env.N8N_PROD_URL || 'https://n8n.pbradygeorgen.com') 
-    : (process.env.N8N_LOCAL_URL || 'http://localhost:5678');
+    ? (process.env.N8N_PROD_URL || process.env.N8N_URL || process.env.N8N_BASE_URL || 'https://n8n.pbradygeorgen.com') 
+    : (process.env.N8N_LOCAL_URL || process.env.N8N_URL || process.env.N8N_BASE_URL || 'http://localhost:5678');
 
 const API_KEY = isProd
-    ? process.env.N8N_PROD_API_KEY
-    : process.env.N8N_LOCAL_API_KEY;
+    ? (process.env.N8N_PROD_API_KEY || process.env.N8N_API_KEY)
+    : (process.env.N8N_LOCAL_API_KEY || process.env.N8N_API_KEY);
 
-if (!API_KEY) {
-    console.error('❌ Error: N8N_API_KEY not found in environment variables.');
+if (!fs.existsSync(WORKFLOWS_DIR)) {
+    console.error(`❌ Error: Workflow directory not found: ${WORKFLOWS_DIR}`);
     process.exit(1);
 }
 
@@ -57,8 +60,18 @@ function getAllWorkflowFiles(dir, fileList = []) {
  * Action: Push (Local -> Remote)
  */
 async function pushWorkflows() {
+    if (!API_KEY) {
+        console.error('❌ Error: N8N_API_KEY not found in environment variables.');
+        process.exit(1);
+    }
+
     console.log(`🚀 Pushing workflows to ${API_URL}...`);
     const files = getAllWorkflowFiles(WORKFLOWS_DIR);
+
+    if (files.length === 0) {
+        console.error(`❌ No workflow JSON files found in ${WORKFLOWS_DIR}`);
+        process.exit(1);
+    }
     
     for (const filePath of files) {
         try {
@@ -103,6 +116,11 @@ async function pushWorkflows() {
  * Action: Pull (Remote -> Local)
  */
 async function pullWorkflows() {
+    if (!API_KEY) {
+        console.error('❌ Error: N8N_API_KEY not found in environment variables.');
+        process.exit(1);
+    }
+
     console.log(`📥 Pulling workflows from ${API_URL}...`);
     
     try {
@@ -146,11 +164,12 @@ async function pullWorkflows() {
 
 // Main Execution
 (async () => {
-    if (isPush) {
+    if (shouldPush) {
         await pushWorkflows();
-    } else if (isPull) {
+    } else if (shouldPull) {
         await pullWorkflows();
     } else {
-        console.log("Usage: node sync-workflows.js --[push|pull] --[local|prod]");
+        console.log("Usage: node sync-workflows.js --push|--pull [--prod]");
+        console.log("   or: node sync-workflows.js --direction=to-n8n|from-n8n [--prod]");
     }
 })();
