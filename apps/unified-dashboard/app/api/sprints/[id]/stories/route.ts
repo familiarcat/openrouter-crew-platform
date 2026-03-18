@@ -1,8 +1,10 @@
 // File: apps/unified-dashboard/app/api/sprints/[id]/stories/route.ts
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
-import type { Tables } from '@openrouter-crew/shared-schemas'
+import { runCrewProjectCli } from '@/lib/crew-project-cli'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: Request,
@@ -10,23 +12,12 @@ export async function GET(
 ) {
   try {
     const sprintId = params.id
-
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('stories')
-      .select('*')
-      .eq('sprint_id', sprintId)
-      .order('priority', { ascending: true })
-
-    if (error) {
-      return NextResponse.json(
-        { error: `Failed to fetch stories: ${error.message}` },
-        { status: 500 }
-      )
-    }
+    const payload = await runCrewProjectCli<{ stories: unknown[] }>('list-stories', {
+      id: sprintId,
+    })
 
     return NextResponse.json({
-      data: data as Tables<'stories'>[],
+      data: payload.stories || [],
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
@@ -54,32 +45,20 @@ export async function POST(
       )
     }
 
-    const supabase = createClient()
-
-    const { data, error } = await supabase
-      .from('stories')
-      .insert({
-        project_id,
-        sprint_id: sprintId,
+    const payload = await runCrewProjectCli<{ story: unknown }>('create-story', {
+      payload: {
+        projectId: project_id,
+        sprintId,
         title,
-        description: description || null,
-        story_type: story_type as 'user_story' | 'developer_story' | 'technical_task' | 'bug_fix' | 'feature' | 'bug' | 'tech_debt' | 'spike' | 'documentation',
+        description,
+        workType: story_type,
         priority,
-        story_points: story_points || null,
-        status: 'backlog',
-      })
-      .select()
-      .single()
-
-    if (error) {
-      return NextResponse.json(
-        { error: `Failed to create story: ${error.message}` },
-        { status: 500 }
-      )
-    }
+        storyPoints: story_points,
+      },
+    })
 
     return NextResponse.json(
-      { data: data as Tables<'stories'> },
+      { data: payload.story },
       { status: 201 }
     )
   } catch (error) {

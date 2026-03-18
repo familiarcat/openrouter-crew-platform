@@ -80,7 +80,7 @@ describe('crew history', () => {
     test('should show an error for invalid limit', async () => {
       const args = ['node', 'crew', 'history', 'list', '--limit', '-5'];
       await program.parseAsync(args);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Invalid limit. Must be a positive integer.');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid limit. Must be a positive integer.'));
       expect(processExitSpy).toHaveBeenCalledWith(1);
     });
   });

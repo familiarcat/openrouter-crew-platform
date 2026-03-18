@@ -4,32 +4,96 @@ export class CrewApiClient {
   private apiKey: string;
 
   constructor(config: { baseUrl: string; apiKey: string }) {
-    this.baseUrl = config.baseUrl;
+    this.baseUrl = config.baseUrl.replace(/\/$/, '');
     this.apiKey = config.apiKey;
   }
 
-  async createProject(params: { name: string }): Promise<{ id: string; name: string; createdAt: string }> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 10));
+  private async requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      ...init,
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': this.apiKey,
+        ...(init?.headers || {}),
+      },
+    });
 
-    if (params.name.toLowerCase().includes('fail')) {
-        throw new Error('Simulated API error: Project name contains "fail"');
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message =
+        payload && typeof payload.error === 'string'
+          ? payload.error
+          : `Request failed with status ${response.status}`;
+      throw new Error(message);
     }
 
+    return payload as T;
+  }
+
+  private mapProjectSummary(project: any): {
+    id: string;
+    name: string;
+    status: string;
+    budget: { limit: number; spent: number };
+  } {
     return {
-      id: `proj_${Date.now()}`,
-      name: params.name,
-      createdAt: new Date().toISOString(),
+      id: project.id,
+      name: project.name,
+      status: project.status || 'draft',
+      budget: {
+        limit: project.budgetAllocated || 0,
+        spent: project.budgetSpent || 0,
+      },
+    };
+  }
+
+  private mapProjectDetail(project: any): {
+    id: string;
+    name: string;
+    createdAt: string;
+    budget: { limit: number; spent: number };
+    sprints: { id: string; name: string; goal: string }[];
+  } {
+    return {
+      id: project.id,
+      name: project.name,
+      createdAt: project.createdAt || new Date().toISOString(),
+      budget: {
+        limit: project.budgetAllocated || 0,
+        spent: project.budgetSpent || 0,
+      },
+      sprints: Array.isArray(project.sprints)
+        ? project.sprints.map((sprint: any) => ({
+            id: sprint.id,
+            name: sprint.name,
+            goal: Array.isArray(sprint.goals) ? sprint.goals.join(', ') : sprint.goal || 'No goal specified',
+          }))
+        : [],
+    };
+  }
+
+  async createProject(params: {
+    name: string;
+    description?: string;
+    domainId?: string;
+    budgetUsd?: number;
+  }): Promise<{ id: string; name: string; createdAt: string }> {
+    const payload = await this.requestJson<{ project: any }>('/projects', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    return {
+      id: payload.project.id,
+      name: payload.project.name,
+      createdAt: payload.project.createdAt || new Date().toISOString(),
     };
   }
 
   async setProjectBudget(params: { projectId: string; budget: number }): Promise<{ success: boolean; budget: number }> {
-    await new Promise(resolve => setTimeout(resolve, 10));
-
-    if (params.budget < 0) {
-      throw new Error('Simulated API error: Budget cannot be negative');
-    }
-
+    await this.requestJson<{ project: any }>(`/projects/${params.projectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ budgetUsd: params.budget }),
+    });
     return { success: true, budget: params.budget };
   }
 
@@ -152,21 +216,8 @@ export class CrewApiClient {
     status: string;
     budget: { limit: number; spent: number };
   }[]> {
-    await new Promise(resolve => setTimeout(resolve, 10));
-    return [
-      {
-        id: 'proj_123',
-        name: 'AI Dashboard',
-        status: 'active',
-        budget: { limit: 500.00, spent: 125.50 },
-      },
-      {
-        id: 'proj_456',
-        name: 'DJ Booking App',
-        status: 'active',
-        budget: { limit: 1000.00, spent: 850.00 },
-      },
-    ];
+    const payload = await this.requestJson<{ projects: any[] }>('/projects');
+    return (payload.projects || []).map((project) => this.mapProjectSummary(project));
   }
 
   async getProjectById(id: string): Promise<{
@@ -176,46 +227,30 @@ export class CrewApiClient {
     budget: { limit: number; spent: number };
     sprints: { id: string; name: string; goal: string }[];
   } | undefined> {
-    await new Promise(resolve => setTimeout(resolve, 10));
-    if (id.startsWith('proj_')) {
-      return {
-        id: id,
-        name: 'AI Dashboard',
-        createdAt: '2026-02-15T10:00:00Z',
-        budget: {
-          limit: 500.00,
-          spent: 125.50,
-        },
-        sprints: [
-          { id: 'sprint_456', name: 'Sprint 1: Core Setup', goal: 'Build the basic UI and auth' },
-          { id: 'sprint_789', name: 'Sprint 2: Add Features', goal: 'Implement memory and cost tracking' },
-        ],
-      };
-    }
-    return undefined;
+    const payload = await this.requestJson<{ project: any }>(`/projects/${id}`);
+    return this.mapProjectDetail(payload.project);
   }
 
   async deleteProject(id: string): Promise<{ success: boolean; deletedId: string }> {
-    await new Promise(resolve => setTimeout(resolve, 10));
-    if (id.includes('fail')) {
-      throw new Error('Simulated API error: Deletion failed on server.');
-    }
-    return { success: true, deletedId: id };
+    const payload = await this.requestJson<{ success: boolean; deletedId: string }>(`/projects/${id}`, {
+      method: 'DELETE',
+    });
+    return { success: payload.success, deletedId: payload.deletedId };
   }
 
   async archiveProject(id: string): Promise<{ success: boolean; archivedId: string }> {
-    await new Promise(resolve => setTimeout(resolve, 10));
-    if (id.includes('fail')) {
-      throw new Error('Simulated API error: Archival failed on server.');
-    }
+    await this.requestJson<{ project: any }>(`/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'archived' }),
+    });
     return { success: true, archivedId: id };
   }
 
   async restoreProject(id: string): Promise<{ success: boolean; restoredId: string }> {
-    await new Promise(resolve => setTimeout(resolve, 10));
-    if (id.includes('fail')) {
-      throw new Error('Simulated API error: Restoration failed on server.');
-    }
+    await this.requestJson<{ project: any }>(`/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'active' }),
+    });
     return { success: true, restoredId: id };
   }
 

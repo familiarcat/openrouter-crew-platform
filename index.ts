@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -374,9 +374,65 @@ import { CrewApiClient } from './apiClient';
 
 // Initialize the API client
 const apiClient = new CrewApiClient({
-    baseUrl: process.env.CREW_API_URL || 'http://localhost:8000/api',
+    baseUrl:
+      process.env.CREW_API_URL ||
+      (process.env.CREW_PLATFORM_URL
+        ? `${process.env.CREW_PLATFORM_URL.replace(/\/$/, '')}/api`
+        : 'http://localhost:3000/api'),
     apiKey: process.env.CREW_API_KEY || 'dummy-key'
 });
+
+function runProjectCliCommand<T>(
+  command:
+    | 'list'
+    | 'create'
+    | 'get'
+    | 'update'
+    | 'delete'
+    | 'list-sprints'
+    | 'create-sprint'
+    | 'list-stories'
+    | 'get-story'
+    | 'create-story'
+    | 'update-story',
+  options: {
+    id?: string;
+    payload?: Record<string, unknown>;
+    status?: string;
+    limit?: number;
+  } = {}
+): T {
+  const scriptPath = path.join(PROJECT_ROOT, 'scripts', 'crew-project-cli.mjs');
+  const args = [scriptPath, command];
+
+  if (options.id && !['list-sprints', 'list-stories'].includes(command)) {
+    args.push('--id', options.id);
+  }
+  if (options.id && command === 'list-sprints') {
+    args.push('--project-id', options.id);
+  }
+  if (options.id && command === 'list-stories') {
+    args.push('--sprint-id', options.id);
+  }
+  if (options.status) {
+    args.push('--status', options.status);
+  }
+  if (typeof options.limit === 'number') {
+    args.push('--limit', String(options.limit));
+  }
+  if (options.payload) {
+    args.push('--payload', JSON.stringify(options.payload));
+  }
+
+  const output = execFileSync(process.execPath, args, {
+    cwd: PROJECT_ROOT,
+    env: process.env,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024 * 5,
+  });
+
+  return JSON.parse(output) as T;
+}
 
 // --- Main CLI Program ---
 const program = new Command();
@@ -404,10 +460,35 @@ const projectCommand = program.command('project')
 projectCommand
   .command('list')
   .description('List all projects in a table')
-  .action(async () => {
-    printStep('Fetching projects...');
+  .option('--json', 'Output raw project JSON')
+  .action(async (options: { json?: boolean }) => {
     try {
-      const projects = await apiClient.listProjects();
+      if (!options.json) {
+        printStep('Fetching projects...');
+      }
+
+      const payload = runProjectCliCommand<{ projects: {
+        id: string;
+        name: string;
+        status: string;
+        budgetAllocated: number;
+        budgetSpent: number;
+      }[] }>('list');
+      const projects = payload.projects.map((project) => ({
+        id: project.id,
+        name: project.name,
+        status: project.status,
+        budget: {
+          limit: project.budgetAllocated || 0,
+          spent: project.budgetSpent || 0,
+        },
+      }));
+
+      if (options.json) {
+        console.log(JSON.stringify(projects, null, 2));
+        return;
+      }
+
       printHeader('All Projects');
 
       if (projects.length === 0) {
@@ -440,6 +521,51 @@ projectCommand
   });
 
 projectCommand
+  .command('create <projectName>')
+  .description('Create a project through the shared dashboard API')
+  .option('--description <text>', 'Project description')
+  .option('--domain <id>', 'Domain id (product-factory, dj-booking, alex-ai-universal)', 'product-factory')
+  .option('--budget <amount>', 'Budget in USD')
+  .option('--json', 'Output raw project JSON')
+  .action(async (
+    projectName: string,
+    options: { description?: string; domain?: string; budget?: string; json?: boolean },
+  ) => {
+    try {
+      if (!options.json) {
+        printStep(`Creating project "${projectName}"...`);
+      }
+
+      const budgetUsd = options.budget ? parseFloat(options.budget) : undefined;
+      if (options.budget && (Number.isNaN(budgetUsd) || budgetUsd! < 0)) {
+        throw new Error(`Invalid budget amount: "${options.budget}". Must be a positive number.`);
+      }
+
+      const payload = runProjectCliCommand<{ project: { id: string; name: string; createdAt: string } }>('create', {
+        payload: {
+          name: projectName,
+          description: options.description,
+          domainId: options.domain,
+          budgetUsd,
+        },
+      });
+      const project = payload.project;
+
+      if (options.json) {
+        console.log(JSON.stringify(project, null, 2));
+        return;
+      }
+
+      printSuccess(`Project '${project.name}' created with ID: ${project.id}`);
+      printInfo("Run 'crew project list' to see the shared project catalog.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      printError(`Failed to create project: ${message}`);
+      process.exit(1);
+    }
+  });
+
+projectCommand
   .command('new <projectName> <budget> <sprintName> <sprintGoal>')
   .description('Scaffold a new project, budget, and initial sprint')
   .option('-d, --duration <days>', 'The duration of the sprint in days', '14')
@@ -456,8 +582,11 @@ projectCommand
 
     try {
       printStep("STEP 1: Creating project...");
-      printInfo(`(API) Calling createProject with name: "${projectName}"`);
-      const newProject = await apiClient.createProject({ name: projectName });
+      printInfo(`(CLI) Creating project "${projectName}" through the shared project command path`);
+      const projectPayload = runProjectCliCommand<{ project: { id: string; name: string } }>('create', {
+        payload: { name: projectName },
+      });
+      const newProject = projectPayload.project;
       printSuccess(`Project '${newProject.name}' created with ID: ${newProject.id}`);
       console.log('');
 
@@ -466,8 +595,11 @@ projectCommand
       if (isNaN(budgetAmount)) {
         throw new Error(`Invalid budget amount: "${budget}". Must be a number.`);
       }
-      printInfo(`(API) Calling setProjectBudget for project ${newProject.id} with budget: ${budgetAmount}`);
-      await apiClient.setProjectBudget({ projectId: newProject.id, budget: budgetAmount });
+      printInfo(`(CLI) Updating budget for project ${newProject.id} to ${budgetAmount}`);
+      runProjectCliCommand('update', {
+        id: newProject.id,
+        payload: { budgetUsd: budgetAmount },
+      });
       printSuccess(`Budget of $${budgetAmount.toFixed(2)} set for project '${newProject.name}'.`);
       console.log('');
 
@@ -482,8 +614,11 @@ projectCommand
         goal: sprintGoal,
         durationDays: durationDays,
       };
-      printInfo(`(API) Calling createSprint with params: ${JSON.stringify(sprintParams)}`);
-      const newSprint = await apiClient.createSprint(sprintParams);
+      printInfo(`(CLI) Creating sprint with params: ${JSON.stringify(sprintParams)}`);
+      const sprintPayload = runProjectCliCommand<{ sprint: { name: string } }>('create-sprint', {
+        payload: sprintParams,
+      });
+      const newSprint = sprintPayload.sprint;
       printSuccess(`Sprint '${newSprint.name}' created for project '${newProject.name}'.`);
       console.log('');
 
@@ -498,17 +633,95 @@ projectCommand
   });
 
 projectCommand
+  .command('feature <title>')
+  .description('Create a sprint work item in the shared story lane')
+  .requiredOption('--project <id>', 'Project id')
+  .requiredOption('--sprint <id>', 'Sprint id')
+  .option('--description <text>', 'Feature description')
+  .option('--type <type>', 'Work type to store in the sprint system', 'feature')
+  .option('--priority <level>', 'Priority level (1-4)', '2')
+  .option('--points <number>', 'Story points', '3')
+  .option('--json', 'Output raw story JSON')
+  .action(async (
+    title: string,
+    options: {
+      project: string;
+      sprint: string;
+      description?: string;
+      type?: string;
+      priority: string;
+      points: string;
+      json?: boolean;
+    },
+  ) => {
+    try {
+      if (!options.json) {
+        printStep(`Creating feature "${title}"...`);
+      }
+
+      const priority = Number.parseInt(options.priority, 10);
+      const storyPoints = Number.parseInt(options.points, 10);
+      if (Number.isNaN(priority) || Number.isNaN(storyPoints)) {
+        throw new Error('Priority and points must be numeric values.');
+      }
+
+      const payload = runProjectCliCommand<{ story: { id: string; title: string; sprintId: string; projectId: string } }>(
+        'create-story',
+        {
+          payload: {
+            projectId: options.project,
+            sprintId: options.sprint,
+            title,
+            description: options.description,
+            workType: options.type || 'feature',
+            priority,
+            storyPoints,
+          },
+        },
+      );
+
+      if (options.json) {
+        console.log(JSON.stringify(payload.story, null, 2));
+        return;
+      }
+
+      printSuccess(`Feature '${payload.story.title}' created with ID: ${payload.story.id}`);
+      printInfo(`Project: ${payload.story.projectId} | Sprint: ${payload.story.sprintId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      printError(`Failed to create feature: ${message}`);
+      process.exit(1);
+    }
+  });
+
+projectCommand
   .command('info <id>')
   .description('Display detailed information about a specific project')
   .action(async (id: string) => {
     printStep(`Fetching details for project: ${id}...`);
     try {
-      const project = await apiClient.getProjectById(id);
-
-      if (!project) {
-        printError(`Project with ID "${id}" not found.`);
-        process.exit(1);
-      }
+      const payload = runProjectCliCommand<{ project: {
+        id: string;
+        name: string;
+        createdAt: string;
+        budgetAllocated: number;
+        budgetSpent: number;
+        sprints: { id: string; name: string; goals?: string[]; goal?: string }[];
+      } }>('get', { id });
+      const project = {
+        id: payload.project.id,
+        name: payload.project.name,
+        createdAt: payload.project.createdAt,
+        budget: {
+          limit: payload.project.budgetAllocated || 0,
+          spent: payload.project.budgetSpent || 0,
+        },
+        sprints: (payload.project.sprints || []).map((sprint) => ({
+          id: sprint.id,
+          name: sprint.name,
+          goal: Array.isArray(sprint.goals) ? sprint.goals.join(', ') : sprint.goal || 'No goal specified',
+        })),
+      };
 
       printHeader(`Project Details: ${project.name}`);
       console.log(chalk.bold('ID:'.padEnd(15)) + project.id);
@@ -563,7 +776,7 @@ projectCommand
 
     printStep(`Deleting project: ${id}...`);
     try {
-      const result = await apiClient.deleteProject(id);
+      const result = runProjectCliCommand<{ success: boolean; deletedId: string }>('delete', { id });
       if (result.success) {
         printSuccess(`Project with ID "${result.deletedId}" has been permanently deleted.`);
       } else {
@@ -603,9 +816,12 @@ projectCommand
 
     printStep(`Archiving project: ${id}...`);
     try {
-      const result = await apiClient.archiveProject(id);
-      if (result.success) {
-        printSuccess(`Project with ID "${result.archivedId}" has been archived.`);
+      const result = runProjectCliCommand<{ project: { id: string } }>('update', {
+        id,
+        payload: { status: 'archived' },
+      });
+      if (result.project?.id) {
+        printSuccess(`Project with ID "${result.project.id}" has been archived.`);
       } else {
         // This branch is unlikely to be hit with the current API client mock
         printError('Archival failed for an unknown reason.');
@@ -624,9 +840,12 @@ projectCommand
   .action(async (id: string) => {
     printStep(`Restoring project: ${id}...`);
     try {
-      const result = await apiClient.restoreProject(id);
-      if (result.success) {
-        printSuccess(`Project with ID "${result.restoredId}" has been restored.`);
+      const result = runProjectCliCommand<{ project: { id: string } }>('update', {
+        id,
+        payload: { status: 'active' },
+      });
+      if (result.project?.id) {
+        printSuccess(`Project with ID "${result.project.id}" has been restored.`);
       } else {
         // This branch is unlikely to be hit with the current API client mock
         printError('Restoration failed for an unknown reason.');
@@ -1198,10 +1417,26 @@ const sprintCommand = program.command('sprint')
 sprintCommand
   .command('list <project-id>')
   .description('List all sprints for a given project')
-  .action(async (projectId: string) => {
-    printStep(`Fetching sprints for project: ${projectId}...`);
+  .option('--json', 'Output raw sprint JSON')
+  .action(async (projectId: string, options: { json?: boolean }) => {
+    if (!options.json) {
+      printStep(`Fetching sprints for project: ${projectId}...`);
+    }
     try {
-      const sprints = await apiClient.listSprints(projectId);
+      const payload = runProjectCliCommand<{ data: {
+        id: string;
+        name: string;
+        status?: string;
+        goals?: string[];
+        goal?: string;
+      }[] }>('list-sprints', { id: projectId });
+      const sprints = payload.data || [];
+
+      if (options.json) {
+        console.log(JSON.stringify(sprints, null, 2));
+        return;
+      }
+
       printHeader(`Sprints for Project: ${projectId}`);
 
       if (sprints.length === 0) {
@@ -1236,14 +1471,26 @@ sprintCommand
   .description('Create a new sprint for a project')
   .option('--goal <goal>', 'The primary goal for the sprint', 'No goal specified')
   .option('--duration <days>', 'The duration of the sprint in days', '14')
-  .action(async (projectId: string, name: string, options: { goal: string; duration: string }) => {
-    printStep(`Creating sprint "${name}" for project ${projectId}...`);
+  .option('--json', 'Output raw sprint JSON')
+  .action(async (projectId: string, name: string, options: { goal: string; duration: string; json?: boolean }) => {
+    if (!options.json) {
+      printStep(`Creating sprint "${name}" for project ${projectId}...`);
+    }
     try {
       const durationDays = parseInt(options.duration, 10);
       if (isNaN(durationDays)) {
         throw new Error(`Invalid duration: "${options.duration}". Must be an integer.`);
       }
-      const newSprint = await apiClient.createSprint({ projectId, name, goal: options.goal, durationDays });
+      const payload = runProjectCliCommand<{ sprint: { id: string; name: string } }>('create-sprint', {
+        payload: { projectId, name, goal: options.goal, durationDays },
+      });
+      const newSprint = payload.sprint;
+
+      if (options.json) {
+        console.log(JSON.stringify(newSprint, null, 2));
+        return;
+      }
+
       printSuccess(`Sprint '${newSprint.name}' created with ID: ${newSprint.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -1368,10 +1615,26 @@ const storyCommand = program.command('story')
 storyCommand
   .command('list <sprint-id>')
   .description('List all stories for a given sprint')
-  .action(async (sprintId: string) => {
-    printStep(`Fetching stories for sprint: ${sprintId}...`);
+  .option('--json', 'Output raw story JSON')
+  .action(async (sprintId: string, options: { json?: boolean }) => {
+    if (!options.json) {
+      printStep(`Fetching stories for sprint: ${sprintId}...`);
+    }
     try {
-      const stories = await apiClient.listStories(sprintId);
+      const payload = runProjectCliCommand<{ stories: {
+        id: string;
+        title: string;
+        status: string;
+        storyPoints?: number;
+        assignee?: string;
+      }[] }>('list-stories', { id: sprintId });
+      const stories = payload.stories || [];
+
+      if (options.json) {
+        console.log(JSON.stringify(stories, null, 2));
+        return;
+      }
+
       printHeader(`Stories for Sprint: ${sprintId}`);
 
       if (stories.length === 0) {
@@ -1392,8 +1655,8 @@ storyCommand
             return chalk.white;
           }
         },
-        { header: 'Points', width: 10, getter: (s) => s.points.toString() },
-        { header: 'Assignee', width: 25, getter: (s) => s.assignee },
+        { header: 'Points', width: 10, getter: (s) => String(s.storyPoints || 0) },
+        { header: 'Assignee', width: 25, getter: (s) => s.assignee || '' },
       ]);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -1405,15 +1668,51 @@ storyCommand
 storyCommand
   .command('create <sprint-id> <title>')
   .description('Create a new story in a sprint')
+  .requiredOption('--project <id>', 'Project id')
+  .option('--description <text>', 'Story description')
+  .option('--type <type>', 'Work type', 'feature')
+  .option('--priority <level>', 'Priority level (1-4)', '2')
   .option('--points <number>', 'The story points for this story', '0')
-  .action(async (sprintId: string, title: string, options: { points: string }) => {
-    printStep(`Creating story "${title}" in sprint ${sprintId}...`);
+  .option('--json', 'Output raw story JSON')
+  .action(async (
+    sprintId: string,
+    title: string,
+    options: {
+      project: string;
+      description?: string;
+      type: string;
+      priority: string;
+      points: string;
+      json?: boolean;
+    },
+  ) => {
+    if (!options.json) {
+      printStep(`Creating story "${title}" in sprint ${sprintId}...`);
+    }
     try {
       const points = parseInt(options.points, 10);
-      if (isNaN(points)) {
+      const priority = parseInt(options.priority, 10);
+      if (isNaN(points) || isNaN(priority)) {
         throw new Error(`Invalid points value: "${options.points}". Must be an integer.`);
       }
-      const newStory = await apiClient.createStory({ sprintId, title, points });
+      const payload = runProjectCliCommand<{ story: { id: string; title: string } }>('create-story', {
+        payload: {
+          projectId: options.project,
+          sprintId,
+          title,
+          description: options.description,
+          workType: options.type,
+          priority,
+          storyPoints: points,
+        },
+      });
+      const newStory = payload.story;
+
+      if (options.json) {
+        console.log(JSON.stringify(newStory, null, 2));
+        return;
+      }
+
       printSuccess(`Story '${newStory.title}' created with ID: ${newStory.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';

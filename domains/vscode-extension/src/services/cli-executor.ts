@@ -27,8 +27,12 @@ export class CLIExecutor {
 
   constructor(outputChannel: vscode.OutputChannel) {
     this.outputChannel = outputChannel;
-    const config = vscode.workspace.getConfiguration('openrouter-crew');
-    this.cliPath = config.get<string>('cliPath', 'crew');
+    const hyphenConfig = vscode.workspace.getConfiguration('openrouter-crew');
+    const camelConfig = vscode.workspace.getConfiguration('openrouterCrew');
+    this.cliPath =
+      hyphenConfig.get<string>('cliPath')
+      || camelConfig.get<string>('cliPath')
+      || 'crew';
   }
 
   /**
@@ -118,12 +122,59 @@ export class CLIExecutor {
   }
 
   /**
+   * List sprints for a project
+   */
+  async listSprints(projectId: string): Promise<CLIResult<any>> {
+    return this.execute(['sprint', 'list', projectId, '--json']);
+  }
+
+  /**
+   * Create project
+   */
+  async createProject(
+    name: string,
+    options?: {
+      description?: string;
+      domainId?: string;
+      budget?: number;
+    }
+  ): Promise<CLIResult<any>> {
+    const args = ['project', 'create', name];
+    if (options?.description) args.push('--description', options.description);
+    if (options?.domainId) args.push('--domain', options.domainId);
+    if (typeof options?.budget === 'number') args.push('--budget', String(options.budget));
+    args.push('--json');
+    return this.execute(args);
+  }
+
+  /**
    * Create feature
    */
   async createFeature(name: string, description?: string, budget?: number): Promise<CLIResult<any>> {
     const args = ['project', 'feature', name];
     if (description) args.push('--description', description);
     if (budget) args.push('--budget', String(budget));
+    args.push('--json');
+    return this.execute(args);
+  }
+
+  /**
+   * Create a sprint work item/story
+   */
+  async createStory(options: {
+    sprintId: string;
+    projectId: string;
+    title: string;
+    description?: string;
+    workType?: string;
+    priority?: number;
+    storyPoints?: number;
+  }): Promise<CLIResult<any>> {
+    const args = ['story', 'create', options.sprintId, options.title, '--project', options.projectId];
+    if (options.description) args.push('--description', options.description);
+    if (options.workType) args.push('--type', options.workType);
+    if (typeof options.priority === 'number') args.push('--priority', String(options.priority));
+    if (typeof options.storyPoints === 'number') args.push('--points', String(options.storyPoints));
     args.push('--json');
     return this.execute(args);
   }

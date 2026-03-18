@@ -34,7 +34,6 @@ import { registerTreeViews } from './ui/tree-views.js';
 import { rosterCommand, consultCommand } from './commands/crew.js';
 import { settingsCommand } from './commands/settings.js';
 import { createMemoryCommand, searchMemoryCommand, complianceCheckCommand } from './commands/memory.js';
-import { createProjectCommand, createFeatureCommand } from './commands/project.js';
 import { CostHoverProvider } from './providers/hover.js';
 import { AICompletionProvider } from './providers/completion.js';
 import { DiagnosticsProvider } from './providers/diagnostics.js';
@@ -52,6 +51,8 @@ import { CrewCodeActionProvider } from './providers/code-action.js';
 import { CostReportPanel } from './ui/cost-report-panel.js';
 import { MemoryBrowser } from './ui/memory-browser.js';
 import { ProjectWorkbenchPanel } from './ui/project-workbench-panel.js';
+import { ProjectIntakePanel } from './ui/project-intake-panel.js';
+import { WorkItemIntakePanel } from './ui/work-item-intake-panel.js';
 
 function registerCommandWithTelemetry(
     context: vscode.ExtensionContext,
@@ -227,18 +228,10 @@ export async function activateExtension(context: vscode.ExtensionContext): Promi
         ProjectWorkbenchPanel.createOrShow(context.extensionUri, agentNetwork);
     });
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.create', async () => {
-        await createProjectCommand(cliExecutor);
-        await vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
-        if (ProjectWorkbenchPanel.currentPanel) {
-            await ProjectWorkbenchPanel.currentPanel.refresh();
-        }
+        ProjectIntakePanel.createOrShow(context.extensionUri, cliExecutor);
     });
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.feature', async () => {
-        await createFeatureCommand(cliExecutor);
-        await vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
-        if (ProjectWorkbenchPanel.currentPanel) {
-            await ProjectWorkbenchPanel.currentPanel.refresh();
-        }
+        WorkItemIntakePanel.createOrShow(context.extensionUri, cliExecutor);
     });
 
     // Register Find Related Files Command

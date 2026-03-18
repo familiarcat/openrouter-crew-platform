@@ -1,56 +1,46 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { createProjectWorkbenchModel, WorkbenchProjectRecord } from '@openrouter-crew/shared-ui-components/project-workbench';
 import { ProjectWorkbenchView } from '@openrouter-crew/shared-ui-components/project-workbench/react';
-import { DOMAINS, MOCK_PROJECTS, Project } from '@/lib/unified-mock-data';
+import { getMockProjectRecords, type ProjectPlatformRecord } from '@/lib/project-platform';
 
-function mapMockProjects(projects: Project[]): WorkbenchProjectRecord[] {
+function mapProjectsToWorkbench(projects: ProjectPlatformRecord[]): WorkbenchProjectRecord[] {
   return projects.map((project) => ({
     id: project.id,
     name: project.name,
     description: project.description,
     status: project.status,
-    domain: DOMAINS.find((domain) => domain.id === project.domainId)?.name || project.domainId,
-    budgetAllocated: project.budget.allocated,
-    budgetSpent: project.budget.spent,
-    teamSize: project.team.size,
+    domain: project.domain?.name || project.domainId,
+    budgetAllocated: project.budgetAllocated,
+    budgetSpent: project.budgetSpent,
+    teamSize: project.teamSize,
     updatedAt: project.updatedAt,
-  }));
+  }))
 }
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<WorkbenchProjectRecord[]>(() => mapMockProjects(MOCK_PROJECTS));
+  const [projects, setProjects] = useState<WorkbenchProjectRecord[]>(() =>
+    mapProjectsToWorkbench(getMockProjectRecords()),
+  );
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-        const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-        if (!sbUrl || !sbKey) {
+        const response = await fetch('/api/projects', {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
           return;
         }
 
-        const supabase = createClient(sbUrl, sbKey);
-        const { data, error } = await supabase.from('projects').select('*').order('updated_at', { ascending: false });
-        if (error || !data || data.length === 0) {
+        const payload = await response.json();
+        if (!payload?.projects || !Array.isArray(payload.projects) || payload.projects.length === 0) {
           return;
         }
 
-        const mapped = data.map((project: any) => ({
-          id: project.id,
-          name: project.name,
-          description: project.description || '',
-          status: project.status || 'draft',
-          domain: project.metadata?.domainId || project.type || 'Unassigned domain',
-          budgetAllocated: project.metadata?.budget?.allocated ?? project.budget_usd ?? 0,
-          budgetSpent: project.metadata?.budget?.spent ?? project.total_cost_usd ?? 0,
-          teamSize: project.metadata?.team?.size ?? 0,
-          updatedAt: project.updated_at,
-        }));
-
-        setProjects(mapped);
+        setProjects(mapProjectsToWorkbench(payload.projects as ProjectPlatformRecord[]));
       } catch (error) {
         console.warn('Falling back to mock project data for workbench', error);
       }

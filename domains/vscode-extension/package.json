@@ -191,6 +191,16 @@
           "type": "string",
           "description": "OpenRouter API Key"
         },
+        "openrouterCrew.cliPath": {
+          "type": "string",
+          "default": "crew",
+          "description": "Path to the shared OpenRouter Crew CLI binary."
+        },
+        "openrouterCrew.platformBaseUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Base URL for the shared dashboard/API service that powers project management."
+        },
         "openrouterCrew.model.simple": {
           "type": "string",
           "default": "anthropic/claude-3-haiku-20240307",

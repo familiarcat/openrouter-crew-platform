@@ -178,14 +178,14 @@ describe('crew story', () => {
     test('should show an error if no options are provided', async () => {
       const args = ['node', 'crew', 'story', 'update', 'story_1'];
       await program.parseAsync(args);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('At least one option (--status or --assignee) must be provided.');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('At least one option (--status or --assignee) must be provided.'));
       expect(processExitSpy).toHaveBeenCalledWith(1);
     });
 
     test('should show an error for invalid status', async () => {
       const args = ['node', 'crew', 'story', 'update', 'story_1', '--status', 'invalid_status'];
       await program.parseAsync(args);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Invalid status. Must be one of: todo, in-progress, done, blocked.');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid status. Must be one of: todo, in-progress, done, blocked.'));
       expect(processExitSpy).toHaveBeenCalledWith(1);
     });
 

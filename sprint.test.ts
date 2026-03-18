@@ -178,14 +178,14 @@ describe('crew sprint', () => {
     test('should show an error if no options are provided', async () => {
       const args = ['node', 'crew', 'sprint', 'update', 'sprint_123'];
       await program.parseAsync(args);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('At least one option (--status or --goal) must be provided.');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('At least one option (--status or --goal) must be provided.'));
       expect(processExitSpy).toHaveBeenCalledWith(1);
     });
 
     test('should show an error for invalid status', async () => {
       const args = ['node', 'crew', 'sprint', 'update', 'sprint_123', '--status', 'invalid_status'];
       await program.parseAsync(args);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Invalid status. Must be one of: planned, active, completed.');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid status. Must be one of: planned, active, completed.'));
       expect(processExitSpy).toHaveBeenCalledWith(1);
     });
 

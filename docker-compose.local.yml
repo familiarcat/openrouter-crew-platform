@@ -1,0 +1,80 @@
+version: '3.8'
+
+name: openrouter-crew-platform-local
+
+services:
+  supabase-db:
+    image: supabase/postgres:15.1.1.2
+    container_name: openrouter-supabase-db
+    environment:
+      POSTGRES_PASSWORD: ${SUPABASE_DB_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    ports:
+      - "54322:5432"
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  supabase-studio:
+    image: supabase/studio:20240101-8e2b95b
+    container_name: openrouter-supabase-studio
+    environment:
+      SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:54321}
+      STUDIO_PG_META_URL: http://localhost:8080
+    ports:
+      - "54323:3000"
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: openrouter-n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-admin}
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-local-n8n-encryption-key}
+      - GENERIC_TIMEZONE=${TIMEZONE:-America/Chicago}
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./domains/shared/workflows:/workflows
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: openrouter-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  supabase-db-data:
+  n8n-data:
+  redis-data:
+
+networks:
+  default:
+    name: openrouter-network

@@ -49,7 +49,7 @@ function buildHeroActions(surface: WorkbenchSurface): WorkbenchAction[] {
         label: 'Create Feature',
         description: 'Break work into deliverable slices before execution.',
         kind: 'secondary',
-        href: '#project-workbench-plan',
+        href: '/work-items/new',
       },
       {
         id: 'review-costs',
@@ -215,7 +215,7 @@ export function createProjectWorkbenchModel(
                   label: 'Plan Features',
                   description: 'Use the shared planning lane.',
                   kind: 'primary',
-                  href: '#project-workbench-plan',
+                  href: '/work-items/new',
                 }
               : {
                   id: 'vscode-create-feature',

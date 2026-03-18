@@ -60,7 +60,7 @@ export class ProjectTreeViewProvider implements vscode.TreeDataProvider<ProjectT
     if (projects.length === 0) {
         return [
           workbenchEntry,
-          new vscode.TreeItem('No projects found in Supabase.', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem,
+          new vscode.TreeItem('No shared projects found yet.', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem,
         ];
     }
 

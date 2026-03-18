@@ -16,8 +16,9 @@ import { TerminalManager } from './services/terminal-manager';
 import { CrewAPIService } from './services/crew-api-service';
 import { registerTreeViews } from './ui/tree-views';
 import { CLIExecutor } from './services/cli-executor';
-import { createProjectCommand, createFeatureCommand } from './commands/project';
 import { ProjectWorkbenchPanel } from './ui/project-workbench-panel';
+import { ProjectIntakePanel } from './ui/project-intake-panel';
+import { WorkItemIntakePanel } from './ui/work-item-intake-panel';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -235,18 +236,10 @@ export function activate(context: vscode.ExtensionContext) {
             ProjectWorkbenchPanel.createOrShow(context.extensionUri, agentNetwork);
         }),
         vscode.commands.registerCommand('openrouter-crew.project.create', async () => {
-            await createProjectCommand(cliExecutor);
-            vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
-            if (ProjectWorkbenchPanel.currentPanel) {
-                void ProjectWorkbenchPanel.currentPanel.refresh();
-            }
+            ProjectIntakePanel.createOrShow(context.extensionUri, cliExecutor);
         }),
         vscode.commands.registerCommand('openrouter-crew.project.feature', async () => {
-            await createFeatureCommand(cliExecutor);
-            vscode.commands.executeCommand('openrouter-crew.project-view.refresh');
-            if (ProjectWorkbenchPanel.currentPanel) {
-                void ProjectWorkbenchPanel.currentPanel.refresh();
-            }
+            WorkItemIntakePanel.createOrShow(context.extensionUri, cliExecutor);
         }),
         vscode.commands.registerCommand('openrouter-crew.history', () => {
             vscode.window.showInformationMessage('Interaction history available in sidebar');

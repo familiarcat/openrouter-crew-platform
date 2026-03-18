@@ -77,3 +77,11 @@ export function getSupabaseAdmin() {
 
   return supabaseAdmin
 }
+
+export function tryGetSupabaseAdmin() {
+  try {
+    return getSupabaseAdmin()
+  } catch {
+    return null
+  }
+}

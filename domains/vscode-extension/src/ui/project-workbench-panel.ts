@@ -82,10 +82,11 @@ export class ProjectWorkbenchPanel {
       name: project.name,
       description: project.description || '',
       status: project.status || 'draft',
-      domain: project.domain_id || project.type || 'Unassigned domain',
-      budgetAllocated: project.budget_usd || 0,
-      budgetSpent: project.total_cost_usd || 0,
-      updatedAt: project.updated_at || project.created_at,
+      domain: project.domain?.name || project.domainId || project.domain_id || project.type || 'Unassigned domain',
+      budgetAllocated: project.budgetAllocated ?? project.budget_usd ?? 0,
+      budgetSpent: project.budgetSpent ?? project.total_cost_usd ?? 0,
+      teamSize: project.teamSize ?? project.metadata?.team?.size ?? 0,
+      updatedAt: project.updatedAt || project.updated_at || project.created_at,
     }));
   }
 }

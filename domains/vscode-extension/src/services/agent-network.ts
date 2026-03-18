@@ -57,6 +57,14 @@ export class AgentNetworkService {
         this.toolRegistry = new ToolRegistry(this.fileManager, this.costTracker, this);
     }
 
+    private getPlatformBaseUrl(): string {
+        const config = vscode.workspace.getConfiguration('openrouterCrew');
+        const configured = config.get<string>('platformBaseUrl');
+        const envUrl = process.env.CREW_PLATFORM_URL || process.env.OPENROUTER_CREW_PLATFORM_URL || process.env.MCP_URL;
+        const baseUrl = configured || envUrl || '';
+        return baseUrl.replace(/\/api\/mcp\/?$/, '').replace(/\/$/, '');
+    }
+
     /**
      * Spawns a Department Lead who can then recruit sub-agents.
      */
@@ -103,6 +111,21 @@ export class AgentNetworkService {
      * Fetches projects from Supabase.
      */
     public async getProjects(): Promise<any[]> {
+        const platformBaseUrl = this.getPlatformBaseUrl();
+        if (platformBaseUrl) {
+            try {
+                const response = await fetch(`${platformBaseUrl}/api/projects`);
+                if (response.ok) {
+                    const payload = await response.json();
+                    if (Array.isArray(payload?.projects)) {
+                        return payload.projects;
+                    }
+                }
+            } catch (error) {
+                console.warn('[Central Mind] Falling back to Supabase project query:', error);
+            }
+        }
+
         try {
             const { data, error } = await this.supabase.from('projects').select('*').order('created_at', { ascending: false });
             if (error) throw error;

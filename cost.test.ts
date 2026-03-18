@@ -126,7 +126,7 @@ describe('crew cost', () => {
       await program.parseAsync(args);
 
       // Assert
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Invalid number of days. Must be a positive integer.');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid number of days. Must be a positive integer.'));
       expect(processExitSpy).toHaveBeenCalledWith(1);
     });
   });

@@ -13,8 +13,12 @@
   "exports": {
     ".": "./dist/index.js",
     "./navigation": "./dist/navigation/index.js",
+    "./project-intake": "./dist/project-intake/index.js",
+    "./project-intake/react": "./dist/project-intake/react.js",
     "./project-workbench": "./dist/project-workbench/index.js",
-    "./project-workbench/react": "./dist/project-workbench/react.js"
+    "./project-workbench/react": "./dist/project-workbench/react.js",
+    "./work-item-intake": "./dist/work-item-intake/index.js",
+    "./work-item-intake/react": "./dist/work-item-intake/react.js"
   },
   "dependencies": {
     "lucide-react": "^0.563.0",

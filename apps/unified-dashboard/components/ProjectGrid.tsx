@@ -1,6 +1,5 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { MOCK_PROJECTS, DOMAINS, Project } from '@/lib/unified-mock-data';
 
 export default function ProjectGrid() {
@@ -11,28 +10,33 @@ export default function ProjectGrid() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-        const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-        setEnvLabel(sbUrl.includes('localhost') || sbUrl.includes('127.0.0.1') ? 'Local' : 'Remote');
+        const response = await fetch('/api/projects');
+        const payload = await response.json();
+        const data = Array.isArray(payload?.projects) ? payload.projects : [];
 
-        const supabase = createClient(sbUrl, sbKey);
-        const { data, error } = await supabase.from('projects').select('*');
-        
-        if (!error && data && data.length > 0) {
-          // Map DB schema (snake_case/jsonb) back to UI schema
-          const mapped = data.map((d: any) => ({
-            id: d.id,
-            domainId: d.metadata?.domainId || 'product-factory',
-            name: d.name,
-            description: d.description,
-            status: d.status,
-            budget: d.metadata?.budget || { allocated: 0, spent: 0, currency: 'USD' },
-            team: d.metadata?.team || { leads: [], size: 0 },
-            metrics: d.metadata?.metrics || { uptime: 0, requestsPerMin: 0, errorRate: 0 },
-            updatedAt: d.updated_at
+        setEnvLabel(payload?.source === 'supabase' ? 'Remote' : 'Local');
+
+        if (data.length > 0) {
+          const mapped = data.map((project: any) => ({
+            id: project.id,
+            domainId: project.domainId || project.domain?.id || 'product-factory',
+            name: project.name,
+            description: project.description,
+            status: project.status,
+            budget: {
+              allocated: project.budgetAllocated || 0,
+              spent: project.budgetSpent || 0,
+              currency: 'USD',
+            },
+            team: {
+              leads: [],
+              size: project.teamSize || 0,
+            },
+            metrics: { uptime: 0, requestsPerMin: 0, errorRate: 0 },
+            updatedAt: project.updatedAt,
           }));
           setProjects(mapped);
-          setIsLive(true);
+          setIsLive(payload?.source === 'supabase');
         }
       } catch (e) {
         console.warn('Failed to fetch live projects, using mock data');

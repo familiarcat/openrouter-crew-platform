@@ -5,7 +5,7 @@ import type { Database } from '@openrouter-crew/shared-schemas'
 import {
   BudgetEnforcer,
   CostCalculator,
-} from '@openrouter-crew/cost-tracking'
+} from '@openrouter-crew/shared-cost-tracking'
 import {
   PromptBuilder,
   MemoryService,
@@ -13,7 +13,7 @@ import {
 import {
   CrewCoordinator,
   type CrewRequest,
-} from '@openrouter-crew/crew-coordination'
+} from '@openrouter-crew/shared-crew-coordination'
 import { AuditService } from '@openrouter-crew/crew-api-client'
 
 interface PlanningSession {

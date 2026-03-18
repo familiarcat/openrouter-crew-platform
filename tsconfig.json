@@ -1,19 +1,10 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "./tsconfig.server.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
-    "module": "commonjs",
-    "noEmit": false,
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+    "strict": true
+  }
 }
