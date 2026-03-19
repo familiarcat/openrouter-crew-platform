@@ -1,10 +1,10 @@
 import { describe, expect, test, jest, beforeEach, afterEach } from '@jest/globals';
-import { program } from './index';
-import * as configManager from './configManager';
-import * as prompts from './prompts';
+import { program } from '../index';
+import * as configManager from '../configManager';
+import * as prompts from '../prompts';
 
-jest.mock('./configManager');
-jest.mock('./prompts');
+jest.mock('../configManager');
+jest.mock('../prompts');
 
 const mockedReadConfig = configManager.readConfig as jest.Mock;
 const mockedWriteConfig = configManager.writeConfig as jest.Mock;

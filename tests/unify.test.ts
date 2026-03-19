@@ -1,5 +1,5 @@
 import { describe, expect, test, jest, beforeEach, afterEach } from '@jest/globals';
-import { program, steps } from './index';
+import { program, steps } from '../index';
 
 describe('crew unify', () => {
   let consoleLogSpy: jest.SpyInstance;

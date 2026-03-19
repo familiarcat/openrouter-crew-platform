@@ -1,10 +1,10 @@
 import { describe, expect, test, jest, beforeEach, afterEach } from '@jest/globals';
-import { program } from './index';
-import { CrewApiClient } from './apiClient';
+import { program } from '../index';
+import { CrewApiClient } from '../apiClient';
 import * as fs from 'fs';
 
 // Mock the entire apiClient module
-jest.mock('./apiClient');
+jest.mock('../apiClient');
 
 const MockedCrewApiClient = CrewApiClient as jest.MockedClass<typeof CrewApiClient>;
 
