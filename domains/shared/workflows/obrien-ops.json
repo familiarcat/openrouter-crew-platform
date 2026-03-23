@@ -1,0 +1,61 @@
+{
+  "name": "O'Brien - Execute Task",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "execute-ops",
+        "options": {}
+      },
+      "id": "webhook-start",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "=echo \"Executing O'Brien Task: {{ $json.body.taskType }}\"\n\n# Simulating task execution based on input\nif [ \"{{ $json.body.taskType }}\" == \"deploy\" ]; then\n  echo \"Running deployment script...\"\n  # ./scripts/deploy.sh (simulated)\n  echo \"Deployment complete.\"\nelif [ \"{{ $json.body.taskType }}\" == \"maintenance\" ]; then\n  echo \"Running maintenance cleanup...\"\n  # npm run clean (simulated)\n  echo \"Maintenance complete.\"\nelse\n  echo \"Unknown task type: {{ $json.body.taskType }}\"\nfi"
+      },
+      "id": "execute-command",
+      "name": "Execute Command",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond to Agent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command": {
+      "main": [
+        [
+          {
+            "node": "Respond to Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

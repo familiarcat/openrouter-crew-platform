@@ -38,7 +38,7 @@ echo " "
 if [ "$TARGET" == "all" ]; then
   echo "🚀 Building all domains and apps in tandem..."
   echo "------------------------------------------------"
-  pnpm turbo build
+  pnpm exec turbo build
   echo "------------------------------------------------"
   echo "✅ Full platform build complete."
 

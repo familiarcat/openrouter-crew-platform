@@ -1,5 +1,5 @@
 {
-  "name": "@dj-studio/music-agent",
+  "name": "@test-event-venue/music-agent",
   "version": "1.0.0",
   "description": "MCP server for music-agent",
   "main": "dist/index.js",

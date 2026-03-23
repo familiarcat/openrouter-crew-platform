@@ -1,7 +1,9 @@
 {
-  "name": "@openrouter-crew/crew-cli",
+  "name": "@openrouter-crew/platform-root",
+  "private": true,
   "version": "1.0.0",
   "description": "Unified CLI for OpenRouter Crew Platform operations",
+  "packageManager": "pnpm@9.12.3",
   "main": "dist/index.js",
   "bin": {
     "crew": "dist/index.js"
@@ -11,10 +13,13 @@
     "start": "ts-node src/index.ts",
     "lint": "eslint src/**/*.ts",
     "test": "jest",
+    "dev": "turbo dev",
+    "dev:universal": "bash scripts/start-local-dev.sh",
     "type-check": "tsc -p tsconfig.cli.json --noEmit",
     "build:shared-ui": "pnpm --dir domains/shared/ui-components build",
     "build:dashboard": "pnpm build:shared-ui && pnpm --dir apps/unified-dashboard build",
     "build:vscode": "pnpm build:shared-ui && pnpm --dir domains/vscode-extension compile",
+    "build:all": "bash scripts/build.sh all",
     "dev:dashboard": "pnpm --dir apps/unified-dashboard dev",
     "dev:shared-ui": "pnpm --dir domains/shared/ui-components dev",
     "dev:vscode": "pnpm --dir domains/vscode-extension watch",
@@ -23,27 +28,30 @@
     "local:infra:up": "docker compose -f docker-compose.local.yml up -d",
     "local:infra:down": "docker compose -f docker-compose.local.yml down",
     "local:infra:logs": "docker compose -f docker-compose.local.yml logs -f",
+    "knowledge:sync": "python3 scripts/knowledge/scrape_memory_alpha.py && node scripts/knowledge/upload_knowledge.js",
     "deploy:aws": "bash scripts/deploy-full.sh",
     "clippy": "bash apps/clippy-doom-video-builder/build_video.sh",
+    "n8n:sync:creds": "node scripts/n8n/sync-credentials.js",
+    "n8n:deploy": "bash scripts/n8n/deploy-to-aws.sh",
     "verify:automation-sync": "node scripts/verify-mcp-n8n-sync.js"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "chalk": "^5.3.0",
     "commander": "^12.1.0",
-    "react-scripts": "^5.0.1"
+    "chalk": "^5.3.0"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.12",
     "@types/node": "^20.11.0",
+    "@types/jest": "^29.5.12",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.56.0",
     "eslint-plugin-import": "^2.29.1",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
-    "typescript": "4.9"
+    "typescript": "^5.9.3",
+    "turbo": "^2.4.2"
   }
 }

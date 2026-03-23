@@ -3,13 +3,22 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
+      "dom",
+      "dom.iterable",
+      "esnext"
     ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "jsx": "preserve",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "incremental": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
@@ -33,27 +42,22 @@
         "../../../domains/shared/ui-components/src/*"
       ]
     },
-    "composite": false,
-    "allowJs": true,
-    "noEmit": true,
-    "isolatedModules": true,
-    "strict": true,
     "plugins": [
       {
         "name": "next"
       }
-    ],
-    "baseUrl": "."
+    ]
   },
+  "ignoreDeprecations": "6.0",
   "include": [
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "next-env.d.ts",
+    "**/*.js",
+    "../types/**/*.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "scripts"
-  ],
-  "ignoreDeprecations": "5.0"
+    "node_modules"
+  ]
 }

@@ -1,57 +1,18 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [
-    "**/.env",
-    "**/.env.local",
-    ".env",
-    ".env.local",
-    "tsconfig.json"
-  ],
-  "tasks": {
+  "pipeline": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "out/**", "build/**"],
-      "env": [
-        "NODE_ENV",
-        "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY"
-      ]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
+    },
+    "lint": {},
     "dev": {
       "cache": false,
       "persistent": true
-    },
-    "lint": {
-      "dependsOn": ["^build"],
-      "outputs": []
-    },
-    "type-check": {
-      "dependsOn": ["^build"],
-      "outputs": []
-    },
-    "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"],
-      "env": ["NODE_ENV"]
-    },
-    "clean": {
-      "cache": false
-    },
-    "format": {
-      "outputs": [],
-      "cache": false
-    },
-    "format:check": {
-      "outputs": []
-    },
-    "@openrouter-crew/shared-gateway-agent#build": {
-      "outputs": []
-    },
-    "@openrouter-crew/shared-openrouter-client#build": {
-      "outputs": []
-    },
-    "@openrouter-crew/shared-ui-components#build": {
-      "outputs": []
     }
   }
 }

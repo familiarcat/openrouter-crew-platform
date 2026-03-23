@@ -1,5 +1,5 @@
 {
-  "name": "@dj-studio/marketing-agent",
+  "name": "@test-event-venue/marketing-agent",
   "version": "1.0.0",
   "description": "MCP server for marketing-agent",
   "main": "dist/index.js",

@@ -13,6 +13,11 @@ import { WorfAgentServer } from './worf-agent-server'
 import { TroiAgentServer } from './troi-agent-server'
 import { GeordiAgentServer } from './geordi-agent-server'
 import { CrusherAgentServer } from './crusher-agent-server'
+import { PicardAgentServer } from './picard-agent-server'
+import { QuarkAgentServer } from './quark-agent-server'
+import { UhuraAgentServer } from './uhura-agent-server'
+import { ObrienAgentServer } from './obrien-agent-server'
+import { RikerAgentServer } from './riker-agent-server'
 import type {
   Problem,
   Recommendation,
@@ -50,11 +55,16 @@ export class ObservationLoungeMeetingCoordinator {
 
   private initializeAgents(): void {
     // Initialize all crew agents with their specializations
+    this.agents.set('picard', new PicardAgentServer())
     this.agents.set('data', new DataAgentServer())
     this.agents.set('worf', new WorfAgentServer())
     this.agents.set('troi', new TroiAgentServer())
     this.agents.set('geordi', new GeordiAgentServer())
     this.agents.set('crusher', new CrusherAgentServer())
+    this.agents.set('quark', new QuarkAgentServer())
+    this.agents.set('uhura', new UhuraAgentServer())
+    this.agents.set('obrien', new ObrienAgentServer())
+    this.agents.set('riker', new RikerAgentServer())
   }
 
   /**
@@ -69,7 +79,7 @@ export class ObservationLoungeMeetingCoordinator {
    */
   async facilitateMeeting(
     problem: Problem,
-    selectedAgents: string[] = ['data', 'worf', 'troi', 'geordi'],
+    selectedAgents: string[] = ['picard', 'riker', 'data', 'worf', 'troi', 'geordi', 'crusher', 'quark', 'uhura', 'obrien'],
     conflictAnalysis?: ConflictAnalysis
   ): Promise<SynthesizedSolution> {
     const sessionId = this.generateSessionId()
@@ -286,6 +296,13 @@ export class ObservationLoungeMeetingCoordinator {
    */
   private generateRecommendation(problem: Problem, agentName: string): Recommendation {
     const agentRecommendations: Record<string, any> = {
+      picard: {
+        agentRole: 'Picard',
+        recommendation: 'Evaluate strategic alignment and authorize action',
+        rationale: 'Must ensure consistency with core directives and long-term goals',
+        confidence: 0.95,
+        expectedImpact: 'Strategic coherence and ethical compliance'
+      },
       data: {
         agentRole: 'Data',
         recommendation: 'Apply mathematical optimization',
@@ -313,6 +330,41 @@ export class ObservationLoungeMeetingCoordinator {
         rationale: 'Technical approach must be practical and deployable',
         confidence: 0.88,
         expectedImpact: 'Successful implementation within timeline'
+      },
+      crusher: {
+        agentRole: 'Crusher',
+        recommendation: 'Ensure system health and sustainability',
+        rationale: 'Solution must not degrade system stability or team well-being',
+        confidence: 0.90,
+        expectedImpact: 'Long-term stability and health'
+      },
+      quark: {
+        agentRole: 'Quark',
+        recommendation: 'Maximize profit and market opportunity',
+        rationale: 'We must ensure this endeavor is profitable. I see a revenue ladder opportunity.',
+        confidence: 0.80,
+        expectedImpact: 'Increased revenue and ROI'
+      },
+      uhura: {
+        agentRole: 'Uhura',
+        recommendation: 'Communicate clearly with stakeholders',
+        rationale: 'Keep channels open. Customers need to know what is happening.',
+        confidence: 0.95,
+        expectedImpact: 'Customer trust and transparency'
+      },
+      obrien: {
+        agentRole: 'Obrien',
+        recommendation: 'Execute the plan efficiently',
+        rationale: 'I can route power to the main deflector... or just run the deployment script. It will take 4 hours.',
+        confidence: 0.90,
+        expectedImpact: 'Operational success'
+      },
+      riker: {
+        agentRole: 'Riker',
+        recommendation: 'Assign teams and prepare for contingencies',
+        rationale: 'We need to make sure the crew is ready for whatever happens. I recommend a yellow alert status.',
+        confidence: 0.92,
+        expectedImpact: 'Operational readiness'
       }
     }
 
@@ -575,11 +627,16 @@ export class ObservationLoungeMeetingCoordinator {
    */
   private getAgentName(agentKey: string): string {
     const names: Record<string, string> = {
+      picard: 'Captain Picard (Leadership & Strategy)',
       data: 'Data (Pragmatic Solutions)',
       worf: 'Worf (Security & Compliance)',
       troi: 'Deanna Troi (User Experience)',
       geordi: 'Geordi La Forge (Infrastructure)',
-      crusher: 'Dr. Crusher (System Health)'
+      crusher: 'Dr. Crusher (System Health)',
+      quark: 'Quark (Business & Profit)',
+      uhura: 'Uhura (Communications)',
+      obrien: 'Chief O\'Brien (Operations & Execution)',
+      riker: 'Commander Riker (Number One)'
     }
     return names[agentKey] || agentKey
   }

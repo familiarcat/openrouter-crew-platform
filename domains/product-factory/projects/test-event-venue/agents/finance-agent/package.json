@@ -1,5 +1,5 @@
 {
-  "name": "@dj-studio/finance-agent",
+  "name": "@test-event-venue/finance-agent",
   "version": "1.0.0",
   "description": "MCP server for finance-agent",
   "main": "dist/index.js",

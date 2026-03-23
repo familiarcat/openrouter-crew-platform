@@ -1,30 +1,4 @@
 packages:
-  # Unified Dashboard (Entry Point)
-  - 'apps/*'
-  - 'packages/creative-pipeline-engine'
-
-  # Shared Domain (Core Infrastructure)
-  - 'domains/shared/crew-api-client'
-  - 'domains/shared/agent-orchestration'
-  - 'domains/shared/crew-coordination'
-  - 'domains/shared/cost-tracking'
-  - 'domains/shared/schemas'
-  - 'domains/shared/workflows'
-  - 'domains/shared/ui-components'
-  - 'domains/shared/openrouter-client'
-  - 'domains/shared/agent-memory'
-
-  # Product Factory Domain
-  - 'domains/product-factory/dashboard'
-
-  # Product Factory - Project Templates
-  - 'domains/product-factory/project-templates/dj-booking/dashboard'
-
-  # Product Factory - Project Instances
-  - 'domains/product-factory/projects/*/dashboard'
-
-  # Alex-AI-Universal Domain
-  - 'domains/alex-ai-universal/dashboard'
-
-  # VSCode Extension Domain (AI Assistance Hub)
-  - 'domains/vscode-extension'
+  - "apps/*"
+  - "domains/**"
+  - "!**/src/**"

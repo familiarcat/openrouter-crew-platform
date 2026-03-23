@@ -1,5 +1,5 @@
 {
-  "name": "@dj-studio/gateway",
+  "name": "@test-event-venue/gateway",
   "version": "1.0.0",
   "description": "MCP Gateway Router",
   "main": "dist/index.js",

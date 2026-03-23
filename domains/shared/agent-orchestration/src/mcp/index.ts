@@ -19,6 +19,11 @@ export { WorfAgentServer } from './worf-agent-server.js'
 export { TroiAgentServer } from './troi-agent-server.js'
 export { GeordiAgentServer } from './geordi-agent-server.js'
 export { CrusherAgentServer } from './crusher-agent-server.js'
+export { PicardAgentServer } from './picard-agent-server.js'
+export { QuarkAgentServer } from './quark-agent-server.js'
+export { UhuraAgentServer } from './uhura-agent-server.js'
+export { ObrienAgentServer } from './obrien-agent-server.js'
+export { RikerAgentServer } from './riker-agent-server.js'
 
 // Claude integration & orchestration
 export { CrewOrchestrator } from './claude-with-crew.js'
@@ -33,7 +38,11 @@ export type { CrewAgent, ToolResult as CrewToolResult, ClaudeResponse } from './
  *   new WorfAgentServer(),
  *   new TroiAgentServer(),
  *   new GeordiAgentServer(),
- *   new CrusherAgentServer()
+ *   new CrusherAgentServer(),
+ *   new QuarkAgentServer(),
+ *   new UhuraAgentServer(),
+ *   new ObrienAgentServer(),
+ *   new RikerAgentServer()
  * ]
  * const solution = await orchestrator.solveProblem('problem statement')
  */

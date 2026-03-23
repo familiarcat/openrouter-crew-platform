@@ -24,7 +24,7 @@ Missing 'ignoreDeprecations' setting to acknowledge deprecated options
 All tsconfig.json files now use:
 - ✅ `moduleResolution: "node"` (lowercase, correct for Node.js)
 - ✅ `moduleResolution: "Bundler"` (for web/Next.js projects)
-- ✅ `ignoreDeprecations: "5.0"` (TypeScript 5.9.3 compatibility)
+- ✅ `ignoreDeprecations: "6.0"` (TypeScript 5.9.3+ compatibility)
 - ✅ Removed `downlevelIteration` (deprecated, not needed for ES2022)
 - ✅ Proper `rootDir` in all library packages
 
@@ -36,16 +36,16 @@ All tsconfig.json files now use:
 
 | File | Changes |
 |------|---------|
-| `tsconfig.json` | Changed `moduleResolution: "Node"` → `"node"`, Added `ignoreDeprecations: "5.0"` |
-| `tsconfig.web.json` | Added `ignoreDeprecations: "5.0"` |
+| `tsconfig.json` | Changed `moduleResolution: "Node"` → `"node"`, Added `ignoreDeprecations: "6.0"` |
+| `tsconfig.web.json` | Added `ignoreDeprecations: "6.0"` |
 
 ### Next.js Applications (4)
 
 | File | Changes |
 |------|---------|
-| `apps/unified-dashboard/tsconfig.json` | Changed `ignoreDeprecations: "5.0"` → `"5.0"` (normalized) |
+| `apps/unified-dashboard/tsconfig.json` | Changed `ignoreDeprecations: "5.0"` → `"6.0"` (normalized) |
 | `domains/alex-ai-universal/dashboard/tsconfig.json` | Removed duplicate `ignoreDeprecations` entries |
-| `domains/product-factory/dashboard/tsconfig.json` | Added `ignoreDeprecations: "5.0"` |
+| `domains/product-factory/dashboard/tsconfig.json` | Added `ignoreDeprecations: "6.0"` |
 | (Other dashboards) | Similar updates |
 
 ### Node.js/Library Packages (7)
@@ -78,7 +78,7 @@ Each file received:
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "ignoreDeprecations": "5.0",
+    "ignoreDeprecations": "6.0",
     "composite": true,
     "baseUrl": ".",
     "paths": { /* path aliases */ }
@@ -95,7 +95,7 @@ Each file received:
     "noEmit": true,
     "composite": false
   },
-  "ignoreDeprecations": "5.0"
+  "ignoreDeprecations": "6.0"
 }
 ```
 

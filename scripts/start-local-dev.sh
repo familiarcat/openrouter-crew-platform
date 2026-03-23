@@ -60,6 +60,14 @@ cleanup() {
     exit 0
 }
 
+check_docker() {
+    if ! docker info > /dev/null 2>&1; then
+        log_error "Docker is not running. Please start Docker Desktop or the Docker daemon."
+        log_info "Docker is required for local services (n8n, Supabase, Redis)."
+        exit 1
+    fi
+}
+
 check_service() {
     local name=$1
     local url=$2
@@ -139,6 +147,9 @@ fi
 
 log_header "PHASE 3: Starting Services"
 
+# Ensure Docker is running before attempting to start containers
+check_docker
+
 # Step 1: Start Supabase (if needed)
 SUPABASE_IS_LOCAL=true
 if [[ -n "$NEXT_PUBLIC_SUPABASE_URL" ]] && [[ "$NEXT_PUBLIC_SUPABASE_URL" != *"localhost"* ]] && [[ "$NEXT_PUBLIC_SUPABASE_URL" != *"127.0.0.1"* ]]; then
@@ -169,12 +180,18 @@ if [ "$SUPABASE_IS_LOCAL" = true ]; then
 fi
 
 # Step 2: Start API Server
-log_info "Starting API server..."
+# Dynamically determine port from MCP_URL to ensure data unison with UI
+API_PORT="3001"
+if [[ "$MCP_URL" =~ :([0-9]+) ]]; then
+    API_PORT="${BASH_REMATCH[1]}"
+fi
+
+log_info "Starting API server on port $API_PORT..."
 cd "$PROJECT_ROOT/domains/shared/crew-api-client"
-PORT=3001 pnpm dev > "$LOG_DIR/api-server.log" 2>&1 &
+PORT=$API_PORT pnpm dev > "$LOG_DIR/api-server.log" 2>&1 &
 API_PID=$!
 SERVICES+=($API_PID)
-log_success "API server starting (PID: $API_PID, http://localhost:3001)"
+log_success "API server starting (PID: $API_PID, http://localhost:$API_PORT)"
 sleep 3
 
 # Step 3: Start Web Portal
@@ -207,7 +224,12 @@ SERVICES+=($ALEX_PID)
 # Step 4: Start n8n
 log_info "Starting n8n..."
 cd "$PROJECT_ROOT"
-if docker-compose -f docker-compose.yml up -d n8n > "$LOG_DIR/n8n.log" 2>&1; then
+DOCKER_COMPOSE_FILE="docker-compose.yml"
+if [ -f "docker-compose.local.yml" ]; then
+    DOCKER_COMPOSE_FILE="docker-compose.local.yml"
+fi
+
+if docker compose -f "$DOCKER_COMPOSE_FILE" up -d n8n > "$LOG_DIR/n8n.log" 2>&1; then
     log_success "n8n starting (http://localhost:5678)"
     sleep 5
 else
@@ -229,12 +251,16 @@ fi
 
 log_header "PHASE 4: Service Verification"
 
-check_service "API Server" "http://localhost:3001/api/health" 60 "$LOG_DIR/api-server.log" || log_error "API Server failed to start. Check logs."
+check_service "API Server" "http://localhost:$API_PORT/api/health" 60 "$LOG_DIR/api-server.log" || log_error "API Server failed to start. Check logs."
 check_service "Web Portal" "http://localhost:3000/api/health" 60 "$LOG_DIR/web-portal.log" || log_error "Web Portal failed to start. Check logs."
 check_service "DJ Booking" "http://localhost:3002" 30 "$LOG_DIR/dj-booking.log" || log_warning "DJ Booking dashboard taking a while..."
 check_service "Product Factory" "http://localhost:3004" 30 "$LOG_DIR/product-factory.log" || log_warning "Product Factory dashboard taking a while..."
 check_service "Alex AI" "http://localhost:3003" 30 "$LOG_DIR/alex-ai.log" || log_warning "Alex AI dashboard taking a while..."
 check_service "n8n" "http://localhost:5678" 90 "$LOG_DIR/n8n.log" || log_error "n8n failed to start. Check logs."
+
+# Step 6: Sync n8n Credentials (Auto-configuration)
+log_info "Syncing n8n credentials from environment..."
+pnpm n8n:sync:creds > "$LOG_DIR/n8n-sync.log" 2>&1 || log_warning "Credential sync failed. Check .env.local"
 
 ###############################################################################
 # Phase 5: Ready State
@@ -245,7 +271,7 @@ log_header "✅ ALL SERVICES RUNNING"
 echo ""
 echo -e "${GREEN}Service URLs:${NC}"
 echo "  • Web Portal:   ${BLUE}http://localhost:3000${NC}"
-echo "  • API Server:   ${BLUE}http://localhost:3001${NC}"
+echo "  • API Server:   ${BLUE}http://localhost:${API_PORT}${NC}"
 echo "  • DJ Booking:   ${BLUE}http://localhost:3002${NC}"
 echo "  • Alex AI:      ${BLUE}http://localhost:3003${NC}"
 echo "  • Prod Factory: ${BLUE}http://localhost:3004${NC}"

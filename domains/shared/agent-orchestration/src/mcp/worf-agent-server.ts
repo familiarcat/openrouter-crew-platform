@@ -12,6 +12,8 @@
  */
 
 import { BaseMCPServer, ToolDefinition, ToolResult } from './base-mcp-server'
+import { N8nBridge } from './n8n-bridge'
+import { z } from 'zod'
 
 export class WorfAgentServer extends BaseMCPServer {
   constructor() {
@@ -120,6 +122,20 @@ export class WorfAgentServer extends BaseMCPServer {
         },
         handler: this.checkPolicyAdherence.bind(this)
     })
+
+    // Tool 5: Security Sweep (N8n Bridge)
+    // Worf initiates a security scan via system automation
+    const securityWorkflow = {
+      id: 'wf-security-sweep',
+      name: 'run-security-sweep',
+      description: 'Initiate a level-1 security diagnostic sweep across all deck systems via n8n.',
+      webhookUrl: `${process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook'}/security-sweep`,
+      schema: z.object({
+        targetDeck: z.string().optional().describe('Specific deck or system to scan'),
+        scanType: z.enum(['routine', 'intrusive', 'bio-scan']).default('routine')
+      })
+    }
+    this.registerTool(N8nBridge.toTool(securityWorkflow))
   }
 
   /**

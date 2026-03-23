@@ -190,6 +190,17 @@ if [ -f "$PROJECT_DIR/dashboard/package.json" ]; then
   echo "  ✅ Updated dashboard package.json"
 fi
 
+# Update agent package names to prevent workspace conflicts
+if [ -d "$PROJECT_DIR/agents" ]; then
+  echo "  ℹ️  Updating agent package names..."
+  find "$PROJECT_DIR/agents" -name "package.json" -type f | while read -r pkg; do
+    # Replace the scope (e.g., @dj-studio/agent -> @project-name/agent)
+    # Matches "name": "@scope/package-name" and replaces scope with project name
+    sed -i '' -E "s/\"name\": \"@[^/]+\/(.+)\"/\"name\": \"@${PROJECT_NAME}\/\1\"/" "$pkg"
+    echo "  ✅ Updated agent package: $(basename "$(dirname "$pkg")")"
+  done
+fi
+
 echo "✅ Package configurations updated"
 echo ""
 

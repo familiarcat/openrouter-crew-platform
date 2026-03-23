@@ -1,175 +1,137 @@
+#!/usr/bin/env node
+
 /**
- * n8n Workflow Sync Script
- * Synchronizes workflows between local JSON files and n8n API.
+ * N8N Workflow Sync
+ * 
+ * Pushes local JSON workflows to an n8n instance.
+ * Supports local (default) and production (--prod) targets.
  */
 
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
 
-// Configuration
-const WORKFLOWS_DIR = path.join(__dirname, '../../domains/shared/workflows');
+// Load environment variables
+const projectRoot = path.resolve(__dirname, '../../');
+dotenv.config({ path: path.join(projectRoot, '.env.local') });
 
-// Parse Args
 const args = process.argv.slice(2);
 const isProd = args.includes('--prod');
-const isPull = args.includes('--pull');
 const isPush = args.includes('--push');
-const directionArg = args.find((arg) => arg.startsWith('--direction='));
-const direction = directionArg ? directionArg.split('=')[1] : null;
-const shouldPush = isPush || direction === 'to-n8n';
-const shouldPull = isPull || direction === 'from-n8n';
 
-// Environment Config (Defaults to local if not set)
-const API_URL = isProd 
-    ? (process.env.N8N_PROD_URL || process.env.N8N_URL || process.env.N8N_BASE_URL || 'https://n8n.pbradygeorgen.com') 
-    : (process.env.N8N_LOCAL_URL || process.env.N8N_URL || process.env.N8N_BASE_URL || 'http://localhost:5678');
+const WORKFLOWS_DIR = path.join(projectRoot, 'domains/shared/workflows');
 
-const API_KEY = isProd
-    ? (process.env.N8N_PROD_API_KEY || process.env.N8N_API_KEY)
-    : (process.env.N8N_LOCAL_API_KEY || process.env.N8N_API_KEY);
+// Configuration based on target environment
+const CONFIG = isProd ? {
+    url: process.env.N8N_PROD_URL,
+    apiKey: process.env.N8N_PROD_API_KEY,
+    name: 'Production'
+} : {
+    url: process.env.N8N_URL || 'http://localhost:5678',
+    apiKey: process.env.N8N_API_KEY,
+    name: 'Local'
+};
 
-if (!fs.existsSync(WORKFLOWS_DIR)) {
-    console.error(`❌ Error: Workflow directory not found: ${WORKFLOWS_DIR}`);
+if (!CONFIG.url || !CONFIG.apiKey) {
+    console.error(`❌ Missing configuration for ${CONFIG.name} environment.`);
+    if (isProd) console.error('   Ensure N8N_PROD_URL and N8N_PROD_API_KEY are set.');
+    else console.error('   Ensure N8N_URL and N8N_API_KEY are set.');
     process.exit(1);
 }
 
+const API_BASE = `${CONFIG.url.replace(/\/$/, '')}/api/v1`;
 const HEADERS = {
-    'X-N8N-API-KEY': API_KEY,
+    'X-N8N-API-KEY': CONFIG.apiKey,
     'Content-Type': 'application/json'
 };
 
-/**
- * Helper: Recursive file search
- */
-function getAllWorkflowFiles(dir, fileList = []) {
-    const files = fs.readdirSync(dir);
-    files.forEach(file => {
-        const filePath = path.join(dir, file);
-        if (fs.statSync(filePath).isDirectory()) {
-            getAllWorkflowFiles(filePath, fileList);
-        } else {
-            if (file.endsWith('.json')) {
-                fileList.push(filePath);
-            }
-        }
-    });
-    return fileList;
-}
-
-/**
- * Action: Push (Local -> Remote)
- */
-async function pushWorkflows() {
-    if (!API_KEY) {
-        console.error('❌ Error: N8N_API_KEY not found in environment variables.');
-        process.exit(1);
-    }
-
-    console.log(`🚀 Pushing workflows to ${API_URL}...`);
-    const files = getAllWorkflowFiles(WORKFLOWS_DIR);
-
-    if (files.length === 0) {
-        console.error(`❌ No workflow JSON files found in ${WORKFLOWS_DIR}`);
-        process.exit(1);
-    }
-    
-    for (const filePath of files) {
-        try {
-            const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            const workflowName = content.name;
-            
-            // 1. Check if exists
-            const searchRes = await fetch(`${API_URL}/api/v1/workflows?limit=1&name=${encodeURIComponent(workflowName)}`, { headers: HEADERS });
-            const searchData = await searchRes.json();
-            
-            let response;
-            if (searchData.data && searchData.data.length > 0) {
-                // Update
-                const id = searchData.data[0].id;
-                console.log(`   Updating: ${workflowName} (${id})`);
-                response = await fetch(`${API_URL}/api/v1/workflows/${id}`, {
-                    method: 'PUT',
-                    headers: HEADERS,
-                    body: JSON.stringify(content)
-                });
-            } else {
-                // Create
-                console.log(`   Creating: ${workflowName}`);
-                response = await fetch(`${API_URL}/api/v1/workflows`, {
-                    method: 'POST',
-                    headers: HEADERS,
-                    body: JSON.stringify(content)
-                });
-            }
-
-            if (!response.ok) {
-                const err = await response.text();
-                console.error(`   ❌ Failed: ${err}`);
-            }
-        } catch (e) {
-            console.error(`   ❌ Error processing ${path.basename(filePath)}: ${e.message}`);
-        }
-    }
-}
-
-/**
- * Action: Pull (Remote -> Local)
- */
-async function pullWorkflows() {
-    if (!API_KEY) {
-        console.error('❌ Error: N8N_API_KEY not found in environment variables.');
-        process.exit(1);
-    }
-
-    console.log(`📥 Pulling workflows from ${API_URL}...`);
-    
+async function getRemoteWorkflows() {
     try {
-        const res = await fetch(`${API_URL}/api/v1/workflows?limit=1000`, { headers: HEADERS });
-        const data = await res.json();
-        
-        if (!data.data) throw new Error("Invalid API response");
-
-        const localFiles = getAllWorkflowFiles(WORKFLOWS_DIR);
-        
-        for (const remoteWorkflow of data.data) {
-            // Get full details
-            const detailRes = await fetch(`${API_URL}/api/v1/workflows/${remoteWorkflow.id}`, { headers: HEADERS });
-            const fullWorkflow = await detailRes.json();
-            
-            // Find matching local file by name to preserve directory structure
-            let targetPath = null;
-            for (const file of localFiles) {
-                const content = JSON.parse(fs.readFileSync(file, 'utf8'));
-                if (content.name === fullWorkflow.name) {
-                    targetPath = file;
-                    break;
-                }
-            }
-
-            // If new, put in 'imported' folder
-            if (!targetPath) {
-                targetPath = path.join(WORKFLOWS_DIR, 'imported', `${fullWorkflow.name.replace(/[^a-z0-9]/gi, '_')}.json`);
-                if (!fs.existsSync(path.dirname(targetPath))) fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-            }
-
-            console.log(`   Saving: ${fullWorkflow.name} -> ${path.relative(WORKFLOWS_DIR, targetPath)}`);
-            
-            // Clean up JSON (optional: remove sensitive data if needed, though usually stored in env)
-            fs.writeFileSync(targetPath, JSON.stringify(fullWorkflow, null, 2));
-        }
-    } catch (e) {
-        console.error(`❌ Error pulling workflows: ${e.message}`);
+        const response = await fetch(`${API_BASE}/workflows`, { headers: HEADERS });
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const data = await response.json();
+        return data.data; // Array of workflow objects
+    } catch (error) {
+        console.error(`❌ Failed to fetch workflows from ${CONFIG.name}: ${error.message}`);
+        process.exit(1);
     }
 }
 
-// Main Execution
-(async () => {
-    if (shouldPush) {
-        await pushWorkflows();
-    } else if (shouldPull) {
-        await pullWorkflows();
-    } else {
-        console.log("Usage: node sync-workflows.js --push|--pull [--prod]");
-        console.log("   or: node sync-workflows.js --direction=to-n8n|from-n8n [--prod]");
+async function upsertWorkflow(localWorkflow, remoteWorkflows) {
+    const existing = remoteWorkflows.find(w => w.name === localWorkflow.name);
+
+    // Prepare workflow object (n8n expects specific fields)
+    // We respect the ID if it exists locally and matches remote, otherwise we rely on name matching
+    const payload = {
+        name: localWorkflow.name,
+        nodes: localWorkflow.nodes,
+        connections: localWorkflow.connections,
+        settings: localWorkflow.settings || {},
+        staticData: localWorkflow.staticData || null,
+        active: true
+    };
+
+    try {
+        if (existing) {
+            console.log(`   🔄 Updating: ${localWorkflow.name} (ID: ${existing.id})`);
+            const response = await fetch(`${API_BASE}/workflows/${existing.id}`, {
+                method: 'PUT',
+                headers: HEADERS,
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            }
+        } else {
+            console.log(`   Mw  Creating: ${localWorkflow.name}`);
+            const response = await fetch(`${API_BASE}/workflows`, {
+                method: 'POST',
+                headers: HEADERS,
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            }
+        }
+    } catch (error) {
+        console.error(`   ❌ Error syncing ${localWorkflow.name}: ${error.message}`);
     }
-})();
+}
+
+async function main() {
+    if (!isPush) {
+        console.log('ℹ️  Run with --push to actually sync workflows.');
+        return;
+    }
+
+    console.log(` Syncing workflows to ${CONFIG.name} (${CONFIG.url})...`);
+
+    // 1. Get Remote State
+    const remoteWorkflows = await getRemoteWorkflows();
+    console.log(`   📋 Found ${remoteWorkflows.length} existing workflows on server.`);
+
+    // 2. Read Local Files
+    if (!fs.existsSync(WORKFLOWS_DIR)) {
+        console.error(`❌ Workflows directory not found: ${WORKFLOWS_DIR}`);
+        process.exit(1);
+    }
+
+    const files = fs.readdirSync(WORKFLOWS_DIR).filter(f => f.endsWith('.json'));
+    console.log(`   qc Found ${files.length} local workflow definitions.`);
+
+    // 3. Upsert
+    for (const file of files) {
+        const filePath = path.join(WORKFLOWS_DIR, file);
+        const content = fs.readFileSync(filePath, 'utf8');
+        const workflow = JSON.parse(content);
+        await upsertWorkflow(workflow, remoteWorkflows);
+    }
+
+    console.log('✨ Workflow sync complete.');
+}
+
+main();

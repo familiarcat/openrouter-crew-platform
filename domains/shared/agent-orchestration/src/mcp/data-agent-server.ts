@@ -12,6 +12,8 @@
  */
 
 import { BaseMCPServer, ToolDefinition, ToolResult } from './base-mcp-server'
+import { N8nBridge } from './n8n-bridge'
+import { z } from 'zod'
 
 export class DataAgentServer extends BaseMCPServer {
   constructor() {
@@ -121,6 +123,22 @@ export class DataAgentServer extends BaseMCPServer {
         },
         handler: this.identifyAnomalies.bind(this)
     })
+
+    // Tool 5: Fetch External Data (n8n Workflow)
+    // Bridges to an n8n webhook for retrieving data from external APIs
+    const fetchDataWorkflow = {
+      id: 'wf-fetch-data',
+      name: 'fetch-external-data',
+      description: 'Fetch and enrich data from external APIs via n8n automation',
+      webhookUrl: `${process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook'}/fetch-data`,
+      schema: z.object({
+        source: z.string().describe('Data source identifier (e.g., "market-data", "crm", "news")'),
+        query: z.string().describe('Query parameters or resource ID'),
+        format: z.enum(['json', 'csv']).optional().describe('Output format preference')
+      })
+    }
+
+    this.registerTool(N8nBridge.toTool(fetchDataWorkflow))
   }
 
   /**

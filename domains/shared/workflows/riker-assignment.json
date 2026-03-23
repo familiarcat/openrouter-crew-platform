@@ -1,0 +1,68 @@
+{
+  "name": "Riker - Assign Crew Task",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "assign-task",
+        "options": {}
+      },
+      "id": "webhook-assign",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO assignments (assignee, task_type, priority, instructions, status, created_at) VALUES ('{{ $json.body.assignee }}', '{{ $json.body.taskType }}', '{{ $json.body.priority }}', '{{ $json.body.instructions }}', 'assigned', NOW()) RETURNING id;"
+      },
+      "id": "postgres-insert",
+      "name": "Log Assignment (Postgres)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-creds-id",
+          "name": "Supabase DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-riker",
+      "name": "Respond to Agent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Log Assignment (Postgres)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    ],
+    "Log Assignment (Postgres)": {
+      "main": [
+        [
+          {
+            "node": "Respond to Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

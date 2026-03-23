@@ -16,6 +16,8 @@ import {
   ErrorContent
 } from '@modelcontextprotocol/sdk/types.js'
 import { createClient } from '@supabase/supabase-js'
+import { N8nBridge } from './n8n-bridge.js'
+import { z } from 'zod'
 
 export interface ToolDefinition {
   name: string
@@ -56,6 +58,7 @@ export abstract class BaseMCPServer {
     })
 
     this.setupRequestHandlers()
+    this.setupSharedMemoryTools()
   }
 
   /**
@@ -128,6 +131,197 @@ export abstract class BaseMCPServer {
         }
       ]
     }))
+  }
+
+  /**
+   * Setup shared memory/configuration tools
+   * Enables agents to read/write shared configuration files (.agent.md, .claude.md, etc.)
+   */
+  private setupSharedMemoryTools() {
+    // Tool: Read Agent Configuration
+    this.registerTool({
+      name: 'read-agent-config',
+      description: 'Read the shared configuration file (.agent.md, .claude.md, .gemini.md) for a specific crew member.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          targetAgent: { 
+            type: 'string', 
+            description: 'Name of the agent to read config for (e.g., "data", "worf", "picard")' 
+          },
+          configType: { 
+            type: 'string', 
+            enum: ['agent', 'claude', 'gemini'], 
+            description: 'Type of configuration file to read' 
+          }
+        },
+        required: ['targetAgent', 'configType']
+      },
+      handler: async (args: any) => {
+        const { targetAgent, configType } = args
+        const { data, error } = await this.supabase
+          .from('agent_configurations')
+          .select('content')
+          .eq('agent_name', targetAgent.toLowerCase())
+          .eq('config_type', configType)
+          .single()
+
+        if (error) return { success: false, error: `Config not found: ${error.message}` }
+        
+        return {
+          success: true,
+          data: { content: data.content },
+          metadata: { source: 'supabase-shared-memory' }
+        }
+      }
+    })
+
+    // Tool: Update Agent Configuration
+    this.registerTool({
+      name: 'update-agent-config',
+      description: 'Update the configuration file for a crew member. Used for self-learning and knowledge sharing.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          configType: { 
+            type: 'string', 
+            enum: ['agent', 'claude', 'gemini'], 
+            description: 'Type of configuration file to update' 
+          },
+          content: { 
+            type: 'string', 
+            description: 'New markdown content for the configuration' 
+          }
+        },
+        required: ['configType', 'content']
+      },
+      handler: async (args: any) => {
+        const { configType, content } = args
+        // Agents can only update their own config to prevent conflicts
+        const { error } = await this.supabase
+          .from('agent_configurations')
+          .upsert({ 
+            agent_name: this.agentName.toLowerCase(),
+            config_type: configType,
+            content: content,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'agent_name,config_type' })
+
+        if (error) return { success: false, error: `Failed to update config: ${error.message}` }
+        
+        return {
+          success: true,
+          data: { message: 'Configuration updated successfully' }
+        }
+      }
+    })
+
+    // Tool: Consult Knowledge Base (Memory Alpha)
+    this.registerTool({
+      name: 'consult-knowledge-base',
+      description: 'Search the crew knowledge base (including Memory Alpha data) for information about roles, history, or protocols.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { 
+            type: 'string', 
+            description: 'The topic or crew member to search for' 
+          },
+          limit: { 
+            type: 'number', 
+            description: 'Max results',
+            default: 3 
+          }
+        },
+        required: ['query']
+      },
+      handler: async (args: any) => {
+        const { query, limit = 3 } = args
+        
+        // 1. Try Semantic Search
+        const embedding = await this.generateEmbedding(query)
+        
+        if (embedding.length > 0) {
+          const { data, error } = await this.supabase.rpc('search_crew_knowledge', {
+            query_embedding: embedding,
+            match_threshold: 0.5,
+            match_count: limit
+          })
+
+          if (!error && data && data.length > 0) {
+            return {
+              success: true,
+              data: { results: data },
+              metadata: { source: 'crew_knowledge', method: 'semantic' }
+            }
+          }
+        }
+
+        // 2. Fallback to Text Search
+        // Using Supabase text search on content column
+        const { data, error } = await this.supabase
+          .from('crew_knowledge')
+          .select('crew_member, topic, content, source_url')
+          .textSearch('content', query, { type: 'websearch', config: 'english' })
+          .limit(limit)
+
+        if (error) return { success: false, error: `Search failed: ${error.message}` }
+        
+        return {
+          success: true,
+          data: { results: data },
+          metadata: { source: 'crew_knowledge', method: 'text_fallback' }
+        }
+      }
+    })
+
+    // Tool: Create Knowledge Entry (Learning)
+    // Bridges to n8n to generate embeddings and store in Supabase
+    const createKnowledgeWorkflow = {
+      id: 'wf-create-knowledge',
+      name: 'create-knowledge-entry',
+      description: 'Record new knowledge or insights into the crew knowledge base for future retrieval. Use this to "learn" from experiences.',
+      webhookUrl: `${process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook'}/create-knowledge`,
+      schema: z.object({
+        topic: z.string().describe('The main topic or subject'),
+        content: z.string().describe('The detailed knowledge to store'),
+        skills: z.array(z.string()).optional().describe('Related skills'),
+        source: z.string().default('agent-experience').describe('Origin of knowledge')
+      })
+    }
+    this.registerTool(N8nBridge.toTool(createKnowledgeWorkflow))
+  }
+
+  /**
+   * Generate embedding for semantic search
+   */
+  private async generateEmbedding(text: string): Promise<number[]> {
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY
+    if (!apiKey) return []
+
+    try {
+      // Use OpenAI API format (compatible with OpenRouter if baseURL is set)
+      const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'
+      const response = await fetch(`${baseUrl}/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          input: text,
+          model: 'text-embedding-3-small'
+        })
+      })
+
+      if (!response.ok) return []
+      
+      const data = await response.json() as any
+      return data.data?.[0]?.embedding || []
+    } catch (error) {
+      console.error('Error generating embedding:', error)
+      return []
+    }
   }
 
   /**
