@@ -33,6 +33,7 @@
     "clippy": "bash apps/clippy-doom-video-builder/build_video.sh",
     "n8n:sync:creds": "node scripts/n8n/sync-credentials.js",
     "n8n:deploy": "bash scripts/n8n/deploy-to-aws.sh",
+    "generate:registry": "ts-node scripts/generate-agent-registry.ts",
     "verify:automation-sync": "node scripts/verify-mcp-n8n-sync.js"
   },
   "keywords": [],
