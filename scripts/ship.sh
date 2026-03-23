@@ -67,4 +67,4 @@ fi
 echo -e "\n${BLUE}3️⃣  Triggering CI/CD Pipeline...${NC}"
 
 # Delegate to the existing trigger script
-bash scripts/trigger-gh-deploy.sh "$ENVIRONMENT"
+bash scripts/deploy/trigger-gh-deploy.sh "$ENVIRONMENT"

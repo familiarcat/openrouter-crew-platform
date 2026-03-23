@@ -58,12 +58,12 @@ case $COMMAND in
     $0 ci "$SCOPE" "$ENV"
     
     # 2. Deploy
-    ./scripts/aws/deploy.sh "$SCOPE" "$ENV"
+    ./scripts/deploy/deploy-full.sh "$SCOPE" "$ENV"
     ;;
 
   phase)
     if [ "$SCOPE" == "phase-8" ]; then
-      ./scripts/phases/complete-phase-8.sh --deploy
+      ./scripts/vscode/build-extension.sh --deploy
     else
       echo "Unknown phase: $SCOPE"
     fi
