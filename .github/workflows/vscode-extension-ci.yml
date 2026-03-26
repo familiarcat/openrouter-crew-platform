@@ -1,0 +1,48 @@
+name: VSCode Extension CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'domains/vscode-extension/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'domains/vscode-extension/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'pnpm'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 9.12.3
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Lint Extension
+      working-directory: domains/vscode-extension
+      run: pnpm lint
+
+    - name: Compile Extension
+      working-directory: domains/vscode-extension
+      run: pnpm compile
+
+    - name: Run Tests (Headless)
+      uses: CoenraadS/xvfb-action@v1
+      with:
+        run: pnpm --filter @openrouter-crew/vscode-extension test
+    
+    # Note: VSCode extension tests require a graphical environment (xvfb) on Linux CI runners.

@@ -1,7 +1,6 @@
 #!/bin/bash
-# scripts/aws/deploy.sh
-# Usage: ./scripts/aws/deploy.sh <domain-or-app> <environment>
-# Example: ./scripts/aws/deploy.sh unified-dashboard staging
+# scripts/deploy/deploy-aws.sh
+# Usage: ./scripts/deploy/deploy-aws.sh <target-app> <environment>
 
 set -e
 
@@ -13,6 +12,13 @@ ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
 if [ -z "$TARGET" ] || [ -z "$ENV" ]; then
   echo "Usage: $0 <target> <environment>"
+  exit 1
+fi
+
+# Validate environment-specific secrets
+if [ -z "$NEXT_PUBLIC_OPENROUTER_API_KEY" ]; then
+  echo "❌ Error: NEXT_PUBLIC_OPENROUTER_API_KEY is not set in the environment."
+  echo "Please run 'pnpm secrets:load' or set the variable manually."
   exit 1
 fi
 
@@ -31,7 +37,7 @@ if [[ "$TARGET" == *"vscode-extension"* ]]; then
   # Upload VSIX to S3 Release Bucket
   VERSION=$(node -p "require('./package.json').version")
   S3_URI="s3://openrouter-crew-releases/vscode-extension/${ENV}/v${VERSION}.vsix"
-  echo "cloud-upload Uploading to $S3_URI..."
+  echo "☁️  Uploading to $S3_URI..."
   aws s3 cp "*.vsix" "$S3_URI"
   exit 0
 fi
@@ -44,17 +50,16 @@ FULL_IMAGE_NAME="${ECR_REGISTRY}/${TARGET}:${IMAGE_TAG}"
 # Login to ECR
 aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-# Build Docker image (Assumes Dockerfile exists at root or domain root)
-# We use a generic Dockerfile context from root to access shared packages
-docker build -t "$TARGET" \
+# Build Docker image
+docker build -t "$TARGET" --platform linux/amd64 \
   -f "apps/${TARGET}/Dockerfile" . \
   --build-arg ENV="$ENV"
 
-echo "🏷️ Tagging and Pushing to ECR..."
+echo "🏷️  Tagging and Pushing to ECR..."
 docker tag "$TARGET" "$FULL_IMAGE_NAME"
 docker push "$FULL_IMAGE_NAME"
 
-# 4. Update AWS Service (App Runner example)
+# 4. Update AWS Service (App Runner)
 echo "🔄 Updating AWS App Runner Service..."
 SERVICE_ARN=$(aws apprunner list-services --region "$AWS_REGION" --query "ServiceSummaryList[?ServiceName=='${TARGET}-${ENV}'].ServiceArn" --output text)
 
@@ -67,6 +72,6 @@ echo "🔒 Updating Service Configuration & Deploying..."
 aws apprunner update-service \
   --service-arn "$SERVICE_ARN" \
   --region "$AWS_REGION" \
-  --source-configuration "ImageRepository={ImageIdentifier=$FULL_IMAGE_NAME,ImageConfiguration={RuntimeEnvironmentVariables={SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY,N8N_BASE_URL=$N8N_BASE_URL,N8N_API_KEY=$N8N_API_KEY,NEXT_PUBLIC_OPENROUTER_API_KEY=$NEXT_PUBLIC_OPENROUTER_API_KEY}}}"
+  --source-configuration "ImageRepository={ImageIdentifier=$FULL_IMAGE_NAME,ImageConfiguration={Port=3000,RuntimeEnvironmentVariables={SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY,N8N_BASE_URL=$N8N_BASE_URL,N8N_API_KEY=$N8N_API_KEY,NEXT_PUBLIC_OPENROUTER_API_KEY=$NEXT_PUBLIC_OPENROUTER_API_KEY,ENVIRONMENT=$ENV}}}"
 
 echo "✅ Deployment triggered successfully!"

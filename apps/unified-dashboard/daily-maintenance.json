@@ -1,0 +1,64 @@
+{
+  "name": "Daily System Maintenance",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days"
+            }
+          ]
+        }
+      },
+      "id": "c7a8b9d0-1e2f-4a3b-8c9d-0e1f2a3b4c5d",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.UNIFIED_DASHBOARD_URL || 'http://localhost:3000' }}/api/route",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "task",
+              "value": "maintenance"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d8b9c0e1-2f3a-4b5c-9d0e-1f2a3b4c5d6e",
+      "name": "Trigger Maintenance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "Trigger Maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

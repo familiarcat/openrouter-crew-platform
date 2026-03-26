@@ -189,8 +189,8 @@ export const analysisTools: ToolDefinition[] = [
                 // Assigned to: Commander Data (Analytical, code generation optimization)
                 // This replaces hardcoded GPT-4o with intelligent model routing
 
-                const response = await agent.performWork(`Generate unit tests for ${args.path}`, prompt, 'TEST');
-                const generatedContent = response;
+                const response = await (agent as any).performWork(`Generate unit tests for ${args.path}`, prompt, 'TEST');
+                const generatedContent = typeof response === 'string' ? response : (response.output || response.content);
 
                 if (!generatedContent) return "Error: Failed to generate test content.";
 

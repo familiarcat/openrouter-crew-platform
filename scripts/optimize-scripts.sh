@@ -235,6 +235,7 @@ success "Debug/verify scripts consolidated."
 # =============================================================================
 echo -e "\n${BOLD}${CYAN}══ Step 7 — Consolidate local dev scripts into scripts/local/ ══${RESET}"
 
+safe_move "${REPO_ROOT}/cleanup-ports.sh"                  "${REPO_ROOT}/scripts/local"
 safe_move "${REPO_ROOT}/scripts/local-dev.sh"              "${REPO_ROOT}/scripts/local"
 safe_move "${REPO_ROOT}/scripts/stop-nextjs.sh"            "${REPO_ROOT}/scripts/local"
 safe_move "${REPO_ROOT}/scripts/clean-build-all.sh"        "${REPO_ROOT}/scripts/local"
@@ -432,8 +433,9 @@ pkg['scripts'] = {
     # ── Local environment ─────────────────────────────────────────
     "local:setup":          "bash scripts/local-platform-setup.sh",
     "local:verify":         "bash scripts/debug/local-platform-verify.sh",
-    "local:infra:up":       "docker compose -f docker-compose.local.yml up -d",
+    "local:infra:up":       "docker compose -f docker-compose.local.yml up -d --force-recreate --remove-orphans",
     "local:infra:down":     "docker compose -f docker-compose.local.yml down",
+    "local:infra:clean":    "bash scripts/local/cleanup-ports.sh && pnpm local:infra:down",
     "local:infra:logs":     "docker compose -f docker-compose.local.yml logs -f",
 
     # ── Knowledge / RAG ───────────────────────────────────────────

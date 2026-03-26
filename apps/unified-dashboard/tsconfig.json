@@ -11,6 +11,9 @@
       "@/*": [
         "./*"
       ],
+      "@alex-ai/*": [
+        "../../domains/alex-ai-universal/dashboard/lib/*"
+      ],
       "@crew/*": [
         "../../domains/shared/crew-api-client/src/*"
       ],

@@ -1,10 +1,8 @@
-version: '3.8'
-
 name: openrouter-crew-platform-local
 
 services:
   supabase-db:
-    image: supabase/postgres:15.1.1.2
+    image: supabase/postgres:15.6.1.138
     container_name: openrouter-supabase-db
     environment:
       POSTGRES_PASSWORD: ${SUPABASE_DB_PASSWORD:-postgres}
@@ -21,7 +19,7 @@ services:
       retries: 10
 
   supabase-studio:
-    image: supabase/studio:20240101-8e2b95b
+    image: supabase/studio:latest
     container_name: openrouter-supabase-studio
     environment:
       SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:54321}
@@ -77,4 +75,5 @@ volumes:
 
 networks:
   default:
+    external: true
     name: openrouter-network

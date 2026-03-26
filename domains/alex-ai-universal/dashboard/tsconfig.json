@@ -40,6 +40,12 @@
       ],
       "@shared/ui-components/*": [
         "../../../domains/shared/ui-components/src/*"
+      ],
+      "@/scripts/utils/unified-service-accessor": [
+        "./lib/mocks/unified-service-accessor.ts"
+      ],
+      "../../../../types/constructor": [
+        "../../../domains/shared/schemas/src/index.ts"
       ]
     },
     "plugins": [

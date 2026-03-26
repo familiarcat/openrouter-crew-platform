@@ -19,7 +19,7 @@ const STATIC_ROLE_REGEX = /static\s+role\s*=\s*['"](.+?)['"]/;
 const STATIC_GOAL_REGEX = /static\s+goal\s*=\s*['"](.+?)['"]/;
 
 // Regex to capture the CREW_MEMBERS object in the shared members file
-const CREW_MEMBER_REGEX = /'([\w_]+)':\s*{\s*id:\s*'[\w_]+',\s*name:\s*'[\w_]+',\s*displayName:\s*'([^']+)',\s*role:\s*'([^']+)',[\s\S]+?costTier:\s*'([^']+)',[\s\S]+?expertise:\s*\[([\s\S]+?)\],[\s\S]+?personality:\s*'([^']+)'/g;
+// const CREW_MEMBER_REGEX = /'([\w_]+)':\s*{\s*id:\s*'[\w_]+',\s*name:\s*'[\w_]+',\s*displayName:\s*'([^']+)',\s*role:\s*'([^']+)',[\s\S]+?costTier:\s*'([^']+)',[\s\S]+?expertise:\s*\[([\s\S]+?)\],[\s\S]+?personality:\s*'([^']+)'/g;
 
 type AgentTier = 'free' | 'premium' | 'standard' | 'budget' | 'ultra_budget';
 
@@ -165,17 +165,17 @@ async function scanForAgents(): Promise<AgentDefinition[]> {
         if (roleMatch && displayNameMatch) {
             const role = roleMatch[1];
             const name = displayNameMatch[1];
-            const tier = (tierMatch ? tierMatch[1] : 'standard') as AgentTier;
+            const rawTier = tierMatch ? tierMatch[1] : 'standard';
             
-            // Map cost tiers to our binary free/premium for the registry interface if needed, or keep string
-            // The interface says 'free' | 'premium', but members.ts has 'budget', 'standard', 'premium'
-            // We'll map budget/ultra_budget -> free, others -> premium
-            
-            // The requirement is to allow specific tiers, so we use the tier directly if it matches our extended type.
-            // If it was mapped before, we can now use the specific value.
-            // However, the original code mapped budget/ultra_budget to 'free' and others to 'premium'.
-            // We will now trust the tier from the file if possible, or fallback to the mapping logic if needed for backward compat, but the request asks to allow specific tiers.
-            const mappedTier = tier;
+            // Validate and cast the tier
+            let mappedTier: AgentTier = 'standard';
+            if (rawTier === 'premium' || rawTier === 'free' || rawTier === 'budget' || rawTier === 'ultra_budget' || rawTier === 'standard') {
+                mappedTier = rawTier as AgentTier;
+            } else {
+                // Fallback for unknown tiers
+                if (rawTier === 'budget' || rawTier.includes('budget')) mappedTier = 'budget';
+                else mappedTier = 'standard';
+            }
             
             // Determine icon based on role (simple mapping)
             let icon = '🤖';
@@ -224,7 +224,16 @@ export const SYSTEM_AGENTS: AgentProfile[] = ${JSON.stringify(agents, null, 2)};
 export function getAgentById(id: string) {
   return SYSTEM_AGENTS.find(a => a.id === id);
 }
+
+export function getAgentsByRole(role: string) {
+  return SYSTEM_AGENTS.filter(a => a.role === role);
+}
 `;
+
+  const outputDir = path.dirname(OUTPUT_FILE);
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
 
   fs.writeFileSync(OUTPUT_FILE, fileContent);
   console.log(`🚀 Registry generated at: ${OUTPUT_FILE}`);

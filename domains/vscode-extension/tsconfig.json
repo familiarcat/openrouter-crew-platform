@@ -4,6 +4,7 @@
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "composite": false,
     "module": "CommonJS",
@@ -18,23 +19,7 @@
       "node",
       "mocha"
     ],
-    "paths": {
-      "@openrouter-crew/shared-cost-tracking": [
-        "../shared/cost-tracking/src/index.ts"
-      ],
-      "@openrouter-crew/shared-schemas": [
-        "../shared/schemas/src/index.ts"
-      ],
-      "@openrouter-crew/shared-crew-coordination": [
-        "../shared/crew-coordination/src/index.ts"
-      ],
-      "@openrouter-crew/shared-ui-components": [
-        "../shared/ui-components/src/index.ts"
-      ],
-      "@openrouter-crew/shared-ui-components/*": [
-        "../shared/ui-components/src/*"
-      ]
-    },
+    "paths": {},
     "baseUrl": "."
   },
   "include": [
