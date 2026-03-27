@@ -5,7 +5,7 @@ output "instance_id" {
 
 output "instance_public_ip" {
   description = "EC2 instance public IP (Elastic IP)"
-  value       = aws_eip.main.public_ip
+  value       = aws_instance.main.public_ip
 }
 
 output "instance_private_ip" {
@@ -25,27 +25,42 @@ output "security_group_id" {
 
 output "iam_role_name" {
   description = "IAM role name for EC2 instance"
-  value       = aws_iam_role.ec2.name
+  value       = aws_iam_role.ec2_role.name
 }
 
 output "iam_instance_profile_name" {
   description = "IAM instance profile name"
-  value       = aws_iam_instance_profile.ec2.name
+  value       = aws_iam_instance_profile.ec2_profile.name
+}
+
+output "backup_bucket_name" {
+  description = "Name of the S3 bucket for database backups"
+  value       = aws_s3_bucket.backups.id
+}
+
+output "backup_bucket_arn" {
+  description = "ARN of the S3 bucket for database backups"
+  value       = aws_s3_bucket.backups.arn
+}
+
+output "sns_alerts_topic_arn" {
+  description = "ARN of the SNS topic for alerts"
+  value       = var.alert_email != "" ? aws_sns_topic.alerts[0].arn : "Email not configured"
 }
 
 output "dashboard_url" {
   description = "Dashboard URL (HTTP)"
-  value       = "http://${aws_eip.main.public_ip}:3000"
+  value       = "http://${aws_instance.main.public_ip}:3000"
 }
 
 output "n8n_url" {
   description = "n8n URL (HTTP)"
-  value       = "http://${aws_eip.main.public_ip}:5678"
+  value       = "http://${aws_instance.main.public_ip}:5678"
 }
 
 output "supabase_studio_url" {
   description = "Supabase Studio URL (HTTP)"
-  value       = "http://${aws_eip.main.public_ip}:54323"
+  value       = "http://${aws_instance.main.public_ip}:54323"
 }
 
 output "ssm_connect_command" {

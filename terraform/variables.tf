@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "environment" {
   description = "Environment name (staging, production)"
   type        = string
-  default     = "staging"
+  # No default - forced input from deployment script
 }
 
 variable "project_name" {
@@ -74,6 +74,12 @@ variable "enable_cloudwatch_logs" {
   description = "Enable CloudWatch Logs for EC2"
   type        = bool
   default     = true
+}
+
+variable "alert_email" {
+  description = "Email address for CloudWatch Alarms"
+  type        = string
+  default     = "" # Set this in terraform.tfvars
 }
 
 variable "tags" {

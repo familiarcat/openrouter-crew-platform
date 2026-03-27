@@ -132,7 +132,7 @@ services:
       - N8N_LOG_FILE_LOCATION=/home/node/logs/n8n.log
     volumes:
       - n8n-data:/home/node/.n8n
-      - ./logs:/home/node/logs
+      - ./logs:/home/node/logs:rw
     depends_on:
       db:
         condition: service_healthy
@@ -159,6 +159,14 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - N8N_BASE_URL=${N8N_BASE_URL:-http://n8n:5678}
       - N8N_API_KEY=${N8N_API_KEY}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - AWS_REGION=${AWS_REGION:-us-east-2}
+      - ENVIRONMENT=${ENVIRONMENT:-staging}
+      - PROJECT_NAME=${PROJECT_NAME:-openrouter-crew-platform}
+      - LOG_FILE_PATH=/app/logs/dashboard.log
+    volumes:
+      - ./logs:/app/logs:rw
     depends_on:
       db:
         condition: service_healthy
@@ -183,7 +191,7 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD:-your-redis-password}\" ping | grep PONG || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

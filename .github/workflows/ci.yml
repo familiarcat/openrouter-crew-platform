@@ -17,39 +17,49 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for Turbo's PR impact analysis and git-based filtering
 
-      - name: Setup Node.js 20
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-          run_install: false
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
+      - name: Turbo Cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-turbo-
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Type Check
+        run: pnpm type-check
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm turbo run lint
 
       - name: Test
-        run: pnpm test
+        run: pnpm turbo run test
 
       - name: Build
-        run: pnpm build
+        run: pnpm build:all
+
+      - name: Generate Codebase Analysis
+        run: pnpm --filter @openrouter-crew/codebase-analyzer generate
+
+      - name: Upload Analyzer Dashboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: codebase-analyzer-dashboard
+          path: apps/codebase-analyzer/output/
+          retention-days: 14

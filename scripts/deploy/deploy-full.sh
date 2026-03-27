@@ -1,9 +1,11 @@
 #!/bin/bash
 
-# Orchestrates the full deployment pipeline:
+# Phase 3: Consolidated AWS Deployment Orchestrator
 # 1. Provisions AWS infrastructure via Terraform
 # 2. Builds and pushes Docker image to ECR
 # 3. Deploys application to EC2 via AWS SSM
+# 4. Configures DNS and SSL
+# 5. Synchronizes n8n workflows
 
 set -e
 
@@ -30,11 +32,18 @@ log_success() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
-ENVIRONMENT="${1:-production}"
+ENVIRONMENT="${1:-staging}"
+
+# Load local environment variables for deployment context (keys, tokens)
+if [ -f ".env.local" ]; then
+    source .env.local
+elif [ -f ".env" ]; then
+    source .env
+fi
 
 # Resolve Base Domain based on Environment
 case "$ENVIRONMENT" in
-  production|prod) BASE_DOMAIN="pbradygeorgen.com" ;;
+  production|prod) BASE_DOMAIN="${PROD_DOMAIN:-pbradygeorgen.com}" ;;
   staging) BASE_DOMAIN="staging.pbradygeorgen.com" ;;
   uat) BASE_DOMAIN="uat.pbradygeorgen.com" ;;
   test) BASE_DOMAIN="test.pbradygeorgen.com" ;;
@@ -61,6 +70,17 @@ if ! docker info > /dev/null 2>&1; then
 fi
 log_success "Prerequisites met."
 
+# Validate critical secrets before proceeding
+log_step "Validating secrets..."
+MISSING_SECRETS=()
+[[ -z "${SUPABASE_URL:-}" ]] && MISSING_SECRETS+=("SUPABASE_URL")
+[[ -z "${OPENROUTER_API_KEY:-}" ]] && MISSING_SECRETS+=("OPENROUTER_API_KEY")
+
+if [ ${#MISSING_SECRETS[@]} -ne 0 ]; then
+    echo -e "${RED}❌ Missing required secrets: ${MISSING_SECRETS[*]}${NC}"
+    exit 1
+fi
+
 # 1. Infrastructure Provisioning
 echo -e "\n${BLUE}📦 Phase 1: Infrastructure Provisioning (Terraform)${NC}"
 
@@ -78,8 +98,10 @@ if [ ! -d ".terraform" ]; then
 fi
 
 log_step "Applying Terraform configuration..."
-# Use -input=false to avoid hanging on prompts if something is wrong
-terraform apply -auto-approve -input=false
+# Use workspace for environment isolation and pass variables
+terraform workspace select "$ENVIRONMENT" || terraform workspace new "$ENVIRONMENT"
+terraform apply -auto-approve -input=false \
+    -var="environment=$ENVIRONMENT" -var="domain_name=$BASE_DOMAIN"
 
 # Capture outputs
 log_step "Capturing infrastructure outputs..."
@@ -166,11 +188,17 @@ N8N_WEBHOOK_URL=${N8N_URL}/webhook
 N8N_API_KEY=${N8N_API_KEY}
 N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
 REDIS_PASSWORD=${REDIS_PASSWORD}
+REDIS_HOST=redis
+REDIS_PORT=6379
+AWS_REGION=${AWS_REGION}
+ENVIRONMENT=${ENVIRONMENT}
+PROJECT_NAME=openrouter-crew-platform
 ENV_EOF
 
 echo "Pulling new image and restarting services..."
-docker-compose --env-file .env.production -f docker-compose.prod.yml pull dashboard
-docker-compose --env-file .env.production -f docker-compose.prod.yml up -d --remove-orphans
+# Pull all images and restart the full stack to ensure all services pick up env changes
+docker-compose --env-file .env.production -f docker-compose.prod.yml pull
+docker-compose --env-file .env.production -f docker-compose.prod.yml up -d --remove-orphans --force-recreate
 
 echo "Verifying running containers..."
 docker-compose --env-file .env.production -f docker-compose.prod.yml ps
@@ -204,10 +232,40 @@ else
     exit 1
 fi
 
-# 4. DNS Configuration
+# 4. DNS Configuration & Post-Deploy Setup
 echo -e "\n${BLUE}🌍 Phase 4: DNS Configuration${NC}"
 export EC2_PUBLIC_IP=$PUBLIC_IP
 ./scripts/ci-post-deploy.sh "$ENVIRONMENT"
+
+# 5. n8n Workflow Synchronization
+echo -e "\n${BLUE}🔄 Phase 5: Synchronizing n8n Workflows${NC}"
+if [ ! -z "$N8N_API_KEY" ]; then
+    log_step "Pushing workflows to $N8N_URL..."
+    # Delegate to sync-workflows.js using the deployment environment parameters
+    N8N_PROD_URL=$N8N_URL N8N_PROD_API_KEY=$N8N_API_KEY node scripts/n8n/sync-workflows.js --push --prod
+    log_success "n8n workflows synchronized."
+else
+    echo "⚠️  N8N_API_KEY not found, skipping workflow sync."
+fi
+
+# 6. Health Verification
+echo -e "\n${BLUE}🔍 Phase 6: Verifying Deployment Health${NC}"
+MAX_RETRIES=12
+RETRY_COUNT=0
+HEALTH_ENDPOINT="$DASHBOARD_URL/api/health"
+
+log_step "Waiting for services at $HEALTH_ENDPOINT..."
+until curl -s -f "$HEALTH_ENDPOINT" > /dev/null || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+    echo -n "."
+    sleep 10
+    ((RETRY_COUNT++))
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo -e "${RED}❌ Health check failed after timeout. Verification manually required.${NC}"
+else
+    log_success "Platform is healthy and reachable at $DASHBOARD_URL"
+fi
 
 echo -e "\n${GREEN}🎉 Full Deployment Complete!${NC}"
 echo "--------------------------------------------------"

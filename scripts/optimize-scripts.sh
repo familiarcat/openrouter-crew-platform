@@ -421,8 +421,9 @@ pkg['scripts'] = {
     "build":                "tsc -p tsconfig.cli.json",
     "build:all":            "bash scripts/build.sh all",
     "build:dashboard":      "pnpm build:shared-ui && pnpm --dir apps/unified-dashboard build",
+    "build:shared":         "turbo run build --filter=\"./domains/shared/*\"",
     "build:shared-ui":      "pnpm --dir domains/shared/ui-components build",
-    "build:vscode":         "pnpm build:shared-ui && pnpm --dir domains/vscode-extension compile",
+    "build:vscode":         "pnpm build:shared && pnpm --dir domains/vscode-extension compile",
 
     # ── Type / Lint / Test ────────────────────────────────────────
     "type-check":           "tsc -p tsconfig.cli.json --noEmit",

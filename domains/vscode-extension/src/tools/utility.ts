@@ -19,10 +19,24 @@ export const utilityTools: ToolDefinition[] = [
                 }
             }
         },
-        execute: async (args, agent) => {
+        execute: async (args, agent, deps) => {
+            let costDetail = '';
+            
+            if (deps?.costTracker) {
+                // Heuristic: ~4 characters per token for the shell command
+                const estimatedTokens = Math.ceil(args.command.length / 4);
+                const cost = await deps.costTracker.estimateCost(estimatedTokens, 0, 'google/gemini-flash-1.5');
+                const metrics = await deps.costTracker.getCostMetrics('daily');
+                
+                if (metrics.remaining < cost) {
+                    return `ABORTED: Estimated cost ($${cost.toFixed(4)}) exceeds remaining daily budget ($${metrics.remaining.toFixed(4)}).`;
+                }
+                costDetail = `\n\nEstimated Execution Cost: $${cost.toFixed(4)}`;
+            }
+
             const allowed = await vscode.window.showInformationMessage(
                 `Allow ${agent.profile.name} to run: ${args.command}?`,
-                { modal: true, detail: args.reason },
+                { modal: true, detail: `${args.reason}${costDetail}` },
                 'Yes'
             );
 

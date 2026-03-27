@@ -8,13 +8,15 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@openrouter-crew/shared-crew-coordination": "workspace:*",
     "@anthropic-ai/sdk": "^0.33.1",
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@openrouter-crew/shared-crew-coordination": "workspace:*",
-    "@supabase/supabase-js": "^2.98.0"
+    "zod": "^3.23.8",
+    "openai": "^4.52.7",
+    "@supabase/supabase-js": "^2.47.10"
   },
   "devDependencies": {
-    "@types/node": "^20.19.35",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@types/node": "^20.12.7"
   }
 }

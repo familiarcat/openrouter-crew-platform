@@ -1,66 +1,75 @@
-name: Deploy Infrastructure
+name: Deploy
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'terraform/**'
+  workflow_run:
+    workflows: ["CI"]
+    branches: ["main"]
+    types:
+      - completed
   workflow_dispatch:
-
-env:
-  AWS_REGION: us-east-2
-  TF_WORKING_DIR: terraform
-
-permissions:
-  id-token: write # This is required for OIDC
-  contents: read # This is required for checkout
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      reason:
+        description: 'Deployment reason'
+        required: false
+        default: 'Manual trigger'
 
 jobs:
-  terraform:
-    name: Apply Terraform
+  deploy:
+    name: AWS Cloud Deployment
+    # Only run if CI succeeded or if manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout
+      - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials via OIDC
-        if: ${{ secrets.AWS_OIDC_ROLE_ARN != '' }}
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }} # Replace with your OIDC role ARN
-          aws-region: ${{ env.AWS_REGION }}
+          version: 9
 
-      - name: Configure AWS Credentials via Static Secrets
-        if: ${{ secrets.AWS_OIDC_ROLE_ARN == '' }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-2' }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.0.0 # Or your desired version
+          terraform_version: "1.7.0"
 
-      - name: Terraform Init
-        run: terraform init
-        working-directory: ${{ env.TF_WORKING_DIR }}
-
-      - name: Terraform Format
-        run: terraform fmt -check
-        working-directory: ${{ env.TF_WORKING_DIR }}
-
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ${{ env.TF_WORKING_DIR }}
-
-      - name: Terraform Plan
-        run: terraform plan -input=false
-        working-directory: ${{ env.TF_WORKING_DIR }}
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false
-        working-directory: ${{ env.TF_WORKING_DIR }}
+      - name: Execute Deployment
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          N8N_ENCRYPTION_KEY: ${{ secrets.N8N_ENCRYPTION_KEY }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          PROD_DOMAIN: ${{ vars.PROD_DOMAIN }}
+        run: |
+          # Use input environment if dispatch, otherwise default to staging for main branch auto-runs
+          TARGET_ENV="${{ github.event.inputs.environment || 'staging' }}"
+          pnpm deploy:aws $TARGET_ENV

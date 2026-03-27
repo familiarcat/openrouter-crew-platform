@@ -1,0 +1,77 @@
+# AGILE Workflow: [Business Name]
+
+**Project ID:** [e.g., baritalia-stl]
+**Status:** [Incubating | Active | Maintenance]
+**Owner Agent:** [e.g., Commander Data / Quark]
+
+> This document defines the agile lifecycle for this generated business app. It serves as the primary orientation point for both human developers and AI agents to coordinate feature implementation and maintenance.
+
+---
+
+## 🎯 Strategic Intent
+**Business Model:** [e.g., Local Restaurant Digital Package]
+**Target ROI:** [e.g., 500x]
+**Core Value Prop:** [Describe the unique selling point of this specific app]
+
+---
+
+## 🧠 Technical Context (DDD)
+This app is a **Deployable Consumer**. It must follow the "Thin Wrapper" pattern:
+- **UI Components:** Consume from `@openrouter-crew/shared-ui-components`.
+- **Business Logic:** Delegate to `@openrouter-crew/product-factory`.
+- **API Patterns:** Use `@openrouter-crew/crew-api-client`.
+
+**Constraint:** DO NOT implement core domain logic inside this folder. If a feature is reusable, move it to `/domains/`.
+
+---
+
+## 🏃 Current Sprint: [Sprint Name/Number]
+**Goal:** [Main objective for the current 1-week cycle]
+
+### Active Tasks
+- [ ] [Task ID] - [Description] - @[Assignee Agent]
+- [ ] [Task ID] - [Description] - @[Assignee Agent]
+
+---
+
+## 📋 Backlog
+### High Priority
+- [ ] SEO Optimization for local search
+- [ ] Integration with [Local Partner] API
+
+### Enhancement Ideas
+- [ ] AI-driven daily menu updates
+- [ ] Automated social media cross-posting
+
+---
+
+## 🛡️ Safety & Governance (Dark Forest Protocol)
+- **Validation:** All AI-generated PRs must be verified by a human or a Lead Architect Agent.
+- **Budget Cap:** Max $[Amount] per automated enhancement cycle.
+- **Environment:** [Staging | Production]
+
+---
+
+## 📊 Business Performance
+| Metric | Value | Target |
+|--------|-------|--------|
+| API Generation Cost | $0.00 | < $1.50 |
+| Monthly Maintenance | $0.00 | < $5.00 |
+| Conversion Rate | 0% | > 2% |
+
+---
+
+## 🛠️ Developer/Agent Instructions
+
+### Orientation
+To orient yourself to this project, run:
+```bash
+pnpm orient
+```
+
+### Local Development
+```bash
+pnpm dev
+```
+
+**Last Updated:** [YYYY-MM-DD] | **Revision:** [Version]

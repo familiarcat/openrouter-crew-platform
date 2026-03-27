@@ -12,7 +12,7 @@ echo "Region: ${aws_region}"
 
 # Update system
 echo "Updating system packages..."
-dnf update -y
+dnf update -y && dnf install -y jq unzip curl
 
 # Install Docker
 echo "Installing Docker..."
@@ -26,15 +26,8 @@ curl -L "https://github.com/docker/compose/releases/latest/download/docker-compo
 chmod +x /usr/local/bin/docker-compose
 ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
 
-# Install AWS CLI (latest version)
-echo "Installing AWS CLI..."
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-dnf install -y unzip
-unzip awscliv2.zip
-./aws/install
-rm -rf aws awscliv2.zip
-
 # Install SSM Agent (should be pre-installed on AL2023, but ensure it's running)
+# This is vital for Phase 3 deployments via scripts/deploy/deploy-full.sh
 echo "Ensuring SSM Agent is running..."
 systemctl enable amazon-ssm-agent
 systemctl start amazon-ssm-agent
@@ -65,6 +58,11 @@ cat > /opt/aws/amazon-cloudwatch-agent/etc/config.json <<'CWEOF'
             "file_path": "/home/ec2-user/openrouter-crew-platform/logs/n8n.log",
             "log_group_name": "/aws/ec2/${project_name}",
             "log_stream_name": "{instance_id}/n8n"
+          },
+          {
+            "file_path": "/var/log/db-backup.log",
+            "log_group_name": "/aws/ec2/${project_name}",
+            "log_stream_name": "{instance_id}/backups"
           }
         ]
       }
@@ -105,12 +103,13 @@ systemctl start amazon-cloudwatch-agent
 
 # Create application directory
 echo "Setting up application directory..."
-mkdir -p /home/ec2-user/openrouter-crew-platform
-mkdir -p /home/ec2-user/openrouter-crew-platform/logs
-chown -R ec2-user:ec2-user /home/ec2-user/openrouter-crew-platform
+APP_DIR="/home/ec2-user/openrouter-crew-platform"
+mkdir -p $APP_DIR/logs
+touch $APP_DIR/.env.production
+chown -R ec2-user:ec2-user $APP_DIR
 
 # Add ec2-user to docker group
-usermod -aG docker ec2-user
+usermod -a -G docker ec2-user
 
 # Create systemd service for application
 cat > /etc/systemd/system/openrouter-crew.service <<'SYSTEMDEOF'
@@ -120,11 +119,13 @@ After=docker.service
 Requires=docker.service
 
 [Service]
-Type=oneshot
+Type=simple
 RemainAfterExit=yes
-WorkingDirectory=/home/ec2-user/openrouter-crew-platform
-ExecStart=/usr/bin/docker-compose -f docker-compose.prod.yml up -d
-ExecStop=/usr/bin/docker-compose -f docker-compose.prod.yml down
+WorkingDirectory=$APP_DIR
+# The following ensures the containers start on boot using the production env
+ExecStartPre=-/usr/bin/docker-compose -f docker-compose.prod.yml pull
+ExecStart=/usr/bin/docker-compose --env-file .env.production -f docker-compose.prod.yml up
+ExecStop=/usr/bin/docker-compose -f docker-compose.prod.yml stop
 User=ec2-user
 Group=ec2-user
 
@@ -147,6 +148,51 @@ cat > /etc/logrotate.d/openrouter-crew <<'LOGROTATEEOF'
     create 0644 ec2-user ec2-user
 }
 LOGROTATEEOF
+
+# Set up Daily Database Backup to S3
+echo "Setting up daily database backup script..."
+cat > /usr/local/bin/backup-db.sh <<'BACKUPEOF'
+#!/bin/bash
+APP_DIR="/home/ec2-user/openrouter-crew-platform"
+BACKUP_BUCKET="${project_name}-backups-${environment}"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Prune local backups older than 3 days to save disk space
+find /tmp -name "db_backup_*.sql.gz" -mtime +3 -delete
+find /tmp -name "n8n_backup_*.tar.gz" -mtime +3 -delete
+
+if [ -f "$APP_DIR/.env.production" ]; then
+    # Extract DB password from the production environment file
+    DB_PWD=$(grep "^SUPABASE_DB_PASSWORD=" "$APP_DIR/.env.production" | cut -d'=' -f2)
+    
+    if docker ps -q -f name=openrouter-supabase-db > /dev/null; then
+        echo "Starting full database backup to S3..."
+        # Perform dump, compress, and upload directly
+        docker exec -e PGPASSWORD="$DB_PWD" openrouter-supabase-db pg_dump -U postgres postgres | gzip > /tmp/db_backup_$TIMESTAMP.sql.gz
+        aws s3 cp /tmp/db_backup_$TIMESTAMP.sql.gz s3://$BACKUP_BUCKET/database/db_backup_$TIMESTAMP.sql.gz
+        rm /tmp/db_backup_$TIMESTAMP.sql.gz
+        echo "Backup complete: s3://$BACKUP_BUCKET/database/db_backup_$TIMESTAMP.sql.gz"
+    else
+        echo "Error: Supabase DB container not found. Backup failed."
+    fi
+
+    # Backup n8n data directory
+    if docker ps -q -f name=openrouter-n8n > /dev/null; then
+        echo "Starting n8n data backup to S3..."
+        # Archive the .n8n directory from inside the container and upload
+        docker exec openrouter-n8n tar -cz -C /home/node .n8n > /tmp/n8n_backup_$TIMESTAMP.tar.gz
+        aws s3 cp /tmp/n8n_backup_$TIMESTAMP.tar.gz s3://$BACKUP_BUCKET/n8n/n8n_backup_$TIMESTAMP.tar.gz
+        rm /tmp/n8n_backup_$TIMESTAMP.tar.gz
+        echo "n8n backup complete: s3://$BACKUP_BUCKET/n8n/n8n_backup_$TIMESTAMP.tar.gz"
+    else
+        echo "Warning: n8n container not found. Skipping n8n backup."
+    fi
+fi
+BACKUPEOF
+chmod +x /usr/local/bin/backup-db.sh
+
+# Schedule the backup via cron (Every day at 2:00 AM)
+(crontab -l 2>/dev/null; echo "0 2 * * * /usr/local/bin/backup-db.sh >> /var/log/db-backup.log 2>&1") | crontab -
 
 echo "===== User data setup complete ====="
 echo "Instance is ready for deployment via SSM"
