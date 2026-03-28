@@ -1,5 +1,5 @@
 {
-  "name": "baritalia-website",
+  "name": "@openrouter-crew/app-baritalia-website",
   "version": "1.0.0",
   "description": "BarItalia STL - Auto-generated restaurant website",
   "private": true,

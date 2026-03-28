@@ -1,5 +1,5 @@
 {
-  "name": "test-project-baritalia-stl",
+  "name": "@openrouter-crew/app-baritalia-stl",
   "version": "1.0.0",
   "description": "Business generator test - BarItalia STL proof of concept",
   "private": true,

@@ -1,4 +1,6 @@
 packages:
   - "apps/*"
   - "domains/**"
+  - "domains/marketing-funnel"
+  - "agents/**"
   - "!**/src/**"

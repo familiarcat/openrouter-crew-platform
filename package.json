@@ -30,6 +30,7 @@
     "local:verify": "bash scripts/debug/local-platform-verify.sh",
     "local:infra:up": "docker compose -f docker-compose.local.yml up -d --force-recreate --remove-orphans",
     "local:infra:down": "docker compose -f docker-compose.local.yml down",
+    "architecture:remediate": "bash scripts/local/remediate-architecture.sh",
     "local:migrate-ddd":    "bash scripts/local/migrate-dashboards-to-apps.sh",
     "local:fix-imports":    "bash scripts/local/fix-relative-imports.sh",
     "local:cleanup-monitoring": "bash scripts/local/cleanup-misplaced-files.sh",
