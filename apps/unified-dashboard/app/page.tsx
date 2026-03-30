@@ -2,15 +2,17 @@
 
 import React, { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { SovereignAgentViewport } from '@openrouter-crew/shared-ui-components';
+import { SovereignAgentViewport } from '@/components/SovereignAgentViewport'; // Corrected local reference
 import { DeploymentLogList } from '@/components/DeploymentLogList';
 import { useOrchestration } from '@/hooks/useOrchestration';
-import { Loader2, Zap, AlertCircle } from 'lucide-react';
+import { Loader2, Zap, AlertCircle, Rocket, FolderKanban } from 'lucide-react';
 
 export default function HomePage() {
   const [problemInput, setProblemInput] = useState('');
+  const [currentProject, setCurrentProject] = useState('Global Fleet');
   const { data, isLoading, error, solveProblem, reset } = useOrchestration();
 
+  // Refactored to be a universal codebase analysis
   const handleAnalyzeCodebase = async () => {
     const codebaseAnalysisPrompt = `
       Perform a comprehensive analysis of the OpenRouter Crew Platform codebase.
@@ -36,7 +38,32 @@ export default function HomePage() {
         {/* Main Orchestration Panel */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           <div className="p-6 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
-            <h2 className="text-xl font-bold text-white mb-4">Mission Control</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded bg-blue-500/20 border border-blue-500/30">
+                  <Rocket className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Mission Control</h2>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Universal Command Interface</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5 text-xs text-gray-400">
+                <FolderKanban className="w-3.5 h-3.5" />
+                <span>Project:</span>
+                <select 
+                  value={currentProject} 
+                  onChange={(e) => setCurrentProject(e.target.value)}
+                  className="bg-transparent text-blue-400 font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="Global Fleet">Global Fleet</option>
+                  <option value="BarItalia STL">BarItalia STL</option>
+                  <option value="Agency Scout">Agency Scout</option>
+                </select>
+              </div>
+            </div>
+
             <textarea
               className="w-full p-3 bg-black/20 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500"
               rows={4}
@@ -94,6 +121,7 @@ export default function HomePage() {
                 cost: data.metadata.cost, // Assuming cost is added to metadata
                 executionTimeMs: data.metadata.execution_time_ms,
               }}
+              cached={data.metadata.cached}
               isActive={true}
             />
           )}

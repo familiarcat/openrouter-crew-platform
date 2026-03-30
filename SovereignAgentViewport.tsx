@@ -4,6 +4,7 @@ import React from 'react';
 import { 
   Brain, 
   Cpu, 
+  Database,
   MessageSquareText, 
   AlertTriangle, 
   CheckCircle, 
@@ -29,6 +30,7 @@ interface SovereignAgentViewportProps {
     cost?: number;
     executionTimeMs?: number;
   };
+  cached?: boolean;
   isActive?: boolean; // If this agent is currently the primary focus
 }
 
@@ -57,6 +59,7 @@ export const SovereignAgentViewport: React.FC<SovereignAgentViewportProps> = ({
   status,
   streamContent,
   metadata,
+  cached = false,
   isActive = false,
 }) => {
   return (
@@ -81,6 +84,11 @@ export const SovereignAgentViewport: React.FC<SovereignAgentViewportProps> = ({
           <span className="text-xs text-gray-400/70">({agentId})</span>
         </div>
         <div className="flex items-center gap-3 text-xs text-gray-500">
+          {cached && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold tracking-tighter text-[10px]">
+              <Database className="w-3 h-3" /> CACHED
+            </span>
+          )}
           {metadata?.cost !== undefined && (
             <span className="flex items-center gap-1 text-yellow-500/90">
               <Coins className="w-3 h-3" /> ${metadata.cost.toFixed(4)}

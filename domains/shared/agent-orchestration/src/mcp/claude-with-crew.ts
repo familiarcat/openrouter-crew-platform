@@ -40,6 +40,7 @@ export interface OrchestratorResponse {
     tokens_used: number
     model: string
     execution_time_ms: number
+    cached?: boolean
   }
 }
 
