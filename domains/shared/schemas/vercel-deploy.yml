@@ -1,0 +1,108 @@
+name: Vercel Deployment (Pruned)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/unified-dashboard/**'
+      - 'domains/shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'turbo.json'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.12.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Global Turbo
+        run: pnpm add -g turbo@2.0
+
+      - name: Prune Monorepo
+        # Replace @openrouter-crew/unified-dashboard with the actual 'name' in apps/unified-dashboard/package.json
+        run: turbo prune @openrouter-crew/unified-dashboard --docker
+
+      - name: Notify Supabase - Build Started
+        run: |
+          curl -X POST "${{ env.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/log-deployment" \
+            -H "Authorization: Bearer ${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "project_id": "${{ secrets.DASHBOARD_PROJECT_ID }}",
+              "platform": "vercel",
+              "environment": "production",
+              "status": "building",
+              "commit_sha": "${{ github.sha }}",
+              "metadata": { "trigger": "push", "branch": "${{ github.ref_name }}" }
+            }'
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        id: vercel-deploy
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          # We deploy from the pruned 'out/full' directory
+          working-directory: out/full
+          vercel-args: '--prod'
+          # Ensure Vercel knows the root of the pruned project
+          project-name: 'unified-dashboard'
+
+      - name: Notify Supabase - Build Success
+        if: success()
+        run: |
+          curl -X POST "${{ env.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/log-deployment" \
+            -H "Authorization: Bearer ${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "project_id": "${{ secrets.DASHBOARD_PROJECT_ID }}",
+              "platform": "vercel",
+              "environment": "production",
+              "status": "success",
+              "commit_sha": "${{ github.sha }}",
+              "build_url": "${{ steps.vercel-deploy.outputs.preview-url }}",
+              "metadata": { "job_id": "${{ github.run_id }}" }
+            }'
+
+      - name: Notify Supabase - Build Failure
+        if: failure()
+        run: |
+          curl -X POST "${{ env.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/log-deployment" \
+            -H "Authorization: Bearer ${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "project_id": "${{ secrets.DASHBOARD_PROJECT_ID }}",
+              "platform": "vercel",
+              "environment": "production",
+              "status": "error",
+              "commit_sha": "${{ github.sha }}",
+              "metadata": { "error": "Vercel deployment failed" }
+            }'
+
+      # Optional: Clean up after deployment
+      - name: Cleanup Pruned Files
+        run: rm -rf out
+
+env:
+  # Ensure the standalone output is utilized
+  NEXT_PRIVATE_STANDALONE: true
+  # Pass necessary public environment variables
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

@@ -5,16 +5,17 @@
 set -e
 
 # Security: Sync secrets from local environment if available
-# This ensures AWS credentials and API keys are loaded from ~/.zshrc
-if [ -f "$HOME/.zshrc" ] && [ -f "scripts/secrets/sync-from-zshrc.sh" ]; then
-  echo "🔐 Syncing secrets from ~/.zshrc..."
-  bash scripts/secrets/sync-from-zshrc.sh
-  
-  if [ -f ".env.local" ]; then
-    set -a
-    source .env.local
-    set +a
-  fi
+# Decoupled from ~/.zshrc to support CI/CD environments
+if [ -f ".env.local" ]; then
+  set -a
+  source .env.local
+  set +a
+fi
+
+# Decouple from ~/.zshrc to allow variable mapping in CI/CD environments
+if [ -f "scripts/crew-env-bridge.sh" ]; then
+  echo "🔐 Bridging secrets from local environment..."
+  eval "$(bash scripts/crew-env-bridge.sh --source)"
 fi
 
 COMMAND=$1

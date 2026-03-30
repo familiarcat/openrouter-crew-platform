@@ -27,6 +27,22 @@
 - 🔄 Weekly analysis automation (in progress)
 - 🔄 CI/CD pipeline integration (in progress)
 
+## 🗺️ Implementation Roadmap (Hybrid Path)
+
+### Phase 1: Local Hardening & Environment (Current)
+- [ ] **Infra Stability**: Verify `docker-compose.local.yml` health checks for Supabase and n8n are 100% reliable.
+- [ ] **Local CLI**: Hardening `crew` CLI to manage local container lifecycles.
+ - [x] **Dashboard Remediation**: Fixed imports in Alex-AI via tsconfig aliSteal Docker environment.
+
+### Phase 2: Domain Awareness & Deployment Logic
+- [x] **Environment Tags**: Added environment field to ProjectSchema. [ ] **API Routing**: Update `crew-api-client` to switch between `localhost` and AWS ALB endpoints based on environment.
+
+### Phase 3: Hybrid CI/CD (The "Pruned" Path)
+- [ ] **AWS**: Deploy agent rums (`/agents`) to ECS Fargate behind a private VPC (Dark Forest Protocol).
+
+### Phase 4: Production Observability
+- [ ] **Logging**: Implement `deployment_logs` in Supabase to track Vercel builds and AWS Task health.
+
 ---
 
 ## Architecture Overview

@@ -9,9 +9,12 @@ const clearButton = document.getElementById('clear-button');
 function sendMessage() {
     const text = input.value;
     if (text.trim().length > 0) {
+        // Data's fix: UTF-8 safe Base64 encoding for VSCode postMessage
+        const encodedText = Buffer.from(text, 'utf-8').toString('base64');
         vscode.postMessage({
-            command: 'sendMessage',
-            text: text
+            command: 'sendMessage', // The command remains the same
+            text: encodedText,      // Send the encoded text
+            encoding: 'base64-utf8' // Inform the extension host about the encoding
         });
         input.value = '';
         input.style.height = 'auto'; // Reset height

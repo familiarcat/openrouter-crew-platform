@@ -22,7 +22,7 @@ import { z } from 'zod'
 
 export class PicardAgentServer extends BaseMCPServer {
   constructor() {
-    super('Picard', 'Leadership & Strategy')
+    super('captain_picard', 'Leadership & Strategy')
     this.setupTools()
   }
 

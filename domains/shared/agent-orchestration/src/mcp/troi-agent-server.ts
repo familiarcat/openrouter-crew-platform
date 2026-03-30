@@ -19,7 +19,6 @@
  */
 
 import { BaseMCPServer } from './base-mcp-server'
-import { createClient } from '@supabase/supabase-js'
 import type { ToolResult } from './base-mcp-server'
 
 interface ImpactAssessment {
@@ -69,16 +68,9 @@ interface ConsensusPlan {
 }
 
 export class TroiAgentServer extends BaseMCPServer {
-  protected supabase
-  getToolDefinition(toolName: string): any { return null; }
-
-  constructor(supabaseUrl?: string, supabaseKey?: string) {
-    super('troi', 'User Experience & Organizational Impact')
-
-    this.supabase = createClient(
-      supabaseUrl || process.env.SUPABASE_URL || '',
-      supabaseKey || process.env.SUPABASE_ANON_KEY || ''
-    )
+  constructor() {
+    super('counselor_troi', 'User Experience & Organizational Impact')
+    this.registerTools()
   }
 
   registerTools(): void {

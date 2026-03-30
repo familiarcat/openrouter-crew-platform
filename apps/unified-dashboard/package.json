@@ -12,6 +12,7 @@
     "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "@openrouter-crew/agent-orchestration": "workspace:*",
     "@openrouter-crew/crew-api-client": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",
     "lucide-react": "^0.563.0",

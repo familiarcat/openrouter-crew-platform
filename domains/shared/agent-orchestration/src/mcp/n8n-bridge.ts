@@ -52,7 +52,7 @@ export class N8nBridge {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              // Add authentication headers if your n8n instance requires them
+              'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
             },
             body: JSON.stringify(args)
           });

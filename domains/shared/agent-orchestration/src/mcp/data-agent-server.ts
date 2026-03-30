@@ -17,7 +17,7 @@ import { z } from 'zod'
 
 export class DataAgentServer extends BaseMCPServer {
   constructor() {
-    super('Data', 'pragmatic-solutions')
+    super('commander_data', 'pragmatic-solutions')
     this.setupTools()
   }
 

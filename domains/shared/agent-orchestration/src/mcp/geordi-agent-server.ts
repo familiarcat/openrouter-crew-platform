@@ -19,7 +19,6 @@
  */
 
 import { BaseMCPServer } from './base-mcp-server'
-import { createClient } from '@supabase/supabase-js'
 import type { ToolResult } from './base-mcp-server'
 
 interface FeasibilityAssessment {
@@ -96,16 +95,9 @@ interface PerformanceMetrics {
 }
 
 export class GeordiAgentServer extends BaseMCPServer {
-  protected supabase
-  getToolDefinition(toolName: string): any { return null; }
-
-  constructor(supabaseUrl?: string, supabaseKey?: string) {
-    super('geordi', 'Infrastructure & Technical Implementation')
-
-    this.supabase = createClient(
-      supabaseUrl || process.env.SUPABASE_URL || '',
-      supabaseKey || process.env.SUPABASE_ANON_KEY || ''
-    )
+  constructor() {
+    super('geordi_la_forge', 'Infrastructure & Technical Implementation')
+    this.registerTools()
   }
 
   registerTools(): void {

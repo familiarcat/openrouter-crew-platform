@@ -42,6 +42,7 @@ services:
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678/}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-local-n8n-encryption-key}
+      - N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET:-dev-secret-placeholder}
       - GENERIC_TIMEZONE=${TIMEZONE:-America/Chicago}
     ports:
       - "5678:5678"

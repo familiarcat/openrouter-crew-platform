@@ -64,8 +64,15 @@ safe_move "agents/test-event-venue/rag-refresh" "apps/test-event-venue-rag"
 echo -e "\n${BLUE}Step 4: Moving Test Projects to /apps...${NC}"
 safe_move "domains/test-projects/baritalia-stl" "apps/baritalia-stl"
 
+# P0.6 & P0.7 — Extract Marketing Funnel (Remediate Layer Bleeding)
+echo -e "\n${BLUE}Step 5: Extracting Marketing Funnel to correct layers...${NC}"
+mkdir -p apps/funnel-visualizer/components domains/marketing-funnel
+safe_move "domains/shared/schemas/Funnel3D.tsx" "apps/funnel-visualizer/components/Funnel3D.tsx"
+safe_move "domains/shared/schemas/DOMAIN.md" "domains/marketing-funnel/DOMAIN.md"
+# Note: index.ts files and package.json are restored/created via build protocol
+
 # Step 5: Update internal package names to reflect new layer identity
-echo -e "\n${BLUE}Step 5: Updating package names in package.json...${NC}"
+echo -e "\n${BLUE}Step 6: Updating package names in package.json...${NC}"
 
 update_pkg_name() {
     local file=$1

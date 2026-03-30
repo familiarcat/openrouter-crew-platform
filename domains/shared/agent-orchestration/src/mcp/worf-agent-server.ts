@@ -17,7 +17,7 @@ import { z } from 'zod'
 
 export class WorfAgentServer extends BaseMCPServer {
   constructor() {
-    super('Worf', 'security-compliance')
+    super('worf', 'security-compliance')
     this.setupTools()
   }
 

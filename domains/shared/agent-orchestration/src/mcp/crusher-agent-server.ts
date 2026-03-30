@@ -19,7 +19,6 @@
  */
 
 import { BaseMCPServer } from './base-mcp-server'
-import { createClient } from '@supabase/supabase-js'
 import type { ToolResult } from './base-mcp-server'
 
 interface Diagnosis {
@@ -87,16 +86,9 @@ interface HealthAssessment {
 }
 
 export class CrusherAgentServer extends BaseMCPServer {
-  protected supabase
-  getToolDefinition(toolName: string): any { return null; }
-
-  constructor(supabaseUrl?: string, supabaseKey?: string) {
+  constructor() {
     super('crusher', 'System Health & Diagnostics')
-
-    this.supabase = createClient(
-      supabaseUrl || process.env.SUPABASE_URL || '',
-      supabaseKey || process.env.SUPABASE_ANON_KEY || ''
-    )
+    this.registerTools()
   }
 
   registerTools(): void {

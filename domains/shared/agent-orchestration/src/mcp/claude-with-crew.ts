@@ -10,7 +10,10 @@
  */
 
 import OpenAI from 'openai'
+import { spawn } from 'child_process'
 import { ChildProcess } from 'child_process'
+import { PersonaProvider } from './persona-provider.js'
+import { OllamaMCPClient } from './ollama-mcp-client.js'
 
 export interface CrewAgent {
   name: string
@@ -32,6 +35,7 @@ export interface OrchestratorResponse {
     agent: string
     result: any
   }>
+  triage?: TriageResult
   metadata: {
     tokens_used: number
     model: string
@@ -39,9 +43,16 @@ export interface OrchestratorResponse {
   }
 }
 
+export interface TriageResult {
+  agentId: string
+  complexity: 'LOW' | 'MEDIUM' | 'HIGH'
+  recommendedModel: string
+}
+
 export class CrewOrchestrator {
   private openai: OpenAI
   private agents: Map<string, CrewAgent> = new Map()
+  private ollamaClient: OllamaMCPClient
   private agentProcesses: Map<string, ChildProcess> = new Map()
 
   constructor() {
@@ -53,6 +64,7 @@ export class CrewOrchestrator {
         'X-Title': 'OpenRouter Crew Platform'
       }
     })
+    this.ollamaClient = new OllamaMCPClient()
   }
 
   /**
@@ -75,18 +87,18 @@ export class CrewOrchestrator {
   private async startAgent(name: string): Promise<void> {
     console.log(`  Starting ${name} agent...`)
 
-    // In production, this would spawn the actual MCP server process
-    // For now, we simulate it
     const agent: CrewAgent = {
       name,
       role: name === 'data' ? 'pragmatic-solutions' : 'security-compliance'
     }
 
-    this.agents.set(name, agent)
+    // Start the agent as a real subprocess via pnpm
+    const child = spawn('pnpm', ['--filter', `@openrouter-crew/agent-orchestration`, 'run', `start:${name}`], {
+      stdio: ['pipe', 'pipe', 'inherit']
+    })
 
-    // In real implementation:
-    // const process = spawn('pnpm', ['crew:run', name])
-    // this.agentProcesses.set(name, process)
+    agent.process = child
+    this.agents.set(name, agent)
   }
 
   /**
@@ -224,32 +236,70 @@ export class CrewOrchestrator {
   }
 
   /**
+   * Phase 1: Triage
+   * Uses an ultra-cheap model to determine the correct agent and complexity.
+   * This saves 90% of costs by avoiding Sonnet for simple routing decisions.
+   */
+  private async triageTask(problem: string): Promise<TriageResult> {
+    // Strategy: Prefer local Ollama for triage to hit $0 decision cost
+    if (process.env.USE_LOCAL_TRIAGE === 'true') {
+      const isOllamaUp = await this.ollamaClient.isAvailable();
+      if (isOllamaUp) {
+        const localResult = await this.ollamaClient.triageTask(problem);
+        if (localResult) return localResult;
+      }
+      console.warn('⚠️ Local triage requested but Ollama is unavailable. Falling back to Gemini.');
+    }
+
+    const response = await this.openai.chat.completions.create({
+      model: 'google/gemini-flash-1.5', // Ultra-cheap triage model
+      messages: [
+        { 
+          role: 'system', 
+          content: 'You are the Crew Triage Controller. Analyze the task and return a JSON object with: agentId (captain_picard, commander_data, worf, geordi_la_forge, counselor_troi, crusher, quark, uhura, chief_obrien, commander_riker), complexity (LOW, MEDIUM, HIGH), and recommendedModel (haiku, sonnet, opus).' 
+        },
+        { role: 'user', content: problem }
+      ],
+      response_format: { type: 'json_object' }
+    });
+
+    return JSON.parse(response.choices[0].message.content || '{}') as TriageResult;
+  }
+
+  /**
    * Solve a problem using crew agents
    */
   async solveProblem(problem: string): Promise<OrchestratorResponse> {
     console.log(`\n🎯 Problem: ${problem}\n`)
 
     const startTime = Date.now()
-    const tools = await this.getAvailableTools()
+    
+    // 1. Run Triage to optimize model selection and cost
+    const triage = await this.triageTask(problem);
+    console.log(`📊 Triage complete: Agent [${triage.agentId}] at ${triage.complexity} complexity.`);
 
-    // Use a high-capability model for orchestration via OpenRouter
-    const model = 'anthropic/claude-3.5-sonnet'
+    const tools = await this.getAvailableTools()
+    
+    // 2. Map complexity to OpenRouter IDs
+    const modelMap: Record<string, string> = {
+      'haiku': 'anthropic/claude-3-haiku',
+      'sonnet': 'anthropic/claude-3.5-sonnet',
+      'opus': 'anthropic/claude-3-opus'
+    };
+    
+    const selectedModel = modelMap[triage.recommendedModel] || modelMap.sonnet;
+
+    // 3. Load the specific Agent Persona for the system prompt
+    const agentPersona = PersonaProvider.getSystemPrompt(triage.agentId);
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       {
+        role: 'system',
+        content: agentPersona
+      },
+      {
         role: 'user',
-        content: `You are working with a crew of specialized agents. Each agent is an MCP tool provider.
-
-Problem to solve: ${problem}
-
-You have access to the following agents:
-- Data Agent: analyze-costs, forecast-costs, calculate-roi, identify-anomalies
-- Worf Agent: verify-compliance, assess-risks, validate-audit-trail, check-policy-adherence
-
-Use the appropriate tools from these agents to thoroughly analyze the problem and provide a comprehensive synthesis.
-Be systematic: start with data analysis, then verify compliance, then assess risks, then calculate ROI.
-
-Provide your final synthesis that addresses all perspectives and constraints.`
+        content: problem
       }
     ]
 
@@ -260,7 +310,7 @@ Provide your final synthesis that addresses all perspectives and constraints.`
     }> = []
 
     let response = await this.openai.chat.completions.create({
-      model,
+      model: selectedModel,
       messages,
       tools: tools as any
     })
@@ -312,7 +362,7 @@ Provide your final synthesis that addresses all perspectives and constraints.`
 
       // Get next response
       response = await this.openai.chat.completions.create({
-        model,
+        model: selectedModel,
         messages,
         tools: tools as any
       })
@@ -327,9 +377,10 @@ Provide your final synthesis that addresses all perspectives and constraints.`
       success: true,
       synthesis,
       findings,
+      triage,
       metadata: {
         tokens_used: response.usage?.total_tokens || 0,
-        model,
+        model: selectedModel,
         execution_time_ms: executionTime
       }
     }

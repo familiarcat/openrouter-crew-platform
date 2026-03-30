@@ -15,6 +15,7 @@ import {
   TextContent,
 } from '@modelcontextprotocol/sdk/types.js'
 import { createClient } from '@supabase/supabase-js'
+import { PersonaProvider } from './persona-provider.js'
 import { N8nBridge } from './n8n-bridge.js'
 import { z } from 'zod'
 
@@ -38,11 +39,15 @@ export abstract class BaseMCPServer {
   protected supabase: ReturnType<typeof createClient>
   protected agentName: string
   protected agentRole: string
+  protected systemPrompt: string
   protected tools: Map<string, ToolDefinition> = new Map()
 
   constructor(agentName: string, agentRole: string) {
     this.agentName = agentName
     this.agentRole = agentRole
+
+    // Automatically load character persona from crew-identities.md
+    this.systemPrompt = PersonaProvider.getSystemPrompt(agentName);
 
     // Initialize Supabase client
     this.supabase = createClient(
