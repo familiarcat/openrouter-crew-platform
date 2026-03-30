@@ -65,4 +65,59 @@ export class OllamaMCPClient {
       return null;
     }
   }
+
+  /**
+   * Phase 1.5: Local Prompt Engineering (The Prompt Architect)
+   * Transforms raw user problems into detailed engineering briefs locally.
+   */
+  async refinePrompt(problem: string, triage: TriageResult): Promise<string> {
+    try {
+      const architectPrompt = `
+<system_role>
+You are the Crew Prompt Architect. Your goal is to expand a user task into a high-fidelity technical execution brief.
+</system_role>
+
+<context>
+Target Agent: ${triage.agentId}
+Complexity Level: ${triage.complexity}
+Character Personas: Reflected in domains/shared/crew-identities.md
+</context>
+
+<task>
+Refine the user problem into a structured command. Use technical Star Trek terminology where appropriate.
+Include specific execution steps and expected output formats.
+Return ONLY a JSON object with the key "refined_prompt".
+</task>
+
+<few_shot_example>
+User Input: "Deploy the latest dashboard build to production."
+Target Agent: chief_obrien
+JSON Output: {
+  "refined_prompt": "CHIEF O'BRIEN: Initiating deployment sequence for Unified Dashboard. 1. Run Level 4 diagnostic on current production containers to establish baseline telemetry. 2. Re-route traffic through the standby ALB buffer to ensure zero-downtime transition. 3. Purge the CloudFront plasma conduits (CDN cache invalidation). 4. Inject the standalone container image into the ECS Fargate clusters. 5. Monitor logs for any heap-memory fluctuations or handshake failures. Report readiness status to the bridge once throughput stabilizes."
+}
+</few_shot_example>
+`;
+
+      const response = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            { role: 'system', content: architectPrompt },
+            { role: 'user', content: problem }
+          ],
+          stream: false,
+          format: 'json'
+        })
+      });
+
+      if (!response.ok) return problem;
+      const result = await response.json();
+      return JSON.parse(result.message?.content || '{}').refined_prompt || problem;
+    } catch (error) {
+      console.error('[OllamaMCPClient] Refinement failed:', error);
+      return problem;
+    }
+  }
 }

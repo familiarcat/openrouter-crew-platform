@@ -256,7 +256,7 @@ export class CrewOrchestrator {
       messages: [
         { 
           role: 'system', 
-          content: 'You are the Crew Triage Controller. Analyze the task and return a JSON object with: agentId (captain_picard, commander_data, worf, geordi_la_forge, counselor_troi, crusher, quark, uhura, chief_obrien, commander_riker), complexity (LOW, MEDIUM, HIGH), and recommendedModel (haiku, sonnet, opus).' 
+          content: 'You are the Crew Triage Controller. Analyze the task and return a JSON object with: agentId (captain_picard, commander_data, worf, geordi_la_forge, counselor_troi, crusher, quark, uhura, chief_obrien, commander_riker), complexity (LOW, MEDIUM, HIGH), and recommendedModel (cheap, balanced, powerful).' 
         },
         { role: 'user', content: problem }
       ],
@@ -264,6 +264,22 @@ export class CrewOrchestrator {
     });
 
     return JSON.parse(response.choices[0].message.content || '{}') as TriageResult;
+  }
+
+  /**
+   * Phase 1.5: Local Prompt Engineering
+   * Uses local Ollama to expand the user problem into a high-fidelity
+   * engineering brief. This reduces the need for external reasoning iterations.
+   */
+  private async refineTaskPrompt(problem: string, triage: TriageResult): Promise<string> {
+    if (process.env.USE_LOCAL_PROMPT_ENG === 'true') {
+      const isOllamaUp = await this.ollamaClient.isAvailable();
+      if (isOllamaUp) {
+        console.log(`🧠 Locally architecting prompt for ${triage.agentId}...`);
+        return await this.ollamaClient.refinePrompt(problem, triage);
+      }
+    }
+    return problem;
   }
 
   /**
@@ -278,16 +294,19 @@ export class CrewOrchestrator {
     const triage = await this.triageTask(problem);
     console.log(`📊 Triage complete: Agent [${triage.agentId}] at ${triage.complexity} complexity.`);
 
+    // 1.5 Refine prompt locally to minimize external token usage
+    const refinedProblem = await this.refineTaskPrompt(problem, triage);
+
     const tools = await this.getAvailableTools()
     
-    // 2. Map complexity to OpenRouter IDs
+    // 2. Map complexity to OpenRouter IDs (LLM Agnostic)
     const modelMap: Record<string, string> = {
-      'haiku': 'anthropic/claude-3-haiku',
-      'sonnet': 'anthropic/claude-3.5-sonnet',
-      'opus': 'anthropic/claude-3-opus'
+      'cheap': process.env.MODEL_CHEAP || 'anthropic/claude-3-haiku',
+      'balanced': process.env.MODEL_MID || 'anthropic/claude-3.5-sonnet',
+      'powerful': process.env.MODEL_POWERFUL || 'anthropic/claude-3-opus'
     };
     
-    const selectedModel = modelMap[triage.recommendedModel] || modelMap.sonnet;
+    const selectedModel = modelMap[triage.recommendedModel.toLowerCase()] || modelMap.balanced;
 
     // 3. Load the specific Agent Persona for the system prompt
     const agentPersona = PersonaProvider.getSystemPrompt(triage.agentId);
@@ -299,7 +318,7 @@ export class CrewOrchestrator {
       },
       {
         role: 'user',
-        content: problem
+        content: refinedProblem
       }
     ]
 
@@ -379,7 +398,7 @@ export class CrewOrchestrator {
       findings,
       triage,
       metadata: {
-        tokens_used: response.usage?.total_tokens || 0,
+        tokens_used: (response as any).usage?.total_tokens || 0,
         model: selectedModel,
         execution_time_ms: executionTime
       }
@@ -390,90 +409,58 @@ export class CrewOrchestrator {
    * Execute a tool (simulated)
    */
   private async executeTool(toolName: string, input: any): Promise<any> {
-    // In production, this would call the actual MCP server
-    // For now, return simulated results
+    const agentName = this.getAgentForTool(toolName).toLowerCase();
+    const agent = this.agents.get(agentName);
 
-    switch (toolName) {
-      case 'analyze-costs':
-        return {
-          success: true,
-          data: {
-            total_cost: 1980.5,
-            cost_per_call: 0.00198,
-            top_cost_drivers: [
-              { name: 'claude-3.5-sonnet', cost: 1200, count: 450 },
-              { name: 'claude-3.5-haiku', cost: 380, count: 2100 }
-            ],
-            optimization_opportunities: [
-              'Use Haiku for 60% of simple queries - potential $480/week savings',
-              'Implement caching for repeated queries - potential 20-40% reduction',
-              'Batch process overnight requests - potential 15% reduction'
-            ]
-          }
-        }
-
-      case 'forecast-costs':
-        return {
-          success: true,
-          data: {
-            scenario: input.assume_change || 'no-change',
-            projected_monthly_cost: 8430,
-            days_until_budget_hit: 45,
-            trend: 'stable'
-          }
-        }
-
-      case 'calculate-roi':
-        return {
-          success: true,
-          data: {
-            annual_savings: 24960,
-            payback_period_days: 14,
-            roi_percentage: 249.6
-          }
-        }
-
-      case 'verify-compliance':
-        return {
-          success: true,
-          data: {
-            compliant: true,
-            compliance_score: '100%',
-            status: 'COMPLIANT'
-          }
-        }
-
-      case 'assess-risks':
-        return {
-          success: true,
-          data: {
-            risk_level: 'MEDIUM',
-            critical_risks: 0,
-            high_risks: 1,
-            mitigations: [
-              'Test accuracy on sample data',
-              'Implement gradual rollout',
-              'Monitor error rates closely'
-            ]
-          }
-        }
-
-      case 'check-policy-adherence':
-        return {
-          success: true,
-          data: {
-            adheres: true,
-            violations: [],
-            approval_status: 'APPROVED'
-          }
-        }
-
-      default:
-        return {
-          success: false,
-          error: `Unknown tool: ${toolName}`
-        }
+    if (!agent || !agent.process) {
+      return { success: false, error: `Agent ${agentName} is not running.` };
     }
+
+    console.log(`📡 Sending tool call [${toolName}] to real agent [${agentName}]`);
+
+    return new Promise((resolve) => {
+      const requestId = Date.now();
+      const request = JSON.stringify({
+        jsonrpc: '2.0',
+        id: requestId,
+        method: 'tools/call',
+        params: { name: toolName, arguments: input }
+      }) + '\n';
+
+      const timer = setTimeout(() => {
+        cleanup();
+        resolve({ success: false, error: `Timeout calling tool ${toolName} on agent ${agentName}` });
+      }, 30000);
+
+      const onData = (data: Buffer) => {
+        const chunk = data.toString();
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const response = JSON.parse(line);
+            if (response.id === requestId) {
+              cleanup();
+              const result = response.result?.content?.[0]?.text;
+              if (result) {
+                try { resolve(JSON.parse(result)); } catch { resolve(result); }
+              } else {
+                resolve(response.result || response.error);
+              }
+              break;
+            }
+          } catch (e) { /* Ignore partials/logs on stdout */ }
+        }
+      };
+
+      const cleanup = () => {
+        clearTimeout(timer);
+        agent.process?.stdout?.removeListener('data', onData);
+      };
+
+      agent.process.stdout?.on('data', onData);
+      agent.process.stdin?.write(request);
+    });
   }
 
   /**

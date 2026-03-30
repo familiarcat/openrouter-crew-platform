@@ -5,7 +5,18 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "start:captain_picard": "node dist/mcp/mcp-runner.js captain_picard",
+    "start:commander_riker": "node dist/mcp/mcp-runner.js commander_riker",
+    "start:commander_data": "node dist/mcp/mcp-runner.js commander_data",
+    "start:geordi_la_forge": "node dist/mcp/mcp-runner.js geordi_la_forge",
+    "start:worf": "node dist/mcp/mcp-runner.js worf",
+    "start:crusher": "node dist/mcp/mcp-runner.js crusher",
+    "start:quark": "node dist/mcp/mcp-runner.js quark",
+    "start:chief_obrien": "node dist/mcp/mcp-runner.js chief_obrien",
+    "start:uhura": "node dist/mcp/mcp-runner.js uhura",
+    "start:counselor_troi": "node dist/mcp/mcp-runner.js counselor_troi",
+    "start:data": "node dist/mcp/mcp-runner.js data"
   },
   "dependencies": {
     "@openrouter-crew/shared-crew-coordination": "workspace:*",
