@@ -15,6 +15,8 @@ import {
   TextContent,
 } from '@modelcontextprotocol/sdk/types.js'
 import { createClient } from '@supabase/supabase-js'
+import Redis from 'ioredis'
+import crypto from 'crypto'
 import { PersonaProvider } from './persona-provider.js'
 import { N8nBridge } from './n8n-bridge.js'
 import { z } from 'zod'
@@ -41,6 +43,7 @@ export abstract class BaseMCPServer {
   protected agentRole: string
   protected systemPrompt: string
   protected tools: Map<string, ToolDefinition> = new Map()
+  protected redis: Redis
 
   constructor(agentName: string, agentRole: string) {
     this.agentName = agentName
@@ -54,6 +57,11 @@ export abstract class BaseMCPServer {
       process.env.SUPABASE_URL || '',
       process.env.SUPABASE_ANON_KEY || ''
     )
+
+    // Initialize Redis client for agent-driven caching
+    const redisPassword = process.env.REDIS_PASSWORD || 'redis'
+    const redisHost = process.env.REDIS_HOST || 'localhost'
+    this.redis = new Redis(`redis://:${redisPassword}@${redisHost}:6379`)
 
     // Initialize MCP server
     this.server = new Server({
@@ -314,6 +322,50 @@ export abstract class BaseMCPServer {
       })
     }
     this.registerTool(N8nBridge.toTool(createKnowledgeWorkflow) as ToolDefinition) // Cast to ToolDefinition
+
+    // Admiral's Directive: Agent-Driven Redis Tools
+    this.registerTool({
+      name: 'cache-agreed-solution',
+      description: 'Store a validated solution in the high-speed Redis cache for future retrieval.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          problem: { type: 'string', description: 'The objective that was solved' },
+          solution: { type: 'object', description: 'The full structured result' },
+          ttl: { type: 'number', description: 'Expiry in seconds (default 24h)', default: 86400 }
+        },
+        required: ['problem', 'solution']
+      },
+      handler: async (args: any) => {
+        const { problem, solution, ttl = 86400 } = args
+        const key = `solution:${crypto.createHash('sha256').update(problem).digest('hex')}`
+        try {
+          await this.redis.set(key, JSON.stringify(solution), 'EX', ttl)
+          return { success: true, data: { key, status: 'cached' } }
+        } catch (err: any) {
+          return { success: false, error: `Redis write failed: ${err.message}` }
+        }
+      }
+    })
+
+    this.registerTool({
+      name: 'retrieve-cached-solution',
+      description: 'Query the high-speed Redis cache for an existing solution to a mission objective.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          problem: { type: 'string', description: 'The objective to look up' }
+        },
+        required: ['problem']
+      },
+      handler: async (args: any) => {
+        const { problem } = args
+        const key = `solution:${crypto.createHash('sha256').update(problem).digest('hex')}`
+        const data = await this.redis.get(key)
+        if (!data) return { success: false, error: 'No cached solution found.' }
+        return { success: true, data: JSON.parse(data) }
+      }
+    })
   }
 
   /**

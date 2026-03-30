@@ -288,6 +288,10 @@ export class CrewOrchestrator {
   async solveProblem(problem: string): Promise<OrchestratorResponse> {
     console.log(`\n🎯 Problem: ${problem}\n`)
 
+    // 0. Check Cache First (The Latinum Shield)
+    const cachedResponse = await this.checkCache(problem)
+    if (cachedResponse) return cachedResponse
+
     const startTime = Date.now()
     
     // 1. Run Triage to optimize model selection and cost
@@ -392,7 +396,7 @@ export class CrewOrchestrator {
 
     const executionTime = Date.now() - startTime
 
-    return {
+    const result: OrchestratorResponse = {
       success: true,
       synthesis,
       findings,
@@ -403,6 +407,14 @@ export class CrewOrchestrator {
         execution_time_ms: executionTime
       }
     }
+
+    // Cache results for complex tasks to hit $1.50 target on repeat requests
+    if (result.success && triage.complexity !== 'LOW') {
+      const cacheKey = `solution:${crypto.createHash('sha256').update(problem).digest('hex')}`
+      await this.redis.set(cacheKey, JSON.stringify(result), 'EX', 86400) // 24 hour TTL
+    }
+
+    return result
   }
 
   /**

@@ -16,7 +16,9 @@
     "start:chief_obrien": "node dist/mcp/mcp-runner.js chief_obrien",
     "start:uhura": "node dist/mcp/mcp-runner.js uhura",
     "start:counselor_troi": "node dist/mcp/mcp-runner.js counselor_troi",
-    "start:data": "node dist/mcp/mcp-runner.js data"
+    "start:data": "node dist/mcp/mcp-runner.js data",
+    "scout:leads": "tsx src/scout-leads.ts",
+    "architect-ui": "tsx src/architect-ui.ts"
   },
   "dependencies": {
     "@openrouter-crew/shared-crew-coordination": "workspace:*",
@@ -27,6 +29,7 @@
     "@supabase/supabase-js": "^2.47.10"
   },
   "devDependencies": {
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3",
     "@types/node": "^20.12.7"
   }

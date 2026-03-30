@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ConstructorEventSchema } from '../../../../types/constructor';
+import { ConstructorEventSchema } from '@openrouter-crew/shared-schemas';
 import { verifySignature } from '../../../lib/hmac';
 import { triggerWebhookWithHeaders } from '../../../lib/n8n-client';
 
@@ -38,5 +38,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err?.message || 'forward failed' }, { status: 502 });
   }
 }
-
-

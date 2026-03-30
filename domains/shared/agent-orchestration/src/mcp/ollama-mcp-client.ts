@@ -96,6 +96,13 @@ JSON Output: {
   "refined_prompt": "CHIEF O'BRIEN: Initiating deployment sequence for Unified Dashboard. 1. Run Level 4 diagnostic on current production containers to establish baseline telemetry. 2. Re-route traffic through the standby ALB buffer to ensure zero-downtime transition. 3. Purge the CloudFront plasma conduits (CDN cache invalidation). 4. Inject the standalone container image into the ECS Fargate clusters. 5. Monitor logs for any heap-memory fluctuations or handshake failures. Report readiness status to the bridge once throughput stabilizes."
 }
 </few_shot_example>
+<few_shot_example>
+User Input: "Generate a lead-capture strategy for a new STL restaurant."
+Target Agent: quark
+JSON Output: {
+  "refined_prompt": "QUARK: Analyzing the Latinum-flow for the STL market. 1. Use Data Agent to scrape local hospitality permits for the 'Awareness' stage leads. 2. Design a 'Consideration' funnel using Counselor Troi's sentiment analysis on competitor reviews. 3. Architect an automated 'Action' trigger via n8n that delivers a personalized ROI-based business plan to the lead. 4. Ensure the total token cost per outreach remains under 500 units to preserve our margins."
+}
+</few_shot_example>
 `;
 
       const response = await fetch(`${this.baseUrl}/api/chat`, {

@@ -15,6 +15,7 @@ echo -e "${GREEN}==> Starting OpenRouter Crew Platform Local Setup <==${NC}"
 # 1. Check Prerequisites
 echo "Checking prerequisites..."
 command -v docker >/dev/null 2>&1 || { echo -e "${RED}Error: docker is required.${NC}" >&2; exit 1; }
+docker info >/dev/null 2>&1 || { echo -e "${RED}Error: Docker is not running. Please start the Docker daemon.${NC}" >&2; exit 1; }
 command -v pnpm >/dev/null 2>&1 || { echo -e "${RED}Error: pnpm is required.${NC}" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo -e "${RED}Error: python3 is required.${NC}" >&2; exit 1; }
 

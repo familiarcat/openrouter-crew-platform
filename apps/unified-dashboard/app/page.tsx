@@ -1,151 +1,110 @@
 'use client';
 
-import React from 'react';
-import { DOMAINS, MOCK_PROJECTS, MOCK_ACTIVITY, getDomainStats } from '@/lib/unified-mock-data';
-import Link from 'next/link';
+import React, { useState } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { SovereignAgentViewport } from '@openrouter-crew/shared-ui-components';
+import { DeploymentLogList } from '@/components/DeploymentLogList';
+import { useOrchestration } from '@/hooks/useOrchestration';
+import { Loader2, Zap, AlertCircle } from 'lucide-react';
 
-export default function DashboardHome() {
-  const totalBudget = MOCK_PROJECTS.reduce((sum, p) => sum + p.budget.allocated, 0);
-  const totalSpent = MOCK_PROJECTS.reduce((sum, p) => sum + p.budget.spent, 0);
-  const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'active').length;
+export default function HomePage() {
+  const [problemInput, setProblemInput] = useState('');
+  const { data, isLoading, error, solveProblem, reset } = useOrchestration();
+
+  const handleAnalyzeCodebase = async () => {
+    const codebaseAnalysisPrompt = `
+      Perform a comprehensive analysis of the OpenRouter Crew Platform codebase.
+      Focus on identifying:
+      1. Domain-Driven Design (DDD) boundary adherence.
+      2. Opportunities for cost optimization in LLM calls.
+      3. Gaps in local development and testing readiness.
+      4. Potential security vulnerabilities or protocol violations (Dark Forest).
+      5. Recommendations for improving agent coordination and prompt engineering.
+      
+      Synthesize your findings into a structured report, highlighting key areas for improvement.
+    `;
+    await solveProblem(codebaseAnalysisPrompt);
+  };
+
+  // Determine active agent for display
+  const activeAgentId = data?.triage?.agentId || 'orchestrator';
+  const activeAgentName = activeAgentId.split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
 
   return (
-    <div suppressHydrationWarning className="p-8 max-w-7xl mx-auto">
-      <header className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Platform Overview</h1>
-          <p className="text-gray-400">Real-time metrics across all domains</p>
-        </div>
-        <Link 
-          href="/projects/new"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-        >
-          <span>+</span> New Project
-        </Link>
-      </header>
-
-      {/* High-level Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <MetricCard title="Total Projects" value={MOCK_PROJECTS.length} trend="+2 this week" />
-        <MetricCard title="Active Workstreams" value={activeProjects} trend="Stable" />
-        <MetricCard title="Budget Utilization" value={`${Math.round((totalSpent / totalBudget) * 100)}%`} trend={`$${totalSpent.toLocaleString()} spent`} />
-        <MetricCard title="System Health" value="99.8%" trend="All systems operational" color="text-green-400" />
-      </div>
-
-      {/* Domain Grid */}
-      <h2 className="text-xl font-semibold text-white mb-4">Domain Status</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {DOMAINS.map(domain => {
-          const stats = getDomainStats(domain.id);
-          return (
-            <div key={domain.id} className="bg-[#16181d] border border-white/10 rounded-xl p-6 hover:border-white/20 transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${domain.color} flex items-center justify-center text-white font-bold`}>
-                    {domain.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white">{domain.name}</h3>
-                    <div className="text-xs text-gray-500">Port {domain.port}</div>
-                  </div>
-                </div>
-                <div className="px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded-full border border-green-500/20">
-                  Healthy
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Active Projects</span>
-                  <span className="text-white font-mono">{stats.activeCount}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Budget Used</span>
-                  <span className="text-white font-mono">{Math.round(stats.budgetUtilization)}%</span>
-                </div>
-                <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div 
-                    className={`h-full bg-gradient-to-r ${domain.color}`} 
-                    style={{ width: `${stats.budgetUtilization}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+    <DashboardLayout>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Projects */}
-        <div className="lg:col-span-2">
-          <h2 className="text-xl font-semibold text-white mb-4">Recent Projects</h2>
-          <div className="bg-[#16181d] border border-white/10 rounded-xl overflow-hidden">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-white/5 text-gray-400">
-                <tr>
-                  <th className="p-4 font-medium">Project Name</th>
-                  <th className="p-4 font-medium">Domain</th>
-                  <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium text-right">Budget</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {MOCK_PROJECTS.map(project => (
-                  <tr key={project.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4">
-                      <div className="font-medium text-white">{project.name}</div>
-                      <div className="text-xs text-gray-500">{project.description}</div>
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2 py-1 bg-white/5 rounded text-xs text-gray-300 border border-white/10">
-                        {DOMAINS.find(d => d.id === project.domainId)?.name}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className={`capitalize ${project.status === 'active' ? 'text-green-400' : 'text-gray-400'}`}>
-                        {project.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right font-mono text-gray-300" suppressHydrationWarning>
-                      ${project.budget.spent.toLocaleString()} / ${project.budget.allocated.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Main Orchestration Panel */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="p-6 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
+            <h2 className="text-xl font-bold text-white mb-4">Mission Control</h2>
+            <textarea
+              className="w-full p-3 bg-black/20 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              rows={4}
+              placeholder="Enter your mission objective for the crew..."
+              value={problemInput}
+              onChange={(e) => setProblemInput(e.target.value)}
+              disabled={isLoading}
+            />
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={reset}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-gray-300 transition-colors disabled:opacity-50"
+                disabled={isLoading}
+              >
+                Clear Mission
+              </button>
+              <button
+                onClick={handleAnalyzeCodebase}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin inline-block mr-2" />
+                ) : (
+                  <Zap className="w-4 h-4 inline-block mr-2" />
+                )}
+                Analyze Codebase
+              </button>
+            </div>
+
+            {isLoading && (
+              <div className="mt-4 flex items-center gap-2 text-blue-400">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Orchestrator is engaging the crew...</span>
+              </div>
+            )}
+            {error && (
+              <div className="mt-4 flex items-center gap-2 text-red-400">
+                <AlertCircle className="w-4 h-4" />
+                <span>Error: {error}</span>
+              </div>
+            )}
           </div>
+
+          {/* Sovereign Agent Viewport */}
+          {data && (
+            <SovereignAgentViewport
+              agentName={activeAgentName}
+              agentId={activeAgentId}
+              status={data.success ? 'SUCCESS' : 'ERROR'}
+              streamContent={data.synthesis}
+              metadata={{
+                model: data.metadata.model,
+                tokensUsed: data.metadata.tokens_used,
+                cost: data.metadata.cost, // Assuming cost is added to metadata
+                executionTimeMs: data.metadata.execution_time_ms,
+              }}
+              isActive={true}
+            />
+          )}
         </div>
 
-        {/* Activity Feed */}
-        <div>
-          <h2 className="text-xl font-semibold text-white mb-4">Live Activity</h2>
-          <div className="bg-[#16181d] border border-white/10 rounded-xl p-4 space-y-4">
-            {MOCK_ACTIVITY.map(event => (
-              <div key={event.id} className="flex gap-3 items-start pb-4 border-b border-white/5 last:border-0 last:pb-0">
-                <div className={`w-2 h-2 mt-1.5 rounded-full ${event.type === 'alert' ? 'bg-red-500' : 'bg-blue-500'}`} />
-                <div>
-                  <div className="text-sm text-gray-300">{event.message}</div>
-                  <div className="text-xs text-gray-500 mt-1 flex gap-2">
-                    <span suppressHydrationWarning>{new Date(event.timestamp).toLocaleTimeString()}</span>
-                    <span>•</span>
-                    <span className="uppercase">{event.domainId}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Side Panel: Deployment Logs */}
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <h2 className="text-xl font-bold text-white mb-4">Deployment History</h2>
+          <DeploymentLogList limit={5} />
         </div>
       </div>
-    </div>
-  );
-}
-
-function MetricCard({ title, value, trend, color = "text-white" }: { title: string, value: string | number, trend: string, color?: string }) {
-  return (
-    <div className="bg-[#16181d] border border-white/10 rounded-xl p-6">
-      <div className="text-gray-400 text-sm mb-2">{title}</div>
-      <div className={`text-3xl font-bold mb-1 ${color}`} suppressHydrationWarning>{value}</div>
-      <div className="text-xs text-gray-500" suppressHydrationWarning>{trend}</div>
-    </div>
+    </DashboardLayout>
   );
 }

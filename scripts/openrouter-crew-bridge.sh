@@ -131,15 +131,16 @@ collect_from_file() {
     for entry in "${VAR_MAP[@]}"; do
       IFS='|' read -ra parts <<< "$entry"
       local canonical="${parts[0]}"
-      [[ -n "${RESOLVED[$canonical]:-}" ]] && continue  # already resolved (higher priority)
+      local res_var="RESOLVED_$canonical"
+      [[ -n "${!res_var:-}" ]] && continue  # already resolved (higher priority)
       # Check only Canonical, Alt1, and Alt2 indices
       for i in 0 1 2; do
         local candidate="${parts[$i]:-}"
         [[ -z "$candidate" || "$candidate" == *" "* ]] && continue
         if [[ "$key" == "$candidate" ]]; then
-          RESOLVED["$canonical"]="$val"
-          SOURCES["$canonical"]="$label"
-          MAPPING["$canonical"]="$key"
+          eval "RESOLVED_$canonical=\"\$val\""
+          eval "SOURCES_$canonical=\"\$label\""
+          eval "MAPPING_$canonical=\"\$key\""
           break
         fi
       done
@@ -152,18 +153,18 @@ collect_from_aws() {
   local aws_creds="$HOME/.aws/credentials"
   local aws_config="$HOME/.aws/config"
 
-  if [[ -f "$aws_creds" ]] && [[ -z "${RESOLVED[AWS_ACCESS_KEY_ID]:-}" ]]; then
+  if [[ -f "$aws_creds" ]] && [[ -z "${RESOLVED_AWS_ACCESS_KEY_ID:-}" ]]; then
     local key_id secret
     key_id=$(grep -A2 '^\[default\]' "$aws_creds" 2>/dev/null | grep 'aws_access_key_id' | cut -d= -f2 | tr -d ' ' || echo "")
     secret=$(grep -A3 '^\[default\]' "$aws_creds" 2>/dev/null | grep 'aws_secret_access_key' | cut -d= -f2 | tr -d ' ' || echo "")
-    [[ -n "$key_id" ]] && { RESOLVED["AWS_ACCESS_KEY_ID"]="$key_id"; SOURCES["AWS_ACCESS_KEY_ID"]="~/.aws/credentials"; }
-    [[ -n "$secret" ]] && { RESOLVED["AWS_SECRET_ACCESS_KEY"]="$secret"; SOURCES["AWS_SECRET_ACCESS_KEY"]="~/.aws/credentials"; }
+    [[ -n "$key_id" ]] && { eval "RESOLVED_AWS_ACCESS_KEY_ID=\"\$key_id\""; eval "SOURCES_AWS_ACCESS_KEY_ID='~/.aws/credentials'"; }
+    [[ -n "$secret" ]] && { eval "RESOLVED_AWS_SECRET_ACCESS_KEY=\"\$secret\""; eval "SOURCES_AWS_SECRET_ACCESS_KEY='~/.aws/credentials'"; }
   fi
 
-  if [[ -f "$aws_config" ]] && [[ -z "${RESOLVED[AWS_DEFAULT_REGION]:-}" ]]; then
+  if [[ -f "$aws_config" ]] && [[ -z "${RESOLVED_AWS_DEFAULT_REGION:-}" ]]; then
     local region
     region=$(grep -A5 '^\[default\]' "$aws_config" 2>/dev/null | grep 'region' | cut -d= -f2 | tr -d ' ' || echo "")
-    [[ -n "$region" ]] && { RESOLVED["AWS_DEFAULT_REGION"]="$region"; SOURCES["AWS_DEFAULT_REGION"]="~/.aws/config"; }
+    [[ -n "$region" ]] && { eval "RESOLVED_AWS_DEFAULT_REGION=\"\$region\""; eval "SOURCES_AWS_DEFAULT_REGION='~/.aws/config'"; }
   fi
 }
 
@@ -184,6 +185,21 @@ collect_all() {
   collect_from_aws
 }
 
+ensure_generated_secrets() {
+  # Auto-generate N8N_WEBHOOK_SECRET if not found in any source
+  if [[ -z "${RESOLVED_N8N_WEBHOOK_SECRET:-}" ]]; then
+    local new_secret
+    if command -v openssl &>/dev/null; then
+      new_secret=$(openssl rand -hex 16)
+    else
+      new_secret=$(LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 32 | head -n 1)
+    fi
+    eval "RESOLVED_N8N_WEBHOOK_SECRET=\"\$new_secret\""
+    eval "SOURCES_N8N_WEBHOOK_SECRET='auto-generated'"
+    eval "MAPPING_N8N_WEBHOOK_SECRET='N8N_WEBHOOK_SECRET'"
+  fi
+}
+
 # ════════════════════════════════════════════════════════════
 #  AUDIT — print full resolution report
 # ════════════════════════════════════════════════════════════
@@ -199,14 +215,17 @@ audit() {
     local canonical="${parts[0]}"
     local desc="${parts[4]:-unknown}"
     local required_for="${parts[5]:-}"
+    local res_var="RESOLVED_$canonical"
+    local src_var="SOURCES_$canonical"
+    local map_var="MAPPING_$canonical"
     # Handle 5-element vs 6-element entries
     [[ "${#parts[@]}" -eq 5 ]] && { desc="${parts[3]}"; required_for="${parts[4]}"; }
     [[ "${#parts[@]}" -eq 6 ]] && { desc="${parts[4]}"; required_for="${parts[5]}"; }
 
-    if [[ -n "${RESOLVED[$canonical]:-}" ]]; then
-      local val="${RESOLVED[$canonical]}"
-      local src="${SOURCES[$canonical]:-unknown}"
-      local mapped="${MAPPING[$canonical]:-$canonical}"
+    if [[ -n "${!res_var:-}" ]]; then
+      local val="${!res_var}"
+      local src="${!src_var:-unknown}"
+      local mapped="${!map_var:-$canonical}"
       # Mask sensitive values
       local masked
       if [[ ${#val} -gt 8 ]]; then
@@ -265,10 +284,11 @@ write_env_local() {
       local canonical="${parts[0]}"
       local desc
       [[ "${#parts[@]}" -eq 5 ]] && desc="${parts[3]}" || desc="${parts[4]}"
+      local res_var="RESOLVED_$canonical"
 
       echo "# $desc"
-      if [[ -n "${RESOLVED[$canonical]:-}" ]]; then
-        echo "$canonical=\"${RESOLVED[$canonical]}\""
+      if [[ -n "${!res_var:-}" ]]; then
+        echo "$canonical=\"${!res_var}\""
       else
         echo "# $canonical=  # NOT FOUND — set this manually"
       fi
@@ -292,12 +312,16 @@ source_mode() {
   for entry in "${VAR_MAP[@]}"; do
     IFS='|' read -ra parts <<< "$entry"
     local canonical="${parts[0]}"
-    [[ -n "${RESOLVED[$canonical]:-}" ]] && \
-      printf "export %s=%q\n" "$canonical" "${RESOLVED[$canonical]}"
+    local res_var="RESOLVED_$canonical"
+    [[ -n "${!res_var:-}" ]] && \
+      printf "export %s=%q\n" "$canonical" "${!res_var}"
   done
-  # Data's fix: Export generation flags for automation scripts
-  for canonical in "${!SOURCES[@]}"; do
-    [[ "${SOURCES[$canonical]}" == "auto-generated" ]] && printf "export %s_IS_GENERATED=true\n" "$canonical"
+  # Data's fix: Export generation flags for automation scripts (Bash 3 compatible)
+  for entry in "${VAR_MAP[@]}"; do
+    IFS='|' read -ra parts <<< "$entry"
+    local canonical="${parts[0]}"
+    local src_var="SOURCES_$canonical"
+    [[ "${!src_var:-}" == "auto-generated" ]] && printf "export %s_IS_GENERATED=true\n" "$canonical"
   done
 }
 
@@ -317,9 +341,10 @@ fix_zshrc() {
     local canonical="${parts[0]}"
     local required_for="${parts[${#parts[@]}-1]}"
     local desc
+    local res_var="RESOLVED_$canonical"
     [[ "${#parts[@]}" -eq 5 ]] && desc="${parts[3]}" || desc="${parts[4]}"
 
-    [[ -n "${RESOLVED[$canonical]:-}" ]] && continue
+    [[ -n "${!res_var:-}" ]] && continue
     [[ "$required_for" == "optional" ]] && continue
 
     block+="# $desc\n"
@@ -346,6 +371,7 @@ fix_zshrc() {
 #  MAIN
 # ════════════════════════════════════════════════════════════
 collect_all
+ensure_generated_secrets
 
 case "$MODE" in
   --audit|audit)       audit ;;
