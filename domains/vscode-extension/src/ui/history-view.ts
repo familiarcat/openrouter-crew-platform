@@ -64,14 +64,24 @@ export class HistoryView {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interaction History</title>
     <style>
+        :root {
+            /* Universal Dark Theme Variable Mapping */
+            --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
+            --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
+            --color-text-primary: var(--vscode-editor-foreground, #cccccc);
+            --color-text-secondary: var(--vscode-descriptionForeground, #858585);
+            --color-border: var(--vscode-widget-border, #3e3e42);
+            --color-primary-500: var(--vscode-textLink-foreground, #3b82f6);
+        }
+
         body {
             font-family: var(--vscode-font-family);
             padding: 20px;
-            color: var(--vscode-editor-foreground);
-            background-color: var(--vscode-editor-background);
+            color: var(--color-text-primary);
+            background-color: var(--color-bg-primary);
         }
         h1 {
-            color: var(--vscode-textLink-foreground);
+            color: var(--color-primary-500);
             margin-bottom: 20px;
         }
         .history-list {
@@ -80,8 +90,8 @@ export class HistoryView {
             gap: 10px;
         }
         .history-item {
-            background-color: var(--vscode-editor-inactiveSelectionBackground);
-            border: 1px solid var(--vscode-widget-border);
+            background-color: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
             border-radius: 5px;
             padding: 10px;
         }
@@ -92,13 +102,13 @@ export class HistoryView {
             font-weight: bold;
         }
         .intent {
-            color: var(--vscode-textLink-foreground);
+            color: var(--color-primary-500);
             text-transform: uppercase;
             font-size: 0.9em;
         }
         .time {
             font-size: 0.9em;
-            opacity: 0.8;
+            color: var(--color-text-secondary);
         }
         .details {
             display: flex;
@@ -111,7 +121,7 @@ export class HistoryView {
             gap: 5px;
         }
         .label {
-            opacity: 0.7;
+            color: var(--color-text-secondary);
         }
     </style>
 </head>

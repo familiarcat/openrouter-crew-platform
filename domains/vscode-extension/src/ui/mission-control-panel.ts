@@ -24,11 +24,11 @@ export class MissionControlPanel {
         }, null, this._disposables);
     }
 
-    public static createOrShow(extensionUri: vscode.Uri, agentNetwork: AgentNetworkService, costTracker: CostTracker) {
-        const column = vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.One;
+    public static createOrShow(extensionUri: vscode.Uri, agentNetwork: AgentNetworkService, costTracker: CostTracker, column?: vscode.ViewColumn) {
+        const targetColumn = column || vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.One;
 
         if (MissionControlPanel.currentPanel) {
-            MissionControlPanel.currentPanel._panel.reveal(column);
+            MissionControlPanel.currentPanel._panel.reveal(targetColumn);
             MissionControlPanel.currentPanel._update();
             return;
         }
@@ -36,7 +36,7 @@ export class MissionControlPanel {
         const panel = vscode.window.createWebviewPanel(
             MissionControlPanel.viewType,
             'Mission Control',
-            column,
+            targetColumn,
             { enableScripts: true, localResourceRoots: [extensionUri] }
         );
 
@@ -73,14 +73,33 @@ export class MissionControlPanel {
         <head>
             <meta charset="UTF-8">
             <style>
-                body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-editor-foreground); }
-                .card { background: var(--vscode-editor-inactiveSelectionBackground); border: 1px solid var(--vscode-widget-border); padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+                :root {
+                    /* Universal Dark Theme Variable Mapping */
+                    --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
+                    --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
+                    --color-bg-tertiary: var(--vscode-sideBar-background, #2d2d30);
+                    --color-text-primary: var(--vscode-editor-foreground, #cccccc);
+                    --color-text-secondary: var(--vscode-descriptionForeground, #858585);
+                    --color-border: var(--vscode-widget-border, #3e3e42);
+                    --color-primary-500: var(--vscode-textLink-foreground, #3b82f6);
+                    --color-success: #10b981;
+                    --color-warning: #f59e0b;
+                    --color-error: #ef4444;
+                }
+
+                body { 
+                    font-family: var(--vscode-font-family); 
+                    padding: 20px; 
+                    color: var(--color-text-primary);
+                    background-color: var(--color-bg-primary);
+                }
+                .card { background: var(--color-bg-secondary); border: 1px solid var(--color-border); padding: 15px; border-radius: 5px; margin-bottom: 20px; }
                 .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; }
-                .badge.active { background: #13c313; color: white; }
+                .badge.active { background: var(--color-success); color: white; }
                 .badge.idle { background: #666; color: white; }
-                h2 { color: var(--vscode-textLink-foreground); margin-top: 0; }
-                .label { font-size: 0.8em; opacity: 0.7; text-transform: uppercase; margin-top: 10px; }
-                .value { font-family: var(--vscode-editor-font-family); background: var(--vscode-textCodeBlock-background); padding: 10px; border-radius: 3px; overflow-x: auto; white-space: pre-wrap; margin-top: 5px; border: 1px solid var(--vscode-panel-border); }
+                h2 { color: var(--color-primary-500); margin-top: 0; }
+                .label { font-size: 0.8em; color: var(--color-text-secondary); text-transform: uppercase; margin-top: 10px; }
+                .value { font-family: var(--vscode-editor-font-family); background: var(--vscode-textCodeBlock-background); padding: 10px; border-radius: 3px; overflow-x: auto; white-space: pre-wrap; margin-top: 5px; border: 1px solid var(--color-border); }
                 .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
                 .charts-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 15px; }
                 .chart-container { height: 120px; position: relative; }
@@ -150,6 +169,7 @@ export class MissionControlPanel {
 
                 const data = ${chartData};
                 const trend = ${trendDataJson};
+                const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary-500').trim() || '#569cd6';
 
                 const ctx = document.getElementById('costChart').getContext('2d');
                 new Chart(ctx, {
@@ -158,7 +178,7 @@ export class MissionControlPanel {
                         labels: ['Used', 'Remaining'],
                         datasets: [{
                             data: [data.totalCost, Math.max(0, data.remaining)],
-                            backgroundColor: ['#569cd6', '#333333'],
+                            backgroundColor: [primaryColor, '#333333'],
                             borderWidth: 0
                         }]
                     },
@@ -178,8 +198,8 @@ export class MissionControlPanel {
                         datasets: [{
                             label: 'Cost',
                             data: trend.map(t => t.cost),
-                            borderColor: '#569cd6',
-                            backgroundColor: 'rgba(86, 156, 214, 0.1)',
+                            borderColor: primaryColor,
+                            backgroundColor: primaryColor + '33', // 20% alpha
                             fill: true,
                             tension: 0.4
                         }]

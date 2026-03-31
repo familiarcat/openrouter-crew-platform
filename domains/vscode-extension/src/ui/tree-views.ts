@@ -3,6 +3,7 @@ import { AgentNetworkService } from '../services/agent-network.js';
 import { CostTracker } from '../services/cost-tracker.js';
 import { CrewAPIService } from '../services/crew-api-service.js';
 import { MissionControlPanel } from './mission-control-panel.js';
+import { BridgeController } from './bridge-controller.js';
 
 const agentProfiles = require('../config/agent-profiles.json');
 // --- Project View ---
@@ -23,11 +24,16 @@ class ProjectTreeItem extends vscode.TreeItem {
         command: 'openrouter-crew.project.workbench',
         title: 'Open Project Workbench',
       };
-    }
-    if (project.isMissionControl) {
+    } else if (project.isMissionControl) {
       this.command = {
         command: 'openrouter-crew.missionControl',
         title: 'Open Mission Control',
+      };
+    } else if (project.id) {
+      this.command = {
+        command: 'openrouter-crew.project.engage',
+        title: 'Engage Project',
+        arguments: [project.id]
       };
     }
   }
@@ -287,6 +293,12 @@ export function registerTreeViews(context: vscode.ExtensionContext, agentNetwork
       vscode.commands.registerCommand('openrouter-crew.cost-report.refresh', () => costProvider.refresh()),
       vscode.commands.registerCommand('openrouter-crew.memory-view.refresh', () => memoryProvider.refresh()),
       
+      // Engage Project Command
+      vscode.commands.registerCommand('openrouter-crew.project.engage', (projectId: string) => {
+        const bridge = BridgeController.getInstance(context, agentNetwork, costTracker);
+        void bridge.engageTacticalMode(projectId);
+      }),
+
       // Mission Control Command
       vscode.commands.registerCommand('openrouter-crew.missionControl', () => {
         MissionControlPanel.createOrShow(context.extensionUri, agentNetwork, costTracker);

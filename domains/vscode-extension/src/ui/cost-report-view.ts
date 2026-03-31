@@ -155,14 +155,27 @@ export class CostReportView {
         }
     </script>
     <style>
+        :root {
+            /* Universal Dark Theme Variable Mapping */
+            --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
+            --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
+            --color-text-primary: var(--vscode-editor-foreground, #cccccc);
+            --color-text-secondary: var(--vscode-descriptionForeground, #858585);
+            --color-border: var(--vscode-widget-border, #3e3e42);
+            --color-primary-500: var(--vscode-textLink-foreground, #3b82f6);
+            --color-button-bg: var(--vscode-button-background, #3b82f6);
+            --color-button-hover: var(--vscode-button-hoverBackground, #2563eb);
+            --color-success: #10b981;
+        }
+
         body {
             font-family: var(--vscode-font-family);
             padding: 20px;
-            color: var(--vscode-editor-foreground);
-            background-color: var(--vscode-editor-background);
+            color: var(--color-text-primary);
+            background-color: var(--color-bg-primary);
         }
         h1, h2 {
-            color: var(--vscode-textLink-foreground);
+            color: var(--color-primary-500);
         }
         .metrics-grid {
             display: grid;
@@ -171,18 +184,18 @@ export class CostReportView {
             margin-bottom: 30px;
         }
         .metric-card {
-            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            background-color: var(--color-bg-secondary);
             padding: 15px;
             border-radius: 5px;
             text-align: center;
-            border: 1px solid var(--vscode-widget-border);
+            border: 1px solid var(--color-border);
         }
         .chart-container {
             margin-bottom: 30px;
             padding: 20px;
-            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            background-color: var(--color-bg-secondary);
             border-radius: 5px;
-            border: 1px solid var(--vscode-widget-border);
+            border: 1px solid var(--color-border);
         }
         .metric-value {
             font-size: 1.5em;
@@ -201,16 +214,16 @@ export class CostReportView {
         th, td {
             text-align: left;
             padding: 10px;
-            border-bottom: 1px solid var(--vscode-widget-border);
+            border-bottom: 1px solid var(--color-border);
         }
         th {
-            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            background-color: var(--color-bg-secondary);
         }
         tr:hover {
             background-color: var(--vscode-list-hoverBackground);
         }
         .action-button {
-            background-color: var(--vscode-button-background);
+            background-color: var(--color-button-bg);
             color: var(--vscode-button-foreground);
             border: none;
             padding: 4px 8px;
@@ -220,7 +233,7 @@ export class CostReportView {
             font-size: 0.9em;
         }
         .action-button:hover {
-            background-color: var(--vscode-button-hoverBackground);
+            background-color: var(--color-button-hover);
         }
     </style>
 </head>
@@ -299,6 +312,8 @@ export class CostReportView {
         const labels = sortedDates.map(date => new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
         const data = sortedDates.map(date => dailyCosts[date]);
 
+                const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary-500').trim() || '#4bc0c0';
+
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -306,8 +321,8 @@ export class CostReportView {
                 datasets: [{
                     label: 'Daily Cost (USD)',
                     data: data,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: primaryColor,
+                            backgroundColor: primaryColor + '33',
                     fill: true,
                     tension: 0.1
                 }]
@@ -317,18 +332,18 @@ export class CostReportView {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { color: 'var(--vscode-editor-foreground)' },
-                        grid: { color: 'var(--vscode-widget-border)' }
+                                ticks: { color: 'var(--color-text-primary)' },
+                                grid: { color: 'var(--color-border)' }
                     },
                     x: {
-                        ticks: { color: 'var(--vscode-editor-foreground)' },
-                        grid: { color: 'var(--vscode-widget-border)' }
+                                ticks: { color: 'var(--color-text-primary)' },
+                                grid: { color: 'var(--color-border)' }
                     }
                 },
                 plugins: {
                     legend: {
                         labels: {
-                            color: 'var(--vscode-editor-foreground)'
+                                    color: 'var(--color-text-primary)'
                         }
                     }
                 }

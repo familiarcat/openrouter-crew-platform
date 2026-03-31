@@ -183,6 +183,19 @@ export class CodebaseAnalysisWebview {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Codebase Analysis</title>
   <style>
+    :root {
+        /* Universal Dark Theme Variable Mapping */
+        --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
+        --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
+        --color-text-primary: var(--vscode-editor-foreground, #cccccc);
+        --color-text-secondary: var(--vscode-descriptionForeground, #858585);
+        --color-border: var(--vscode-widget-border, #3e3e42);
+        --color-primary-500: var(--vscode-textLink-foreground, #3b82f6);
+        --color-button-bg: var(--vscode-button-background, #3b82f6);
+        --color-button-hover: var(--vscode-button-hoverBackground, #2563eb);
+        --color-input-bg: var(--vscode-input-background, #3c3c3c);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -192,8 +205,8 @@ export class CodebaseAnalysisWebview {
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
         'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-      color: var(--vscode-foreground);
-      background-color: var(--vscode-editor-background);
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-primary);
       padding: 16px;
       font-size: 12px;
       line-height: 1.5;
@@ -206,8 +219,8 @@ export class CodebaseAnalysisWebview {
     h1 {
       font-size: 18px;
       margin-bottom: 16px;
-      color: var(--vscode-descriptionForeground);
-      border-bottom: 1px solid var(--vscode-widget-border);
+      color: var(--color-text-secondary);
+      border-bottom: 1px solid var(--color-border);
       padding-bottom: 8px;
     }
 
@@ -215,7 +228,7 @@ export class CodebaseAnalysisWebview {
       font-size: 14px;
       margin-top: 16px;
       margin-bottom: 8px;
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
     }
 
     h3 {
@@ -232,7 +245,7 @@ export class CodebaseAnalysisWebview {
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
     }
 
     .metric-grid {
@@ -243,8 +256,8 @@ export class CodebaseAnalysisWebview {
     }
 
     .metric-card {
-      background-color: var(--vscode-input-background);
-      border: 1px solid var(--vscode-widget-border);
+      background-color: var(--color-input-bg);
+      border: 1px solid var(--color-border);
       border-radius: 4px;
       padding: 12px;
       text-align: center;
@@ -253,20 +266,20 @@ export class CodebaseAnalysisWebview {
     .metric-value {
       font-size: 20px;
       font-weight: bold;
-      color: var(--vscode-textLink-foreground);
+      color: var(--color-primary-500);
       margin-bottom: 4px;
     }
 
     .metric-label {
       font-size: 11px;
       text-transform: uppercase;
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
       letter-spacing: 0.5px;
     }
 
     .chart-container {
-      background-color: var(--vscode-input-background);
-      border: 1px solid var(--vscode-widget-border);
+      background-color: var(--color-input-bg);
+      border: 1px solid var(--color-border);
       border-radius: 4px;
       padding: 12px;
       margin-bottom: 16px;
@@ -291,7 +304,7 @@ export class CodebaseAnalysisWebview {
       display: flex;
       align-items: center;
       height: 20px;
-      background-color: var(--vscode-editor-background);
+      background-color: var(--color-bg-primary);
       border-radius: 2px;
       overflow: hidden;
       gap: 4px;
@@ -299,7 +312,7 @@ export class CodebaseAnalysisWebview {
 
     .bar {
       height: 100%;
-      background: linear-gradient(90deg, var(--vscode-textLink-foreground), var(--vscode-buttonBackground));
+      background: linear-gradient(90deg, var(--color-primary-500), var(--color-button-bg));
       border-radius: 2px;
       transition: width 0.3s ease;
     }
@@ -308,7 +321,7 @@ export class CodebaseAnalysisWebview {
       font-size: 10px;
       min-width: 30px;
       text-align: right;
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
     }
 
     .domains-section {
@@ -317,7 +330,7 @@ export class CodebaseAnalysisWebview {
 
     .domain-badge {
       display: inline-block;
-      background-color: var(--vscode-button-background);
+      background-color: var(--color-button-bg);
       color: var(--vscode-button-foreground);
       padding: 2px 6px;
       border-radius: 2px;
@@ -327,8 +340,8 @@ export class CodebaseAnalysisWebview {
     }
 
     .tech-section {
-      background-color: var(--vscode-input-background);
-      border: 1px solid var(--vscode-widget-border);
+      background-color: var(--color-input-bg);
+      border: 1px solid var(--color-border);
       border-radius: 4px;
       padding: 12px;
       margin-bottom: 16px;
@@ -336,7 +349,7 @@ export class CodebaseAnalysisWebview {
 
     .tech-list {
       font-size: 11px;
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
       margin-bottom: 8px;
       line-height: 1.4;
     }
@@ -349,17 +362,17 @@ export class CodebaseAnalysisWebview {
     }
 
     th {
-      background-color: var(--vscode-input-background);
+      background-color: var(--color-input-bg);
       padding: 6px 4px;
       text-align: left;
       font-weight: 600;
-      border-bottom: 1px solid var(--vscode-widget-border);
-      color: var(--vscode-descriptionForeground);
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
     }
 
     td {
       padding: 6px 4px;
-      border-bottom: 1px solid var(--vscode-widget-border);
+      border-bottom: 1px solid var(--color-border);
     }
 
     tr:hover {
@@ -368,11 +381,11 @@ export class CodebaseAnalysisWebview {
 
     .pkg-name {
       font-weight: 500;
-      color: var(--vscode-textLink-foreground);
+      color: var(--color-primary-500);
     }
 
     .pkg-type {
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
     }
 
     .pkg-deps {
@@ -389,7 +402,7 @@ export class CodebaseAnalysisWebview {
     button {
       flex: 1;
       padding: 6px 8px;
-      background-color: var(--vscode-button-background);
+      background-color: var(--color-button-bg);
       color: var(--vscode-button-foreground);
       border: none;
       border-radius: 2px;
@@ -406,7 +419,7 @@ export class CodebaseAnalysisWebview {
     .empty-state {
       text-align: center;
       padding: 40px 20px;
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
     }
 
     .empty-state p {
@@ -415,11 +428,11 @@ export class CodebaseAnalysisWebview {
 
     .last-updated {
       font-size: 10px;
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
       text-align: right;
       margin-top: 16px;
       padding-top: 8px;
-      border-top: 1px solid var(--vscode-widget-border);
+      border-top: 1px solid var(--color-border);
     }
   </style>
 </head>
@@ -517,10 +530,23 @@ export class CodebaseAnalysisWebview {
   <meta charset="UTF-8">
   <title>Codebase Analysis</title>
   <style>
+    :root {
+        /* Universal Dark Theme Variable Mapping */
+        --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
+        --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
+        --color-text-primary: var(--vscode-editor-foreground, #cccccc);
+        --color-text-secondary: var(--vscode-descriptionForeground, #858585);
+        --color-border: var(--vscode-widget-border, #3e3e42);
+        --color-primary-500: var(--vscode-textLink-foreground, #3b82f6);
+        --color-button-bg: var(--vscode-button-background, #3b82f6);
+        --color-button-hover: var(--vscode-button-hoverBackground, #2563eb);
+        --color-input-bg: var(--vscode-input-background, #3c3c3c);
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      color: var(--vscode-foreground);
-      background-color: var(--vscode-editor-background);
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-primary);
       padding: 40px 20px;
       display: flex;
       align-items: center;
@@ -529,20 +555,20 @@ export class CodebaseAnalysisWebview {
     }
     .empty-state {
       text-align: center;
-      color: var(--vscode-descriptionForeground);
+      color: var(--color-text-secondary);
       max-width: 400px;
     }
     h1 {
       font-size: 16px;
       margin-bottom: 12px;
-      color: var(--vscode-foreground);
+      color: var(--color-text-primary);
     }
     p {
       margin-bottom: 16px;
       line-height: 1.5;
     }
     code {
-      background-color: var(--vscode-input-background);
+      background-color: var(--color-input-bg);
       padding: 2px 4px;
       border-radius: 2px;
       font-family: 'Monaco', 'Menlo', monospace;
@@ -550,7 +576,7 @@ export class CodebaseAnalysisWebview {
     }
     button {
       padding: 8px 16px;
-      background-color: var(--vscode-button-background);
+      background-color: var(--color-button-bg);
       color: var(--vscode-button-foreground);
       border: none;
       border-radius: 2px;
@@ -559,7 +585,7 @@ export class CodebaseAnalysisWebview {
       font-weight: 500;
     }
     button:hover {
-      background-color: var(--vscode-button-hoverBackground);
+      background-color: var(--color-button-hover);
     }
   </style>
 </head>

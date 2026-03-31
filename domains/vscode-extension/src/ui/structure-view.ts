@@ -53,14 +53,26 @@ export class StructureView {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Structure Analysis</title>
     <style>
+        :root {
+            /* Universal Dark Theme Variable Mapping */
+            --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
+            --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
+            --color-text-primary: var(--vscode-editor-foreground, #cccccc);
+            --color-text-secondary: var(--vscode-descriptionForeground, #858585);
+            --color-border: var(--vscode-widget-border, #3e3e42);
+            --color-primary-500: var(--vscode-textLink-foreground, #3b82f6);
+            --color-button-bg: var(--vscode-button-background, #3b82f6);
+            --color-button-hover: var(--vscode-button-hoverBackground, #2563eb);
+        }
+
         body {
             font-family: var(--vscode-font-family);
             padding: 20px;
-            color: var(--vscode-editor-foreground);
-            background-color: var(--vscode-editor-background);
+            color: var(--color-text-primary);
+            background-color: var(--color-bg-primary);
         }
         h1, h2, h3 {
-            color: var(--vscode-textLink-foreground);
+            color: var(--color-primary-500);
         }
         code {
             background-color: var(--vscode-textBlockQuote-background);
@@ -70,17 +82,18 @@ export class StructureView {
         .meta {
             margin-bottom: 20px;
             padding: 10px;
-            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            background-color: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
             border-radius: 5px;
             font-size: 0.9em;
         }
         .actions {
             margin-top: 20px;
             padding-top: 20px;
-            border-top: 1px solid var(--vscode-widget-border);
+            border-top: 1px solid var(--color-border);
         }
         button {
-            background-color: var(--vscode-button-background);
+            background-color: var(--color-button-bg);
             color: var(--vscode-button-foreground);
             border: none;
             padding: 8px 16px;
@@ -88,7 +101,7 @@ export class StructureView {
             border-radius: 2px;
         }
         button:hover {
-            background-color: var(--vscode-button-hoverBackground);
+            background-color: var(--color-button-hover);
         }
     </style>
 </head>

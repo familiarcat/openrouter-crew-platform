@@ -63,15 +63,16 @@ export class ChatPanel {
     toolRegistry: ToolRegistry,
     commandExecutor: CommandExecutor,
     promptManager: PromptManager,
-    context: vscode.ExtensionContext
+    context: vscode.ExtensionContext,
+    column?: vscode.ViewColumn
   ) {
-    const column = vscode.window.activeTextEditor
+    const targetColumn = column || (vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
-      : undefined;
+      : undefined);
 
     // If we already have a panel, show it.
     if (ChatPanel.currentPanel) {
-      ChatPanel.currentPanel._panel.reveal(column);
+      ChatPanel.currentPanel._panel.reveal(targetColumn);
       return;
     }
 
@@ -79,7 +80,7 @@ export class ChatPanel {
     const panel = vscode.window.createWebviewPanel(
       ChatPanel.viewType,
       'OpenRouter Crew',
-      column || vscode.ViewColumn.One,
+      targetColumn || vscode.ViewColumn.One,
       {
         enableScripts: true,
         localResourceRoots: [
@@ -220,12 +221,24 @@ export class ChatPanel {
         <style>
             :root {
                 --container-padding: 20px;
+                /* Universal Dark Theme Variable Mapping */
+                --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
+                --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
+                --color-text-primary: var(--vscode-editor-foreground, #cccccc);
+                --color-text-secondary: var(--vscode-descriptionForeground, #858585);
+                --color-border: var(--vscode-widget-border, #3e3e42);
+                --color-primary-500: var(--vscode-button-background, #3b82f6);
+                --color-primary-600: var(--vscode-button-hoverBackground, #2563eb);
+                --color-success: #10b981;
+                --color-warning: #f59e0b;
+                --color-error: #ef4444;
             }
+
             body {
                 margin: 0;
                 padding: 0;
-                color: var(--vscode-editor-foreground);
-                background-color: var(--vscode-editor-background);
+                color: var(--color-text-primary);
+                background-color: var(--color-bg-primary);
                 font-family: var(--vscode-font-family);
                 display: flex;
                 flex-direction: column;
@@ -252,13 +265,13 @@ export class ChatPanel {
             }
             .message.user {
                 align-self: flex-end;
-                background-color: var(--vscode-button-background);
+                background-color: var(--color-primary-500);
                 color: var(--vscode-button-foreground);
             }
             .message.assistant {
                 align-self: flex-start;
-                background-color: var(--vscode-editor-inactiveSelectionBackground);
-                border: 1px solid var(--vscode-widget-border);
+                background-color: var(--color-bg-secondary);
+                border: 1px solid var(--color-border);
             }
             .message.system {
                 align-self: center;
@@ -274,7 +287,7 @@ export class ChatPanel {
             }
             #input-container {
                 padding: var(--container-padding);
-                background-color: var(--vscode-editor-background);
+                background-color: var(--color-bg-primary);
                 border-top: 1px solid var(--vscode-widget-border);
                 display: flex;
                 gap: 10px;
@@ -295,7 +308,7 @@ export class ChatPanel {
                 outline: 1px solid var(--vscode-focusBorder);
             }
             #send-button {
-                background-color: var(--vscode-button-background);
+                background-color: var(--color-primary-500);
                 color: var(--vscode-button-foreground);
                 border: none;
                 padding: 8px 16px;
@@ -303,7 +316,7 @@ export class ChatPanel {
                 cursor: pointer;
             }
             #send-button:hover {
-                background-color: var(--vscode-button-hoverBackground);
+                background-color: var(--color-primary-600);
             }
             pre {
                 background-color: var(--vscode-textBlockQuote-background);
