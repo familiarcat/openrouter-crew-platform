@@ -64,28 +64,15 @@ export class N8nBridge {
           const data = await response.json();
           
           return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  status: 'success',
-                  workflowId: config.id,
-                  result: data
-                }, null, 2)
-              }
-            ]
+            success: true,
+            data: {
+              workflowId: config.id,
+              result: data
+            }
           };
         } catch (error: any) {
           console.error(`[N8nBridge] Error executing ${config.id}:`, error);
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Failed to execute workflow '${config.name}'. Error: ${error.message}`
-              }
-            ],
-            isError: true
-          };
+          return { success: false, error: error.message };
         }
       }
     };

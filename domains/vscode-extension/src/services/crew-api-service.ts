@@ -13,6 +13,7 @@ export class CrewAPIService {
   private outputChannel: vscode.OutputChannel;
   private userId: string = 'vscode-user';
   private crewId: string = 'default-crew';
+  private projectId: string = 'default-project';
 
   constructor(outputChannel: vscode.OutputChannel) {
     this.outputChannel = outputChannel;
@@ -26,6 +27,7 @@ export class CrewAPIService {
     const config = vscode.workspace.getConfiguration('openrouter-crew');
     this.userId = config.get<string>('userId') || 'vscode-user';
     this.crewId = config.get<string>('crewId') || 'default-crew';
+    this.projectId = config.get<string>('projectId') || 'default-project';
   }
 
   /**
@@ -63,6 +65,7 @@ export class CrewAPIService {
     return {
       user_id: overrides?.user_id || this.userId,
       crew_id: overrides?.crew_id || this.crewId,
+      project_id: overrides?.project_id || this.projectId,
       role: overrides?.role || 'member',
       surface: 'ide'
     };
@@ -127,6 +130,7 @@ export class CrewAPIService {
             {
               content: memoryContent,
               type,
+              project_id: this.projectId,
               crew_id: context.crew_id,
               retention_tier: 'short_term' as any
             }
@@ -152,7 +156,8 @@ export class CrewAPIService {
       // Use empty query to fetch recent memories
       const results = await client.search_memories({
         query: '',
-        limit
+        limit,
+        project_id: this.projectId
       });
       return results || [];
     } catch (error) {
@@ -192,6 +197,7 @@ export class CrewAPIService {
           results = await client.search_memories(
             {
               query: searchQuery,
+              project_id: this.projectId,
               limit: 10,
             }
           );
@@ -399,6 +405,7 @@ export class CrewAPIService {
           result = await client.execute_crew(
             {
               crew_id: context.crew_id,
+              project_id: this.projectId,
               input: crewInput,
             }
           );

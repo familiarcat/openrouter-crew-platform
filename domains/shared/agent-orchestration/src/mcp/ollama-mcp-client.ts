@@ -31,7 +31,7 @@ export class OllamaMCPClient {
    */
   async triageTask(problem: string): Promise<TriageResult | null> {
     try {
-      const systemPrompt = 'You are the Crew Triage Controller. Analyze the task and return a JSON object with: agentId (captain_picard, commander_data, worf, geordi_la_forge, counselor_troi, crusher, quark, uhura, chief_obrien, commander_riker), complexity (LOW, MEDIUM, HIGH), and recommendedModel (haiku, sonnet, opus).';
+      const systemPrompt = 'You are the Crew Triage Controller. Analyze the task and return a JSON object with: agentId (captain_picard, commander_data, worf, geordi_la_forge, counselor_troi, crusher, quark, uhura, chief_obrien, commander_riker), complexity (LOW, MEDIUM, HIGH), and recommendedModel (cheap, balanced, powerful). Any task involving file examination, editing, or creation must be classified as HIGH complexity and assigned to geordi_la_forge or chief_obrien.';
       
       const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
@@ -86,7 +86,7 @@ Character Personas: Reflected in domains/shared/crew-identities.md
 <task>
 Refine the user problem into a structured command. Use technical Star Trek terminology where appropriate.
 Include specific execution steps and expected output formats.
-Return ONLY a JSON object with the key "refined_prompt".
+Return ONLY a valid JSON object with the key "refined_prompt".
 </task>
 
 <few_shot_example>

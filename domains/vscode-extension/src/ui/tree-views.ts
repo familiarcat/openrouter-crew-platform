@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { AgentNetworkService } from '../services/agent-network.js';
 import { CostTracker } from '../services/cost-tracker.js';
 import { CrewAPIService } from '../services/crew-api-service.js';
+import { MissionControlPanel } from './mission-control-panel.js';
 
 const agentProfiles = require('../config/agent-profiles.json');
 // --- Project View ---
@@ -16,11 +17,17 @@ class ProjectTreeItem extends vscode.TreeItem {
     this.tooltip = `${project.description || 'No description'}`;
     this.description = project.status;
     this.contextValue = 'project';
-    this.iconPath = new vscode.ThemeIcon(project.isWorkbench ? 'dashboard' : 'repo');
+    this.iconPath = new vscode.ThemeIcon(project.isWorkbench || project.isMissionControl ? 'dashboard' : 'repo');
     if (project.isWorkbench) {
       this.command = {
         command: 'openrouter-crew.project.workbench',
         title: 'Open Project Workbench',
+      };
+    }
+    if (project.isMissionControl) {
+      this.command = {
+        command: 'openrouter-crew.missionControl',
+        title: 'Open Mission Control',
       };
     }
   }
@@ -57,15 +64,27 @@ export class ProjectTreeViewProvider implements vscode.TreeDataProvider<ProjectT
       }
     );
 
+    const missionControlEntry = new ProjectTreeItem(
+      'Mission Control',
+      vscode.TreeItemCollapsibleState.None,
+      {
+        description: 'View active synchronized missions from Redis',
+        status: 'synced',
+        isMissionControl: true,
+      }
+    );
+
     if (projects.length === 0) {
         return [
           workbenchEntry,
+          missionControlEntry,
           new vscode.TreeItem('No shared projects found yet.', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem,
         ];
     }
 
     return [
       workbenchEntry,
+      missionControlEntry,
       ...projects.map(p => new ProjectTreeItem(
           p.name,
           vscode.TreeItemCollapsibleState.None,
@@ -268,6 +287,11 @@ export function registerTreeViews(context: vscode.ExtensionContext, agentNetwork
       vscode.commands.registerCommand('openrouter-crew.cost-report.refresh', () => costProvider.refresh()),
       vscode.commands.registerCommand('openrouter-crew.memory-view.refresh', () => memoryProvider.refresh()),
       
+      // Mission Control Command
+      vscode.commands.registerCommand('openrouter-crew.missionControl', () => {
+        MissionControlPanel.createOrShow(context.extensionUri, agentNetwork, costTracker);
+      }),
+
       // Show Crew Details Command
       vscode.commands.registerCommand('openrouter-crew.showCrewDetails', (item: CrewTreeItem) => {
         const panel = vscode.window.createWebviewPanel(

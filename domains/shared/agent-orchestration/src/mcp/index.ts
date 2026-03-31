@@ -27,6 +27,7 @@ export { RikerAgentServer } from './riker-agent-server.js'
 
 // Claude integration & orchestration
 export { CrewOrchestrator } from './claude-with-crew.js'
+export { PromptManager } from './prompt-manager.js'
 export type { CrewAgent, ToolResult as CrewToolResult, ClaudeResponse } from './claude-with-crew.js'
 
 /**

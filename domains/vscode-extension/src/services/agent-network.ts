@@ -13,6 +13,7 @@ import { FileManager } from './file-manager';
 import { ToolRegistry } from './tool-registry';
 import { AgentExecutionResult } from './types';
 import { LLMRouter } from './llm-router';
+import Redis from 'ioredis';
 
 // Map friendly model names to OpenRouter model IDs
 const MODEL_ID_MAP: Record<AgentProfile['model'], string> = {
@@ -41,6 +42,7 @@ export class AgentNetworkService {
     private activeAgents: Map<string, CrewAgent> = new Map();
     private fileManager: FileManager;
     private toolRegistry: ToolRegistry;
+    private redis: Redis;
 
     constructor(private costTracker: CostTracker, private llmRouter: LLMRouter) {
         // Connect to Supabase using VSCode configuration
@@ -55,6 +57,11 @@ export class AgentNetworkService {
         // Pass llmRouter to FileManager for cost-optimized refactoring (Geordi La Forge fix)
         this.fileManager = new FileManager(llmRouter);
         this.toolRegistry = new ToolRegistry(this.fileManager, this.costTracker, this);
+
+        // Initialize Redis for Mission Control sync
+        const redisPassword = process.env.REDIS_PASSWORD || 'redis';
+        const redisHost = process.env.REDIS_HOST || 'localhost';
+        this.redis = new Redis(`redis://:${redisPassword}@${redisHost}:6379`);
     }
 
     private getPlatformBaseUrl(): string {
@@ -133,6 +140,23 @@ export class AgentNetworkService {
         } catch (e: any) {
             console.error(`[Central Mind] Failed to fetch projects: ${e}`);
             return [];
+        }
+    }
+
+    /**
+     * Fetches the current mission brief for a project from Redis.
+     */
+    public async getActiveMissionBrief(projectId: string): Promise<any | null> {
+        try {
+            const syncKey = `project:${projectId}:mission_state`;
+            const data = await this.redis.get(syncKey);
+            if (data) {
+                return JSON.parse(data);
+            }
+            return null;
+        } catch (e) {
+            console.error(`[Central Mind] Failed to fetch mission brief for ${projectId}:`, e);
+            return null;
         }
     }
 }

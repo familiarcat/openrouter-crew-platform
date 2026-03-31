@@ -1,0 +1,92 @@
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import { CostTracker } from './cost-tracker';
+
+/**
+ * ProposeChangeService
+ * Implements the Dark Forest Protocol by replacing destructive writes 
+ * with a human-in-the-loop approval workflow.
+ */
+export class ProposeChangeService {
+    constructor(private costTracker?: CostTracker) {}
+
+    /**
+     * Proposes a change to a file by showing a side-by-side diff.
+     * Returns true if accepted, false otherwise.
+     */
+    public async propose(filePath: string, newContent: string, costUSD: number = 0): Promise<boolean> {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceRoot) {
+            throw new Error('No active workspace found.');
+        }
+
+        const absolutePath = path.isAbsolute(filePath) 
+            ? filePath 
+            : path.join(workspaceRoot, filePath);
+
+        const fileName = path.basename(absolutePath);
+        
+        // Handle new file creation
+        if (!fs.existsSync(absolutePath)) {
+            return this.proposeNewFile(absolutePath, newContent);
+        }
+
+        // Create a temporary file for the proposed version
+        const tempDir = path.join(workspaceRoot, '.crew', 'temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        const tempFilePath = path.join(tempDir, `${fileName}.proposed`);
+        fs.writeFileSync(tempFilePath, newContent);
+
+        const originalUri = vscode.Uri.file(absolutePath);
+        const proposedUri = vscode.Uri.file(tempFilePath);
+
+        // Open the diff editor
+        await vscode.commands.executeCommand(
+            'vscode.diff', 
+            originalUri, 
+            proposedUri, 
+            `Proposal: ${fileName} (Review Required)`
+        );
+
+        const costString = costUSD > 0 ? ` (Generation Cost: $${costUSD.toFixed(5)})` : '';
+
+        const response = await vscode.window.showInformationMessage(
+            `Alex AI proposes changes to ${fileName}${costString}. Do you accept these changes?`,
+            { modal: true },
+            'Accept & Apply', 
+            'Reject'
+        );
+
+        // Cleanup temp file
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
+
+        if (response === 'Accept & Apply') {
+            fs.writeFileSync(absolutePath, newContent);
+            vscode.window.showInformationMessage(`Successfully applied changes to ${fileName}`);
+            return true;
+        }
+
+        return false;
+    }
+
+    private async proposeNewFile(filePath: string, content: string): Promise<boolean> {
+        const response = await vscode.window.showInformationMessage(
+            `Alex AI wants to create a new file: ${path.basename(filePath)}. Allow?`,
+            'Create', 'Cancel'
+        );
+        
+        if (response === 'Create') {
+            const dir = path.dirname(filePath);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(filePath, content);
+            return true;
+        }
+        return false;
+    }
+}

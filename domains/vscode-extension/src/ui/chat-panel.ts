@@ -5,6 +5,7 @@ import { NLPProcessor } from '../services/nlp-processor';
 import { ContextBuilder } from '../services/context-builder';
 import { ToolRegistry } from '../services/tool-registry';
 import { CommandExecutor } from '../commands/command-executor';
+import { PromptManager } from '@openrouter-crew/agent-orchestration';
 
 export class ChatPanel {
   public static currentPanel: ChatPanel | undefined;
@@ -23,6 +24,7 @@ export class ChatPanel {
     private contextBuilder: ContextBuilder,
     private toolRegistry: ToolRegistry,
     private commandExecutor: CommandExecutor,
+    private promptManager: PromptManager,
     private context: vscode.ExtensionContext
   ) {
     this._panel = panel;
@@ -60,6 +62,7 @@ export class ChatPanel {
     contextBuilder: ContextBuilder,
     toolRegistry: ToolRegistry,
     commandExecutor: CommandExecutor,
+    promptManager: PromptManager,
     context: vscode.ExtensionContext
   ) {
     const column = vscode.window.activeTextEditor
@@ -96,6 +99,7 @@ export class ChatPanel {
       contextBuilder,
       toolRegistry,
       commandExecutor,
+      promptManager,
       context
     );
   }
@@ -109,6 +113,7 @@ export class ChatPanel {
     contextBuilder: ContextBuilder,
     toolRegistry: ToolRegistry,
     commandExecutor: CommandExecutor,
+    promptManager: PromptManager,
     context: vscode.ExtensionContext
   ) {
     ChatPanel.currentPanel = new ChatPanel(
@@ -120,6 +125,7 @@ export class ChatPanel {
       contextBuilder,
       toolRegistry,
       commandExecutor,
+      promptManager,
       context
     );
   }
@@ -132,40 +138,52 @@ export class ChatPanel {
 
   private async handleUserMessage(text: string) {
     try {
-        const intent = await this.nlpProcessor.detectIntent(text);
-        const context = await this.contextBuilder.buildContext(text);
+        const config = vscode.workspace.getConfiguration('openrouter-crew');
+        const projectId = config.get<string>('projectId') || 'default-project';
+
+        // Step 1: Centralized Prompt Refinement (The "Universal" pass)
+        // This uses local Ollama to architect the technical brief at $0 cost
+        this._panel.webview.postMessage({ command: 'updateStatus', text: 'Architecting mission brief...' });
+        const brief = await this.promptManager.architectMission(text, { projectId });
+
+        // Admiral's Directive: Automatically trigger deep file context for HIGH complexity tasks
+        const context = await this.contextBuilder.buildContext(text, brief.complexity === 'HIGH');
         
         let responseContent = '';
         let cost = 0;
-        let model = '';
+        let responseModel = brief.selectedModel;
 
-        // Optimization: Use LLMRouter directly for simple questions to save overhead
-        if (intent.intent === 'ASK' && intent.complexity === 'LOW') {
+        if (brief.complexity === 'LOW') {
              const response = await this.llmRouter.route({
-                prompt: text,
+                prompt: brief.refinedPrompt,
+                systemPrompt: brief.agentPersona, // Explicitly pass the persona
                 intent: 'ASK',
                 complexity: 'LOW'
              });
              responseContent = response.content;
              cost = response.costUSD;
-             model = response.model;
         } else {
-            // Use CommandExecutor (Agent Network) for complex tasks
-            const result = await this.commandExecutor.executeTask(text, { 
-                intent: intent.intent, 
-                complexity: intent.complexity,
-                context 
+            this._panel.webview.postMessage({ command: 'updateStatus', text: `Engaging ${brief.agentId}...` });
+
+            // Use the refined, persona-aligned prompt for execution
+            // Use the refined, persona-aligned prompt for high-complexity code editing
+            const result = await this.commandExecutor.executeTask(brief.refinedPrompt, { 
+                agentId: brief.agentId, 
+                complexity: brief.complexity,
+                context,
+                systemPrompt: brief.agentPersona // Ensure agent has context
             });
             responseContent = result.output;
             cost = result.cost;
-            model = result.model;
+            responseModel = result.model || responseModel;
         }
 
+        this._panel.webview.postMessage({ command: 'updateStatus', text: 'Transmission complete.' });
         this._panel.webview.postMessage({ 
             command: 'addMessage', 
             role: 'assistant', 
             text: responseContent,
-            meta: { cost, model }
+            meta: { cost, model: responseModel }
         });
 
     } catch (error) {

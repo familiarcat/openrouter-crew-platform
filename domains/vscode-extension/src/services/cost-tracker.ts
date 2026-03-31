@@ -43,7 +43,7 @@ export class CostTracker implements vscode.Disposable {
         return `${this.COST_KEY_PREFIX}monthly.${year}-${month}`;
     }
 
-    public async recordUsage(cost: number): Promise<void> {
+    public async recordUsage(cost: number, metadata?: Partial<UsageRecord>): Promise<void> {
         const dailyKey = this.getStorageKey('daily');
         const monthlyKey = this.getStorageKey('monthly');
 
@@ -52,6 +52,21 @@ export class CostTracker implements vscode.Disposable {
 
         await this.context.globalState.update(dailyKey, currentDailyCost + cost);
         await this.context.globalState.update(monthlyKey, currentMonthlyCost + cost);
+
+        // Persist history record
+        const history = this.getLocalHistory();
+        history.push({
+            timestamp: new Date().toISOString(),
+            costUSD: cost,
+            cost: cost,
+            model: metadata?.model || 'unknown',
+            tokens: metadata?.tokens || 0,
+            ...metadata
+        });
+
+        // Cap history at 1000 entries to maintain performance
+        await this.context.globalState.update(this.COST_KEY_PREFIX + 'history', history.slice(-1000));
+
         this._onDidCostUpdate.fire();
     }
 
@@ -97,8 +112,29 @@ export class CostTracker implements vscode.Disposable {
     }
 
     public getLocalHistory(): UsageRecord[] {
-        // TODO: Implement actual history persistence. For now returning empty to satisfy interface.
-        return [];
+        return this.context.globalState.get<UsageRecord[]>(this.COST_KEY_PREFIX + 'history') || [];
+    }
+
+    public getTrendData(days: number = 7): { date: string; cost: number }[] {
+        const history = this.getLocalHistory();
+        const trend = [];
+        const now = new Date();
+
+        for (let i = days - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(now.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            
+            const dayCost = history
+                .filter(r => r.timestamp.startsWith(dateStr))
+                .reduce((sum, r) => sum + r.costUSD, 0);
+            
+            trend.push({ 
+                date: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), 
+                cost: dayCost 
+            });
+        }
+        return trend;
     }
 
     dispose() {

@@ -8,6 +8,8 @@
  * and implements their specialized tools.
  */
 
+import fs from 'fs'
+import path from 'path'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
@@ -364,6 +366,82 @@ export abstract class BaseMCPServer {
         const data = await this.redis.get(key)
         if (!data) return { success: false, error: 'No cached solution found.' }
         return { success: true, data: JSON.parse(data) }
+      }
+    })
+
+    // Agentic Philosophy: Self-Optimization and Anomaly Correction
+    this.registerTool({
+      name: 'propose-agent-optimization',
+      description: 'Allows an agent to propose a change to its own system prompt or tool logic based on observed failures.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          observation: { type: 'string', description: 'The failure or inefficiency detected' },
+          proposed_fix: { type: 'string', description: 'The prompt or logic change required' },
+          severity: { type: 'enum', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] }
+        },
+        required: ['observation', 'proposed_fix']
+      },
+      handler: async (args: any) => {
+        const { observation, proposed_fix, severity } = args;
+        // Log this directly to the observation lounge as a 'critical_learning'
+        await (this.supabase as any).from('observation_lounge_findings').insert({
+          project_id: process.env.PROJECT_ID || 'fleet-optimization',
+          crew_member_id: this.agentName,
+          insight_type: 'pattern',
+          finding: JSON.stringify({ observation, proposed_fix, severity }),
+          status: 'pending_review'
+        });
+        
+        return { 
+          success: true, 
+          data: { message: "Optimization proposed to Command. Awaiting Picard's approval." } 
+        };
+      }
+    })
+
+    // Admiral's Directive: Development Tools for Code Examination & Editing
+    this.registerTool({
+      name: 'read-file',
+      description: 'Read the contents of a file in the monorepo for examination.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          relative_path: { type: 'string', description: 'Path relative to REPO_ROOT' }
+        },
+        required: ['relative_path']
+      },
+      handler: async (args: any) => {
+        const fullPath = path.join(process.cwd(), args.relative_path);
+        try {
+          const content = fs.readFileSync(fullPath, 'utf-8');
+          return { success: true, data: { content } };
+        } catch (err: any) {
+          return { success: false, error: `Failed to read file: ${err.message}` };
+        }
+      }
+    })
+
+    this.registerTool({
+      name: 'write-file',
+      description: 'Apply changes or create a new file in the monorepo.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          relative_path: { type: 'string', description: 'Path relative to REPO_ROOT' },
+          content: { type: 'string', description: 'The full content to write' }
+        },
+        required: ['relative_path', 'content']
+      },
+      handler: async (args: any) => {
+        const fullPath = path.join(process.cwd(), args.relative_path);
+        try {
+          fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+          fs.writeFileSync(fullPath, args.content, 'utf-8');
+          return { success: true, data: { message: `File ${args.relative_path} updated.` } };
+        } catch (err: any) {
+          return { success: false, error: `Failed to write file: ${err.message}` };
+        }
       }
     })
   }

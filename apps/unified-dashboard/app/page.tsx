@@ -5,12 +5,14 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { SovereignAgentViewport } from '@/components/SovereignAgentViewport'; // Corrected local reference
 import { DeploymentLogList } from '@/components/DeploymentLogList';
 import { useOrchestration } from '@/hooks/useOrchestration';
+import { useProjects } from '@/hooks/useProjects';
 import { Loader2, Zap, AlertCircle, Rocket, FolderKanban } from 'lucide-react';
 
 export default function HomePage() {
   const [problemInput, setProblemInput] = useState('');
-  const [currentProject, setCurrentProject] = useState('Global Fleet');
+  const [currentProjectId, setCurrentProjectId] = useState('');
   const { data, isLoading, error, solveProblem, reset } = useOrchestration();
+  const { projects, isLoading: projectsLoading } = useProjects();
 
   // Refactored to be a universal codebase analysis
   const handleAnalyzeCodebase = async () => {
@@ -25,7 +27,7 @@ export default function HomePage() {
       
       Synthesize your findings into a structured report, highlighting key areas for improvement.
     `;
-    await solveProblem(codebaseAnalysisPrompt);
+    await solveProblem(codebaseAnalysisPrompt, undefined, currentProjectId);
   };
 
   // Determine active agent for display
@@ -53,13 +55,14 @@ export default function HomePage() {
                 <FolderKanban className="w-3.5 h-3.5" />
                 <span>Project:</span>
                 <select 
-                  value={currentProject} 
-                  onChange={(e) => setCurrentProject(e.target.value)}
+                  value={currentProjectId} 
+                  onChange={(e) => setCurrentProjectId(e.target.value)}
                   className="bg-transparent text-blue-400 font-bold focus:outline-none cursor-pointer"
                 >
-                  <option value="Global Fleet">Global Fleet</option>
-                  <option value="BarItalia STL">BarItalia STL</option>
-                  <option value="Agency Scout">Agency Scout</option>
+                  <option value="">Select Mission...</option>
+                  {projects.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
                 </select>
               </div>
             </div>

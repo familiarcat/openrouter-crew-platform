@@ -10,10 +10,13 @@
  */
 
 import OpenAI from 'openai'
+import Redis from 'ioredis'
+import crypto from 'crypto'
 import { spawn } from 'child_process'
 import { ChildProcess } from 'child_process'
 import { PersonaProvider } from './persona-provider.js'
 import { OllamaMCPClient } from './ollama-mcp-client.js'
+import { PromptManager } from './prompt-manager.js'
 
 export interface CrewAgent {
   name: string
@@ -55,6 +58,9 @@ export class CrewOrchestrator {
   private agents: Map<string, CrewAgent> = new Map()
   private ollamaClient: OllamaMCPClient
   private agentProcesses: Map<string, ChildProcess> = new Map()
+  private promptManager: PromptManager
+  private redis: Redis
+  private projectId?: string
 
   constructor() {
     this.openai = new OpenAI({
@@ -66,6 +72,59 @@ export class CrewOrchestrator {
       }
     })
     this.ollamaClient = new OllamaMCPClient()
+    this.promptManager = new PromptManager(this.openai, this.ollamaClient)
+
+    // Admiral's Directive: Initialize Redis for High-Speed Caching
+    const redisPassword = process.env.REDIS_PASSWORD || 'redis'
+    const redisHost = process.env.REDIS_HOST || 'localhost'
+    this.redis = new Redis(`redis://:${redisPassword}@${redisHost}:6379`)
+  }
+
+  /**
+   * Phase 0: Cache Check
+   * Checks Redis for a pre-solved mission objective to bypass LLM costs.
+   */
+  private async checkCache(problem: string, projectId: string = 'default'): Promise<OrchestratorResponse | null> {
+    const prefix = projectId ? `project:${projectId}:` : 'global:';
+    const cacheKey = `solution:${prefix}${crypto.createHash('sha256').update(problem).digest('hex')}`
+    try {
+      const cached = await this.redis.get(cacheKey)
+      if (cached) {
+        // Check for an existing mission state/brief first
+        const syncKey = `project:${projectId}:mission_state`;
+        const syncState = await this.redis.get(syncKey);
+        
+        console.log(`💾 [Redis] Cache hit for ${projectId}: ${problem.substring(0, 30)}...`)
+        const response = JSON.parse(cached)
+        return { ...response, metadata: { ...response.metadata, cached: true } }
+      }
+    } catch (err) {
+      console.error('⚠️ Redis cache lookup failure:', err)
+    }
+    return null
+  }
+
+  /**
+   * Phase 0.5: Sync Mission State
+   * Caches the refined persona and prompt in Redis so the Dashboard and IDE stay in sync.
+   */
+  private async syncMissionBrief(projectId: string, brief: any): Promise<void> {
+    const syncKey = `project:${projectId}:mission_state`;
+    try {
+      await this.redis.set(syncKey, JSON.stringify({
+        ...brief,
+        timestamp: new Date().toISOString()
+      }), 'EX', 3600); // 1 hour TTL
+      console.log(`📡 [Redis] Synced mission brief for project: ${projectId}`);
+    } catch (err) {
+      console.error('⚠️ Redis sync failure:', err);
+    }
+  }
+
+  private async getSyncedBrief(projectId: string): Promise<any | null> {
+    const syncKey = `project:${projectId}:mission_state`;
+    const data = await this.redis.get(syncKey);
+    return data ? JSON.parse(data) : null;
   }
 
   /**
@@ -286,44 +345,38 @@ export class CrewOrchestrator {
   /**
    * Solve a problem using crew agents
    */
-  async solveProblem(problem: string): Promise<OrchestratorResponse> {
+  async solveProblem(problem: string, projectId: string = 'default'): Promise<OrchestratorResponse> {
     console.log(`\n🎯 Problem: ${problem}\n`)
 
-    // 0. Check Cache First (The Latinum Shield)
-    const cachedResponse = await this.checkCache(problem)
-    if (cachedResponse) return cachedResponse
-
     const startTime = Date.now()
-    
-    // 1. Run Triage to optimize model selection and cost
-    const triage = await this.triageTask(problem);
-    console.log(`📊 Triage complete: Agent [${triage.agentId}] at ${triage.complexity} complexity.`);
 
-    // 1.5 Refine prompt locally to minimize external token usage
-    const refinedProblem = await this.refineTaskPrompt(problem, triage);
+    // Check for cached solutions first
+    const cached = await this.checkCache(problem, projectId);
+    if (cached) return cached;
+
+    // Check if there is already an active mission brief for this project
+    let brief = await this.getSyncedBrief(projectId);
+    
+    if (!brief || brief.originalPrompt !== problem) {
+      // Architect the mission locally (Triage + Refinement)
+      brief = await this.promptManager.architectMission(problem);
+      brief.originalPrompt = problem;
+      await this.syncMissionBrief(projectId, brief);
+    }
+
+    // 1. Architect the mission locally (Triage + Refinement)
+    console.log(`📊 Mission Brief Active: Agent [${brief.agentId}] via ${brief.selectedModel}`);
 
     const tools = await this.getAvailableTools()
-    
-    // 2. Map complexity to OpenRouter IDs (LLM Agnostic)
-    const modelMap: Record<string, string> = {
-      'cheap': process.env.MODEL_CHEAP || 'anthropic/claude-3-haiku',
-      'balanced': process.env.MODEL_MID || 'anthropic/claude-3.5-sonnet',
-      'powerful': process.env.MODEL_POWERFUL || 'anthropic/claude-3-opus'
-    };
-    
-    const selectedModel = modelMap[triage.recommendedModel.toLowerCase()] || modelMap.balanced;
-
-    // 3. Load the specific Agent Persona for the system prompt
-    const agentPersona = PersonaProvider.getSystemPrompt(triage.agentId);
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       {
         role: 'system',
-        content: agentPersona
+        content: brief.agentPersona
       },
       {
         role: 'user',
-        content: refinedProblem
+        content: brief.refinedPrompt
       }
     ]
 
@@ -397,7 +450,7 @@ export class CrewOrchestrator {
 
     const executionTime = Date.now() - startTime
 
-    const result: OrchestratorResponse = {
+    return {
       success: true,
       synthesis,
       findings,
@@ -408,14 +461,6 @@ export class CrewOrchestrator {
         execution_time_ms: executionTime
       }
     }
-
-    // Cache results for complex tasks to hit $1.50 target on repeat requests
-    if (result.success && triage.complexity !== 'LOW') {
-      const cacheKey = `solution:${crypto.createHash('sha256').update(problem).digest('hex')}`
-      await this.redis.set(cacheKey, JSON.stringify(result), 'EX', 86400) // 24 hour TTL
-    }
-
-    return result
   }
 
   /**
@@ -442,8 +487,8 @@ export class CrewOrchestrator {
 
       const timer = setTimeout(() => {
         cleanup();
-        resolve({ success: false, error: `Timeout calling tool ${toolName} on agent ${agentName}` });
-      }, 30000);
+        resolve({ success: false, error: `Timeout calling tool ${toolName} on agent ${agentName} (60s limit reached)` });
+      }, 60000);
 
       const onData = (data: Buffer) => {
         const chunk = data.toString();

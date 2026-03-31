@@ -25,23 +25,25 @@
 - ✅ VSCode extension foundation complete
 - ✅ Codebase analyzer implemented
 - 🔄 Weekly analysis automation (in progress)
-- 🔄 CI/CD pipeline integration (in progress)
+- ✅ Local Prompt Architect (Ollama) active
 
 ## 🗺️ Implementation Roadmap (Hybrid Path)
 
-### Phase 1: Local Hardening & Environment (Current)
-- [ ] **Infra Stability**: Verify `docker-compose.local.yml` health checks for Supabase and n8n are 100% reliable.
-- [ ] **Local CLI**: Hardening `crew` CLI to manage local container lifecycles.
- - [x] **Dashboard Remediation**: Fixed imports in Alex-AI via tsconfig aliSteal Docker environment.
+### Phase 1: The Tactical Toolbelt (Local Dev)
+- [x] **Secret Parity**: Resolved bridge script compatibility.
+- [x] **Character Sovereignty**: Personas integrated into BaseMCPServer.
+- [ ] **Diff-Ready Workflow**: Implement `propose-change` tool to replace destructive `write-file`.
+- [ ] **IDE Resilience**: Increase RPC timeouts to 60s for deep code examination.
 
-### Phase 2: Domain Awareness & Deployment Logic
-- [x] **Environment Tags**: Added environment field to ProjectSchema. [ ] **API Routing**: Update `crew-api-client` to switch between `localhost` and AWS ALB endpoints based on environment.
+### Phase 2: The Command Bridge (Fleet Sync)
+- [x] **Environment Tags**: Added environment field to ProjectSchema.
+- [ ] **Universal Pass**: Deploy standard `PromptManager` to both Next.js and VSCode.
+- [ ] **Memory Scoping**: Namespacing Redis and Supabase by `PROJECT_ID`.
 
-### Phase 3: Hybrid CI/CD (The "Pruned" Path)
-- [ ] **AWS**: Deploy agent rums (`/agents`) to ECS Fargate behind a private VPC (Dark Forest Protocol).
+### Phase 3: The Latinum Shield (Agency Autonomy)
+- [ ] **Opportunity Scout**: Automate Data/Uhura lead-generation missions.
+- [ ] **Cost-to-Execution**: Real-time Latinum Flow meter integration in IDE.
 
-### Phase 4: Production Observability
-- [ ] **Logging**: Implement `deployment_logs` in Supabase to track Vercel builds and AWS Task health.
 
 ---
 

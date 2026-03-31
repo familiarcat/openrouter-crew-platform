@@ -7,7 +7,7 @@ interface UseOrchestrationReturn {
   data: OrchestratorResponse | null;
   isLoading: boolean;
   error: string | null;
-  solveProblem: (problem: string, agents?: string[]) => Promise<void>;
+  solveProblem: (problem: string, agents?: string[], projectId?: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -20,7 +20,7 @@ export const useOrchestration = (): UseOrchestrationReturn => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const solveProblem = useCallback(async (problem: string, agents?: string[]) => {
+  const solveProblem = useCallback(async (problem: string, agents?: string[], projectId?: string) => {
     setIsLoading(true);
     setError(null);
 
@@ -30,7 +30,7 @@ export const useOrchestration = (): UseOrchestrationReturn => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ problem, agents }),
+        body: JSON.stringify({ problem, agents, projectId }),
       });
 
       const result = await response.json();

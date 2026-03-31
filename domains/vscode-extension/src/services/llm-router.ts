@@ -38,6 +38,7 @@ export interface LLMResponse {
   executionTimeMs: number;
   cached: boolean;
   tool_calls?: any[];
+  usage?: { prompt_tokens: number; completion_tokens: number };
 }
 
 export interface CostEstimate {
@@ -86,7 +87,11 @@ export class LLMRouter {
       const response = await this.callOpenRouter(request, selectedModel.id);
 
       // 7. Track Cost & Cache
-      await this.costTracker.recordUsage(response.costUSD);
+      await this.costTracker.recordUsage(response.costUSD, {
+          model: response.model,
+          tokens: (response.usage?.prompt_tokens || 0) + (response.usage?.completion_tokens || 0),
+          intent: request.intent
+      });
 
       return {
           ...response,
@@ -184,7 +189,8 @@ export class LLMRouter {
           costUSD,
           executionTimeMs: 0, // Calculated in route()
           cached: false,
-          tool_calls: choice?.message?.tool_calls
+          tool_calls: choice?.message?.tool_calls,
+          usage
       };
   }
 

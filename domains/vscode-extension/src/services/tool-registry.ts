@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { AgentNetworkService, CrewAgent } from './agent-network';
 import { CostTracker } from './cost-tracker';
 import { FileManager } from './file-manager';
+import { ProposeChangeService } from './propose-change-service';
 import { ToolDefinition } from './types';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -33,7 +34,8 @@ export class ToolRegistry {
     constructor(
         private fileManager: FileManager,
         private costTracker: CostTracker,
-        private network: AgentNetworkService
+        private network: AgentNetworkService,
+        private proposeChangeService: ProposeChangeService
     ) {
         // Initialization is now async and must be called separately.
     }
@@ -80,7 +82,8 @@ export class ToolRegistry {
             this.register(tool.schema, (args, agent) => tool.execute(args, agent, {
                 fileManager: this.fileManager,
                 costTracker: this.costTracker,
-                network: this.network
+                network: this.network,
+                proposeChangeService: this.proposeChangeService
             }));
         });
     }
