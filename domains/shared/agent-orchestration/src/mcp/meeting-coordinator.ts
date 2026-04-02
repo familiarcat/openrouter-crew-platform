@@ -137,8 +137,7 @@ export class ObservationLoungeMeetingCoordinator {
 
     return {
       ...synthesis,
-      implementationPlan: [implementationPlan],
-      meetingId: sessionId
+      implementationPlan: [implementationPlan]
     }
   }
 
@@ -192,11 +191,11 @@ export class ObservationLoungeMeetingCoordinator {
     }
 
     return {
-      totalRecommendations: recommendations.length,
+      sessionId: '',
       conflicts,
       synergies,
       resolutionStrategy: this.suggestStrategy(conflicts, synergies) as any,
-      confidence: 0.85
+      analysisConfidence: 0.85
     }
   }
 

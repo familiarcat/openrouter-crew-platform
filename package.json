@@ -76,6 +76,8 @@
     "validate:imports": "bash scripts/validate-imports.sh",
     "ai:analyze": "bash scripts/ai-analyze.sh",
     "ai:analyze:dry": "bash scripts/ai-analyze.sh --dry-run",
+    "crew:launch": "bash scripts/admiral-review.sh",
+    "review:admiral": "bash scripts/admiral-review.sh",
     "reorg:dry": "bash scripts/reorganize.sh --dry-run",
     "reorg:apply": "bash scripts/reorganize.sh --apply"
   },

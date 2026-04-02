@@ -28,7 +28,8 @@ export { RikerAgentServer } from './riker-agent-server.js'
 // Claude integration & orchestration
 export { CrewOrchestrator } from './claude-with-crew.js'
 export { PromptManager } from './prompt-manager.js'
-export type { CrewAgent, ToolResult as CrewToolResult, ClaudeResponse } from './claude-with-crew.js'
+export { OllamaMCPClient } from './ollama-mcp-client.js'
+export type { CrewAgent, ToolResult as CrewToolResult, OrchestratorResponse as ClaudeResponse } from './claude-with-crew.js'
 
 /**
  * Quick Start: Create all agents and orchestrate

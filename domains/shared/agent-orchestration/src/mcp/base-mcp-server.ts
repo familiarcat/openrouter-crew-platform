@@ -40,7 +40,7 @@ export interface ToolResult {
 
 export abstract class BaseMCPServer {
   protected server: Server
-  protected supabase: ReturnType<typeof createClient>
+  protected supabase: ReturnType<typeof createClient> | null
   protected agentName: string
   protected agentRole: string
   protected systemPrompt: string
@@ -54,11 +54,10 @@ export abstract class BaseMCPServer {
     // Automatically load character persona from crew-identities.md
     this.systemPrompt = PersonaProvider.getSystemPrompt(agentName);
 
-    // Initialize Supabase client
-    this.supabase = createClient(
-      process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_ANON_KEY || ''
-    )
+    // Initialize Supabase client (only when credentials are present)
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_ANON_KEY
+    this.supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
 
     // Initialize Redis client for agent-driven caching
     const redisPassword = process.env.REDIS_PASSWORD || 'redis'
@@ -173,7 +172,7 @@ export abstract class BaseMCPServer {
       },
       handler: async (args: any) => {
         const { targetAgent, configType } = args
-        const { data, error } = await this.supabase
+        const { data, error } = await this.supabase!
           .from('agent_configurations')
           .select('content')
           .eq('agent_name', targetAgent.toLowerCase())
@@ -293,7 +292,7 @@ export abstract class BaseMCPServer {
 
         // 2. Fallback to Text Search
         // Using Supabase text search on content column
-        const { data, error } = await this.supabase
+        const { data, error } = await this.supabase!
           .from('crew_knowledge')
           .select('crew_member, topic, content, source_url')
           .textSearch('content', query, { type: 'websearch', config: 'english' })
@@ -531,7 +530,7 @@ export abstract class BaseMCPServer {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
-    const { data, error } = await this.supabase
+    const { data, error } = await this.supabase!
       .from('llm_usage_events')
       .select('*')
       .gte('created_at', startDate.toISOString())
@@ -553,7 +552,7 @@ export abstract class BaseMCPServer {
     minConfidence?: number
     limit?: number
   }): Promise<any[]> {
-    let query = this.supabase
+    let query = this.supabase!
       .from('observation_lounge_findings')
       .select('*')
       .eq('status', 'published')

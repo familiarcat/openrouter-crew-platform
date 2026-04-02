@@ -354,6 +354,9 @@ export class CrewOrchestrator {
     const cached = await this.checkCache(problem, projectId);
     if (cached) return cached;
 
+    // Phase 1: Triage (cheap routing decision)
+    const triage = await this.triageTask(problem);
+
     // Check if there is already an active mission brief for this project
     let brief = await this.getSyncedBrief(projectId);
     
@@ -387,7 +390,7 @@ export class CrewOrchestrator {
     }> = []
 
     let response = await this.openai.chat.completions.create({
-      model: selectedModel,
+      model: brief.selectedModel,
       messages,
       tools: tools as any
     })
@@ -439,7 +442,7 @@ export class CrewOrchestrator {
 
       // Get next response
       response = await this.openai.chat.completions.create({
-        model: selectedModel,
+        model: brief.selectedModel,
         messages,
         tools: tools as any
       })
@@ -457,7 +460,7 @@ export class CrewOrchestrator {
       triage,
       metadata: {
         tokens_used: (response as any).usage?.total_tokens || 0,
-        model: selectedModel,
+        model: brief.selectedModel,
         execution_time_ms: executionTime
       }
     }
@@ -516,8 +519,8 @@ export class CrewOrchestrator {
         agent.process?.stdout?.removeListener('data', onData);
       };
 
-      agent.process.stdout?.on('data', onData);
-      agent.process.stdin?.write(request);
+      agent.process?.stdout?.on('data', onData);
+      agent.process?.stdin?.write(request);
     });
   }
 

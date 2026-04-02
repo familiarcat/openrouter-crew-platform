@@ -282,11 +282,14 @@
     "release": "npm version patch && git push --follow-tags"
   },
   "dependencies": {
+    "@openrouter-crew/agent-orchestration": "workspace:*",
     "@openrouter-crew/crew-api-client": "workspace:*",
     "@openrouter-crew/shared-ui-components": "workspace:*",
     "@openrouter-crew/shared-cost-tracking": "workspace:^",
     "@openrouter-crew/shared-crew-coordination": "workspace:^",
     "@openrouter-crew/shared-schemas": "workspace:^",
+    "ioredis": "^5.3.2",
+    "openai": "^4.52.7",
     "@supabase/supabase-js": "^2.39.0",
     "tesseract.js": "^5.0.0",
     "typescript": "^5.3.3",

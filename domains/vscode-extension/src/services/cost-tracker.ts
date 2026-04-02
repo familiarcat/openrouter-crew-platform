@@ -15,6 +15,8 @@ export interface UsageRecord {
     tokens: number;
     command?: string;
     intent?: string;
+    complexity?: string;
+    latencyScore?: number;
     promptLength?: number;
     executionTimeMs?: number;
     costUSD: number;
@@ -31,16 +33,18 @@ export class CostTracker implements vscode.Disposable {
         this.context = context;
     }
 
-    private getStorageKey(period: 'daily' | 'monthly'): string {
+    private getStorageKey(period: 'daily' | 'monthly', projectId?: string): string {
         const now = new Date();
         const year = now.getUTCFullYear();
         const month = now.getUTCMonth() + 1;
         const day = now.getUTCDate();
         
+        const projectSuffix = projectId ? `.${projectId}` : '';
+        
         if (period === 'daily') {
-            return `${this.COST_KEY_PREFIX}daily.${year}-${month}-${day}`;
+            return `${this.COST_KEY_PREFIX}daily.${year}-${month}-${day}${projectSuffix}`;
         }
-        return `${this.COST_KEY_PREFIX}monthly.${year}-${month}`;
+        return `${this.COST_KEY_PREFIX}monthly.${year}-${month}${projectSuffix}`;
     }
 
     public async recordUsage(cost: number, metadata?: Partial<UsageRecord>): Promise<void> {
@@ -135,6 +139,23 @@ export class CostTracker implements vscode.Disposable {
             });
         }
         return trend;
+    }
+
+    /**
+     * DATA'S PREDICTIVE FORECAST:
+     * Predicts the cost of the next mission based on the average of the last 50 transactions.
+     */
+    public predictMissionCost(): number {
+        const history = this.getLocalHistory();
+        if (history.length === 0) return 0;
+
+        const recent = history.slice(-50);
+        const avgCost = recent.reduce((sum, r) => sum + r.costUSD, 0) / recent.length;
+        
+        // Apply a complexity variance factor (1.2x) for safety
+        const prediction = avgCost * 1.2;
+        console.log(`📊 Data: Next mission forecasted at $${prediction.toFixed(5)}`);
+        return prediction;
     }
 
     dispose() {

@@ -6,8 +6,9 @@ import { CLIExecutor } from '../services/cli-executor';
 import { ChatPanel } from '../ui/chat-panel';
 import { CostReportPanel } from '../ui/cost-report-panel';
 import { ProjectWorkbenchPanel } from '../ui/project-workbench-panel';
-import { ProjectIntakePanel } from '../ui/project-intake-panel';
-import { WorkItemIntakePanel } from '../ui/work-item-intake-panel';
+// ProjectIntakePanel and WorkItemIntakePanel require shared-ui-components subpath exports not yet built
+// import { ProjectIntakePanel } from '../ui/project-intake-panel';
+// import { WorkItemIntakePanel } from '../ui/work-item-intake-panel';
 import { triggerMaintenance } from './trigger-maintenance';
 import { MaintenanceStatusProvider } from '../providers/maintenance-status';
 import { LLMRouter } from '../services/llm-router';
@@ -15,6 +16,7 @@ import { NLPProcessor } from '../services/nlp-processor';
 import { ContextBuilder } from '../services/context-builder';
 import { ToolRegistry } from '../services/tool-registry';
 import { CommandExecutor } from './command-executor';
+import { PromptManager } from '@openrouter-crew/agent-orchestration';
 
 export interface ExtensionServices {
     costTracker: CostTracker;
@@ -27,6 +29,7 @@ export interface ExtensionServices {
     contextBuilder: ContextBuilder;
     toolRegistry: ToolRegistry;
     commandExecutor: CommandExecutor;
+    promptManager: PromptManager;
 }
 
 export function registerCommands(context: vscode.ExtensionContext, services: ExtensionServices) {
@@ -40,7 +43,8 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
         nlpProcessor,
         contextBuilder,
         toolRegistry,
-        commandExecutor
+        commandExecutor,
+        promptManager
     } = services;
 
     const subscriptions = context.subscriptions;
@@ -50,12 +54,14 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
         vscode.commands.registerCommand('openrouter-crew.chat', () => {
             ChatPanel.createOrShow(
                 context.extensionUri,
+                agentNetwork,
                 llmRouter,
                 costTracker,
                 nlpProcessor,
                 contextBuilder,
                 toolRegistry,
                 commandExecutor,
+                promptManager,
                 context
             );
         }),
@@ -123,9 +129,9 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
 
     // Project & UI
     subscriptions.push(
-        vscode.commands.registerCommand('openrouter-crew.project.workbench', () => ProjectWorkbenchPanel.createOrShow(context.extensionUri, agentNetwork)),
-        vscode.commands.registerCommand('openrouter-crew.project.create', () => ProjectIntakePanel.createOrShow(context.extensionUri, cliExecutor)),
-        vscode.commands.registerCommand('openrouter-crew.project.feature', () => WorkItemIntakePanel.createOrShow(context.extensionUri, cliExecutor)),
+        vscode.commands.registerCommand('openrouter-crew.project.workbench', () => ProjectWorkbenchPanel.createOrShow(context.extensionUri, agentNetwork, costTracker, context)),
+        vscode.commands.registerCommand('openrouter-crew.project.create', () => vscode.window.showInformationMessage('Project creation panel coming soon.')),
+        vscode.commands.registerCommand('openrouter-crew.project.feature', () => vscode.window.showInformationMessage('Work item intake panel coming soon.')),
         vscode.commands.registerCommand('openrouter-crew.settings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'openrouterCrew')),
         vscode.commands.registerCommand('openrouter-crew.welcome', () => vscode.window.showInformationMessage('OpenRouter Crew: Cost-optimized AI coding assistant. Use Ctrl+Shift+C for chat.')),
         

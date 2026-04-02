@@ -13,7 +13,10 @@ import { FileManager } from './file-manager';
 import { ToolRegistry } from './tool-registry';
 import { AgentExecutionResult } from './types';
 import { LLMRouter } from './llm-router';
+import { ProposeChangeService } from './propose-change-service';
 import Redis from 'ioredis';
+import * as path from 'path';
+import { execAsync } from './exec.js';
 
 // Map friendly model names to OpenRouter model IDs
 const MODEL_ID_MAP: Record<AgentProfile['model'], string> = {
@@ -43,6 +46,7 @@ export class AgentNetworkService {
     private fileManager: FileManager;
     private toolRegistry: ToolRegistry;
     private redis: Redis;
+    private proposeChangeService: ProposeChangeService;
 
     constructor(private costTracker: CostTracker, private llmRouter: LLMRouter) {
         // Connect to Supabase using VSCode configuration
@@ -56,7 +60,8 @@ export class AgentNetworkService {
         );
         // Pass llmRouter to FileManager for cost-optimized refactoring (Geordi La Forge fix)
         this.fileManager = new FileManager(llmRouter);
-        this.toolRegistry = new ToolRegistry(this.fileManager, this.costTracker, this);
+        this.proposeChangeService = new ProposeChangeService(this.costTracker);
+        this.toolRegistry = new ToolRegistry(this.fileManager, this.costTracker, this, this.proposeChangeService);
 
         // Initialize Redis for Mission Control sync
         const redisPassword = process.env.REDIS_PASSWORD || 'redis';
@@ -84,7 +89,7 @@ export class AgentNetworkService {
         const profiles = agentProfiles as Record<string, AgentProfile>;
         
         // Ensure we have a valid profile, falling back to a hardcoded default if necessary
-        const profile = profiles[name.toLowerCase()] || profiles['data'] || {
+        const profile = profiles[name.toLowerCase()] || profiles['data'] || profiles['crusher'] || {
             name: 'Default Agent',
             role: 'General Assistant',
             specialties: ['general tasks'],
@@ -157,6 +162,61 @@ export class AgentNetworkService {
         } catch (e) {
             console.error(`[Central Mind] Failed to fetch mission brief for ${projectId}:`, e);
             return null;
+        }
+    }
+
+    /**
+     * O'BRIEN'S TRANSPORTER BUFFER: List all files currently in the buffer.
+     */
+    public async getBufferedFiles(): Promise<string[]> {
+        try {
+            const keys = await this.redis.keys('buffer:*');
+            return keys.map(k => k.replace('buffer:', ''));
+        } catch (e) {
+            console.error('[Central Mind] Failed to fetch buffer list:', e);
+            return [];
+        }
+    }
+
+    /**
+     * O'BRIEN'S TRANSPORTER BUFFER: Restore a file to its previous state.
+     */
+    public async restoreFromBuffer(filePath: string): Promise<boolean> {
+        try {
+            const content = await this.redis.get(`buffer:${filePath}`);
+            if (content) {
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                const absolutePath = workspaceRoot && !path.isAbsolute(filePath) 
+                    ? path.join(workspaceRoot, filePath) 
+                    : filePath;
+                
+                await this.fileManager.writeFile(absolutePath, content);
+                await this.redis.del(`buffer:${filePath}`);
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error(`[Central Mind] Failed to restore ${filePath} from buffer:`, e);
+            return false;
+        }
+    }
+
+    /**
+     * WARP FIELD STATUS: Fetches real-time health of Docker containers.
+     */
+    public async getDockerStatus(): Promise<Array<{ name: string; status: string; healthy: boolean }>> {
+        try {
+            const { stdout } = await execAsync('docker ps --format "{{.Names}}:{{.Status}}"');
+            const lines = stdout.split('\n').filter(Boolean);
+            
+            return lines.map(line => {
+                const [name, status] = line.split(':');
+                const healthy = !status.includes('unhealthy') && !status.includes('Exited') && (status.includes('up') || status.includes('Up'));
+                return { name, status, healthy };
+            });
+        } catch (e) {
+            console.error('[Central Mind] Failed to fetch docker status:', e);
+            return [];
         }
     }
 }

@@ -18,6 +18,10 @@ import { registerTreeViews } from './ui/tree-views';
 import { CLIExecutor } from './services/cli-executor';
 import { MaintenanceStatusProvider } from './providers/maintenance-status';
 import { registerCommands } from './commands/registry';
+import { StabilizerService } from './services/stabilizer-service';
+import { TreatmentPlanView } from './ui/treatment-plan-view';
+import { ProposeChangeService } from './services/propose-change-service';
+import { PromptManager, OllamaMCPClient } from '@openrouter-crew/agent-orchestration';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -32,16 +36,32 @@ export function activate(context: vscode.ExtensionContext) {
     const nlpProcessor = new NLPProcessor(llmRouter);
     const contextBuilder = new ContextBuilder(fileManager);
     const agentNetwork = new AgentNetworkService(costTracker, llmRouter);
-    const toolRegistry = new ToolRegistry(fileManager, costTracker, agentNetwork);
+    const proposeChangeService = new ProposeChangeService(costTracker);
+    const toolRegistry = new ToolRegistry(fileManager, costTracker, agentNetwork, proposeChangeService);
     const terminalManager = new TerminalManager();
     const outputChannel = vscode.window.createOutputChannel('OpenRouter Crew');
     const cliOutputChannel = vscode.window.createOutputChannel('OpenRouter Crew CLI');
     const crewAPIService = new CrewAPIService(outputChannel);
     const commandExecutor = new CommandExecutor(agentNetwork, toolRegistry, terminalManager, outputChannel, llmRouter, nlpProcessor);
     const cliExecutor = new CLIExecutor(cliOutputChannel);
+    const apiKey = vscode.workspace.getConfiguration('openrouterCrew').get<string>('apiKey') || '';
+    const openaiClient = new (require('openai').default)({ apiKey, baseURL: 'https://openrouter.ai/api/v1' });
+    const promptManager = new PromptManager(openaiClient, new OllamaMCPClient());
     costEstimator; // Keep instance for potential future use
 
     toolRegistry.initialize();
+
+    // Geordi's Warp Field Stabilizer — Docker health monitor
+    const stabilizerService = new StabilizerService();
+    context.subscriptions.push(stabilizerService);
+
+    // Dr. Crusher's Treatment Plan View — diagnostic results panel
+    const treatmentPlanView = new TreatmentPlanView(context, agentNetwork, costTracker);
+    context.subscriptions.push(
+        vscode.commands.registerCommand('openrouter-crew.showTreatmentPlan', (result) => {
+            treatmentPlanView.show(result);
+        })
+    );
 
     // Register tree views (sidebar panels)
     registerTreeViews(context, agentNetwork, costTracker, crewAPIService);
@@ -60,7 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
             async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
                 // The state is persisted by VS Code, but we are using globalState for history.
                 // `revive` will handle loading the history from globalState.
-                ChatPanel.revive(webviewPanel, context.extensionUri, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, commandExecutor, context);
+                ChatPanel.revive(webviewPanel, context.extensionUri, agentNetwork, llmRouter, costTracker, nlpProcessor, contextBuilder, toolRegistry, commandExecutor, promptManager, context);
             }
         })
     );
@@ -76,7 +96,8 @@ export function activate(context: vscode.ExtensionContext) {
         nlpProcessor,
         contextBuilder,
         toolRegistry,
-        commandExecutor
+        commandExecutor,
+        promptManager
     });
 }
 

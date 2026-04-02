@@ -38,6 +38,7 @@ export interface LLMResponse {
   executionTimeMs: number;
   cached: boolean;
   tool_calls?: any[];
+  latencyScore?: number; // QUARK: Arbitrage metric
   usage?: { prompt_tokens: number; completion_tokens: number };
 }
 
@@ -54,7 +55,7 @@ export interface ModelChoice {
 }
 
 export class LLMRouter {
-  private sharedRouter: ModelRouter;
+  private sharedRouter: any;
   
   constructor(
       private costTracker: CostTracker,
@@ -72,7 +73,7 @@ export class LLMRouter {
       
       // 2. Delegate to Shared Router for Model Selection
       // Adapts local context to shared CostTier logic
-      let preferredTier: CostTier = 'budget';
+      let preferredTier: string = 'budget';
       if (complexity === 'HIGH' || contextSize > 4000 || request.intent === 'DEBUG') {
           preferredTier = 'premium';
       }
@@ -86,16 +87,22 @@ export class LLMRouter {
       // 3. Execute request via OpenRouter using selected model
       const response = await this.callOpenRouter(request, selectedModel.id);
 
+      const executionTime = Date.now() - startTime;
+
       // 7. Track Cost & Cache
       await this.costTracker.recordUsage(response.costUSD, {
           model: response.model,
           tokens: (response.usage?.prompt_tokens || 0) + (response.usage?.completion_tokens || 0),
-          intent: request.intent
+          intent: request.intent,
+          complexity: request.complexity || complexity,
+          latencyScore: response.latencyScore,
+          executionTimeMs: executionTime
       });
 
       return {
           ...response,
-          executionTimeMs: Date.now() - startTime
+          executionTimeMs: executionTime,
+          latencyScore: executionTime / (response.usage?.completion_tokens || 1)
       };
   }
 
@@ -152,16 +159,24 @@ export class LLMRouter {
           body.tools = request.tools;
       }
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': 'https://github.com/openrouter-crew/vscode-extension',
-              'X-Title': 'OpenRouter Crew VSCode',
-          },
-          body: JSON.stringify(body)
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60_000);
+      let response: Response;
+      try {
+          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json',
+                  'HTTP-Referer': 'https://github.com/openrouter-crew/vscode-extension',
+                  'X-Title': 'OpenRouter Crew VSCode',
+              },
+              body: JSON.stringify(body),
+              signal: controller.signal
+          });
+      } finally {
+          clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
           const errorText = await response.text();

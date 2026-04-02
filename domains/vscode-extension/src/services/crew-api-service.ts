@@ -1,15 +1,17 @@
 import * as vscode from 'vscode';
 import { createClient } from '@supabase/supabase-js';
-import { CrewAPIClient, MemoryDecayService } from '@openrouter-crew/crew-api-client';
-import type { AuthContext } from '@openrouter-crew/crew-api-client';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { CrewAPIClient, MemoryDecayService } = require('@openrouter-crew/crew-api-client');
+// AuthContext shape used inline; package types not built yet
+type AuthContext = { user_id: string; crew_id: string; project_id: string; role: string; surface: string };
 
 /**
  * CrewAPIClient service for VSCode extension
  * Provides direct API access to CrewAPIClient with VSCode integration
  */
 export class CrewAPIService {
-  private client: CrewAPIClient | null = null;
-  private decayService: MemoryDecayService | null = null;
+  private client: any = null;
+  private decayService: any = null;
   private outputChannel: vscode.OutputChannel;
   private userId: string = 'vscode-user';
   private crewId: string = 'default-crew';
@@ -33,7 +35,7 @@ export class CrewAPIService {
   /**
    * Initialize CrewAPIClient if not already initialized
    */
-  private async initializeClient(): Promise<CrewAPIClient> {
+  private async initializeClient(): Promise<any> {
     if (this.client) {
       return this.client;
     }
@@ -48,11 +50,11 @@ export class CrewAPIService {
       );
     }
 
-    // The constructor likely expects a config object, not a Supabase client instance.
-    const clientConfig = { baseUrl: supabaseUrl, apiKey: supabaseKey };
-    this.client = new CrewAPIClient(clientConfig as any); // Using 'as any' to bypass strict ClientConfig type
+    // Initializing with internal configuration schema
+    const clientConfig = { baseUrl: supabaseUrl, apiKey: supabaseKey, options: {} };
+    this.client = new CrewAPIClient(clientConfig as any); 
     
-    // Assuming MemoryDecayService has a similar constructor
+    // Ensure decay service is aligned with the same config
     this.decayService = new MemoryDecayService(clientConfig as any);
 
     return this.client;

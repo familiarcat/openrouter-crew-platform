@@ -6,6 +6,8 @@ import { ContextBuilder } from '../services/context-builder';
 import { ToolRegistry } from '../services/tool-registry';
 import { CommandExecutor } from '../commands/command-executor';
 import { PromptManager } from '@openrouter-crew/agent-orchestration';
+import { BridgeController, FleetDeck } from './bridge-controller';
+import { AgentNetworkService } from '../services/agent-network';
 
 export class ChatPanel {
   public static currentPanel: ChatPanel | undefined;
@@ -18,6 +20,7 @@ export class ChatPanel {
   private constructor(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
+    private agentNetwork: AgentNetworkService,
     private llmRouter: LLMRouter,
     private costTracker: CostTracker,
     private nlpProcessor: NLPProcessor,
@@ -41,6 +44,10 @@ export class ChatPanel {
     this._panel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.command) {
+          case 'navigate':
+            const bridge = BridgeController.getInstance(this.context, this.agentNetwork, this.costTracker);
+            bridge.navigateToDeck(message.deck as FleetDeck);
+            break;
           case 'sendMessage':
             await this.handleUserMessage(message.text);
             return;
@@ -56,6 +63,7 @@ export class ChatPanel {
 
   public static createOrShow(
     extensionUri: vscode.Uri,
+    agentNetwork: AgentNetworkService,
     llmRouter: LLMRouter,
     costTracker: CostTracker,
     nlpProcessor: NLPProcessor,
@@ -94,6 +102,7 @@ export class ChatPanel {
     ChatPanel.currentPanel = new ChatPanel(
       panel,
       extensionUri,
+      agentNetwork,
       llmRouter,
       costTracker,
       nlpProcessor,
@@ -108,6 +117,7 @@ export class ChatPanel {
   public static revive(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
+    agentNetwork: AgentNetworkService,
     llmRouter: LLMRouter,
     costTracker: CostTracker,
     nlpProcessor: NLPProcessor,
@@ -120,6 +130,7 @@ export class ChatPanel {
     ChatPanel.currentPanel = new ChatPanel(
       panel,
       extensionUri,
+      agentNetwork,
       llmRouter,
       costTracker,
       nlpProcessor,
@@ -145,10 +156,10 @@ export class ChatPanel {
         // Step 1: Centralized Prompt Refinement (The "Universal" pass)
         // This uses local Ollama to architect the technical brief at $0 cost
         this._panel.webview.postMessage({ command: 'updateStatus', text: 'Architecting mission brief...' });
-        const brief = await this.promptManager.architectMission(text, { projectId });
+        const brief = await this.promptManager.architectMission(text, projectId);
 
         // Admiral's Directive: Automatically trigger deep file context for HIGH complexity tasks
-        const context = await this.contextBuilder.buildContext(text, brief.complexity === 'HIGH');
+        const context = await this.contextBuilder.buildContext(text, brief.complexity === 'HIGH' ? 16000 : 8000);
         
         let responseContent = '';
         let cost = 0;
@@ -156,8 +167,7 @@ export class ChatPanel {
 
         if (brief.complexity === 'LOW') {
              const response = await this.llmRouter.route({
-                prompt: brief.refinedPrompt,
-                systemPrompt: brief.agentPersona, // Explicitly pass the persona
+                prompt: `${brief.agentPersona}\n\n${brief.refinedPrompt}`,
                 intent: 'ASK',
                 complexity: 'LOW'
              });
@@ -207,11 +217,16 @@ export class ChatPanel {
     }
   }
 
-  private _update() {
-    this._panel.webview.html = this._getHtmlForWebview();
+  private async _update() {
+    const costMetrics = await this.costTracker.getCostMetrics('daily');
+    this._panel.webview.html = this._getHtmlForWebview(costMetrics);
   }
 
-  private _getHtmlForWebview() {
+  private _getHtmlForWebview(costMetrics: any) {
+    let budgetAlertClass = '';
+    if (costMetrics.percentUsed > 95) budgetAlertClass = 'alert-red';
+    else if (costMetrics.percentUsed > 70) budgetAlertClass = 'alert-yellow';
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -233,6 +248,19 @@ export class ChatPanel {
                 --color-warning: #f59e0b;
                 --color-error: #ef4444;
             }
+
+            /* Pedagogical Navigation System */
+            .fleet-nav { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--color-border); padding: 10px 20px; background: var(--color-bg-primary); }
+            .nav-item { 
+                padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;
+                background: var(--color-bg-tertiary); color: var(--color-text-secondary); border: 1px solid transparent;
+                transition: all 0.2s ease;
+            }
+            .nav-item:hover { background: var(--color-bg-secondary); border-color: var(--color-primary-500); }
+            .nav-item.active { background: var(--color-primary-500); color: white; border-color: var(--color-primary-500); }
+            .nav-arrow { opacity: 0.5; font-size: 1.1em; display: flex; align-items: center; }
+            .fleet-nav.alert-yellow { border-bottom: 2px solid var(--color-warning); }
+            .fleet-nav.alert-red { border-bottom: 2px solid var(--color-error); }
 
             body {
                 margin: 0;
@@ -330,6 +358,14 @@ export class ChatPanel {
         </style>
     </head>
     <body>
+        <div class="fleet-nav ${budgetAlertClass}">
+            <div class="nav-item" onclick="nav('STRATEGY')">1. STRATEGY</div>
+            <div class="nav-arrow">→</div>
+            <div class="nav-item active" onclick="nav('COMMAND')">2. COMMAND</div>
+            <div class="nav-arrow">→</div>
+            <div class="nav-item" onclick="nav('AUDIT')">3. AUDIT</div>
+        </div>
+
         <div id="chat-container">
             <div class="message system">Welcome to OpenRouter Crew! How can I help you today?</div>
         </div>
@@ -384,6 +420,10 @@ export class ChatPanel {
                     messageInput.value = '';
                     messageInput.style.height = 'auto';
                 }
+            }
+
+            function nav(deck) {
+                vscode.postMessage({ command: 'navigate', deck: deck });
             }
 
             sendButton.addEventListener('click', sendMessage);

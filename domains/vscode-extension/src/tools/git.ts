@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ToolDefinition } from '../services/types.js';
 import { execAsync } from '../services/exec.js';
+import { fsTools } from './filesystem.js';
 
 export const gitTools: ToolDefinition[] = [
     {
@@ -18,10 +19,21 @@ export const gitTools: ToolDefinition[] = [
                 }
             }
         },
-        execute: async (args, agent) => {
+        execute: async (args, agent, deps) => {
             try {
                 const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
                 if (!cwd) return "Error: No workspace open.";
+
+                // WORF SENTRY: Force secret scan before commit
+                const scanTool = fsTools.find(t => t.schema.function.name === 'scanForSecrets');
+                if (scanTool) {
+                    const scanResult = await scanTool.execute({}, agent, deps);
+                    if (scanResult.includes('⚠️ Potential secret')) {
+                        return `COMMIT BLOCKED BY WORF: Security vulnerabilities detected.\n${scanResult}`;
+                    }
+                }
+
+                // Future: Add verify-compliance agent check here
 
                 const safeMessage = args.message.replace(/"/g, '\\"');
                 const cmd = `git add . && git commit -m "${safeMessage}"`;

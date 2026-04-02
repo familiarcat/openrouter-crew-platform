@@ -6,6 +6,12 @@
 
 ---
 
+## 🖖 Admiral Oversight (Human-in-the-Loop)
+To review system functionality and provide feedback:
+1. Run `pnpm crew:launch` to build, analyze, and launch the platform.
+2. Open **Mission Control** (`Cmd+Shift+P` -> `Crew: Open Mission Control Dashboard`).
+3. Use the **Chat Panel** to issue directives; feedback is logged to Supabase `memories`.
+
 ## Executive Summary
 
 **OpenRouter Crew Platform** is a cost-optimized AI orchestration system that combines n8n workflow automation, Supabase data management, and Claude AI agents to create autonomous business services. The platform demonstrates profitability by generating complete local business packages (websites, business plans, financials) for under $1.50 per execution, with potential ROI of 500x+ when scaled.

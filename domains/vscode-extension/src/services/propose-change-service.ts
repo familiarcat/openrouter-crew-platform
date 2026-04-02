@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CostTracker } from './cost-tracker';
+import Redis from 'ioredis';
 
 /**
  * ProposeChangeService
@@ -9,7 +10,12 @@ import { CostTracker } from './cost-tracker';
  * with a human-in-the-loop approval workflow.
  */
 export class ProposeChangeService {
-    constructor(private costTracker?: CostTracker) {}
+    private redis: Redis;
+
+    constructor(private costTracker?: CostTracker) {
+        // Standard fleet connection
+        this.redis = new Redis(`redis://:${process.env.REDIS_PASSWORD || 'redis'}@${process.env.REDIS_HOST || 'localhost'}:6379`);
+    }
 
     /**
      * Proposes a change to a file by showing a side-by-side diff.
@@ -67,6 +73,10 @@ export class ProposeChangeService {
         }
 
         if (response === 'Accept & Apply') {
+            // O'BRIEN TRANSPORTER BUFFER: Cache current state before overwriting
+            const currentState = fs.readFileSync(absolutePath, 'utf-8');
+            await this.redis.set(`buffer:${filePath}`, currentState, 'EX', 3600);
+
             fs.writeFileSync(absolutePath, newContent);
             vscode.window.showInformationMessage(`Successfully applied changes to ${fileName}`);
             return true;

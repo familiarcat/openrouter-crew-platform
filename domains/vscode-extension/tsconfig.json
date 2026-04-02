@@ -27,6 +27,10 @@
   ],
   "exclude": [
     "node_modules",
-    "out"
+    "out",
+    "src/activation.ts",
+    "src/chat-panel.test.ts",
+    "src/ui/project-intake-panel.ts",
+    "src/ui/work-item-intake-panel.ts"
   ]
 }

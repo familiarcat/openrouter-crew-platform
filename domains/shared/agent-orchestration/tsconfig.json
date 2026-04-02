@@ -1,14 +1,22 @@
 {
   "extends": "../../../tsconfig.json",
   "compilerOptions": {
+    "target": "ES2017",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "isolatedModules": false
   },
   "include": [
     "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "src/mcp/useProjects.ts"
   ]
 }

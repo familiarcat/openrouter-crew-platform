@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": ".",
+			"name": "OpenRouter Crew Platform"
+		}
+	],
+	"settings": {
+		"openrouter-crew.projectId": "default-project",
+		"workbench.editor.openSideBySideDirection": "right",
+		"editor.formatOnSave": true
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "🖖 Admiral Review (Extension Host)",
+				"type": "extensionHost",
+				"request": "launch",
+				"runtimeExecutable": "${execPath}",
+				"args": [
+					"--extensionDevelopmentPath=${workspaceFolder}/domains/vscode-extension"
+				],
+				"outFiles": ["${workspaceFolder}/domains/vscode-extension/out/**/*.js"]
+			}
+		]
+	}
+}

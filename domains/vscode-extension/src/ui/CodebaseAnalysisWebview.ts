@@ -1,6 +1,10 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import * as fs from 'fs'
+import { BridgeController, FleetDeck } from './bridge-controller'
+import { AgentNetworkService } from '../services/agent-network'
+import { CostTracker } from '../services/cost-tracker'
+import { TreatmentPlanView } from './treatment-plan-view'
 
 interface CodebaseMetrics {
   totalFiles: number
@@ -23,7 +27,10 @@ export class CodebaseAnalysisWebview {
 
   private panel: vscode.WebviewPanel | undefined
   private metrics: CodebaseMetrics | undefined
-  private refreshInterval: NodeJS.Timer | undefined
+  private refreshInterval: ReturnType<typeof setInterval> | undefined
+  private agentNetwork: AgentNetworkService | undefined
+  private costTracker: CostTracker | undefined
+  private context: vscode.ExtensionContext | undefined
 
   private constructor() {}
 
@@ -34,7 +41,11 @@ export class CodebaseAnalysisWebview {
     return CodebaseAnalysisWebview.instance
   }
 
-  async show(extensionContext: vscode.ExtensionContext): Promise<void> {
+  async show(extensionContext: vscode.ExtensionContext, agentNetwork?: AgentNetworkService, costTracker?: CostTracker): Promise<void> {
+    this.agentNetwork = agentNetwork;
+    this.costTracker = costTracker;
+    this.context = extensionContext;
+
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.Two)
       return
@@ -117,13 +128,19 @@ export class CodebaseAnalysisWebview {
   private updateWebview(extensionContext: vscode.ExtensionContext): void {
     if (!this.panel) return
 
-    this.panel.webview.html = this.getHtmlContent(extensionContext)
+    this.costTracker?.getCostMetrics('daily').then(costMetrics => {
+      this.panel!.webview.html = this.getHtmlContent(extensionContext, costMetrics)
+    })
   }
 
-  private getHtmlContent(extensionContext: vscode.ExtensionContext): string {
+  private getHtmlContent(extensionContext: vscode.ExtensionContext, costMetrics?: any): string {
     if (!this.metrics) {
       return this.getEmptyStateHtml()
     }
+
+    let budgetAlertClass = '';
+    if (costMetrics?.percentUsed > 95) budgetAlertClass = 'alert-red';
+    else if (costMetrics?.percentUsed > 70) budgetAlertClass = 'alert-yellow';
 
     const formatBytes = (bytes: number): string => {
       if (bytes === 0) return '0 B'
@@ -195,6 +212,20 @@ export class CodebaseAnalysisWebview {
         --color-button-hover: var(--vscode-button-hoverBackground, #2563eb);
         --color-input-bg: var(--vscode-input-background, #3c3c3c);
     }
+
+    /* Pedagogical Navigation System */
+    .fleet-nav { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; }
+    .nav-item { 
+        padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold;
+        background: var(--color-bg-tertiary); color: var(--color-text-secondary); border: 1px solid transparent;
+        transition: all 0.2s ease;
+    }
+    .nav-item:hover { background: var(--color-bg-secondary); border-color: var(--color-primary-500); }
+    .nav-item.active { background: var(--color-primary-500); color: white; border-color: var(--color-primary-500); }
+    .nav-step { display: flex; align-items: center; gap: 5px; }
+    .nav-arrow { opacity: 0.5; font-size: 1.2em; display: flex; align-items: center; }
+    .fleet-nav.alert-yellow { border-bottom: 2px solid var(--color-warning); }
+    .fleet-nav.alert-red { border-bottom: 2px solid var(--color-error); }
 
     * {
       box-sizing: border-box;
@@ -438,7 +469,18 @@ export class CodebaseAnalysisWebview {
 </head>
 <body>
   <div class="container">
-    <h1>Codebase Analysis Dashboard</h1>
+    <div class="fleet-nav ${budgetAlertClass}">
+        <div class="nav-item" onclick="nav('STRATEGY')">1. STRATEGY</div>
+        <div class="nav-arrow">→</div>
+        <div class="nav-item" onclick="nav('COMMAND')">2. COMMAND</div>
+        <div class="nav-arrow">→</div>
+        <div class="nav-item active" onclick="nav('AUDIT')">3. AUDIT</div>
+    </div>
+
+    <h1 style="display: flex; align-items: center; gap: 10px;">
+        <span>Codebase Analysis Dashboard</span>
+        <span style="font-size: 0.5em; opacity: 0.6; font-weight: normal;">[AUDIT DECK]</span>
+    </h1>
 
     <div class="metric-grid">
       <div class="metric-card">
@@ -489,6 +531,9 @@ export class CodebaseAnalysisWebview {
     <div class="button-group">
       <button onclick="refresh()">Refresh</button>
       <button onclick="openDashboard()">Full Dashboard</button>
+      <button onclick="runAdmiralAudit()" style="background: var(--color-primary-500);">Admiral Audit</button>
+      <button onclick="runMedicalDiagnostic()" style="background: var(--color-success); color: white;">Crusher: Medical Diagnostic</button>
+      <button onclick="runSecurityScan()" style="background: var(--color-error); color: white;">Worf: Security Sweep</button>
     </div>
 
     <div class="last-updated">
@@ -499,12 +544,28 @@ export class CodebaseAnalysisWebview {
   <script>
     const vscode = acquireVsCodeApi()
 
+    function nav(deck) {
+      vscode.postMessage({ command: 'navigate', deck: deck });
+    }
+
     function refresh() {
       vscode.postMessage({ command: 'refresh' })
     }
 
     function openDashboard() {
       vscode.postMessage({ command: 'openDashboard' })
+    }
+
+    function runAdmiralAudit() {
+      vscode.postMessage({ command: 'runAnalysis' })
+    }
+
+    function runMedicalDiagnostic() {
+      vscode.postMessage({ command: 'runMedicalDiagnostic' })
+    }
+
+    function runSecurityScan() {
+      vscode.postMessage({ command: 'runSecurityScan' })
     }
 
     // Update timestamp
@@ -534,6 +595,7 @@ export class CodebaseAnalysisWebview {
         /* Universal Dark Theme Variable Mapping */
         --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
         --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
+        --color-bg-tertiary: var(--vscode-sideBar-background, #2d2d30);
         --color-text-primary: var(--vscode-editor-foreground, #cccccc);
         --color-text-secondary: var(--vscode-descriptionForeground, #858585);
         --color-border: var(--vscode-widget-border, #3e3e42);
@@ -542,6 +604,17 @@ export class CodebaseAnalysisWebview {
         --color-button-hover: var(--vscode-button-hoverBackground, #2563eb);
         --color-input-bg: var(--vscode-input-background, #3c3c3c);
     }
+
+    /* Pedagogical Navigation System */
+    .fleet-nav { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; width: 100%; position: absolute; top: 0; left: 0; padding: 20px; box-sizing: border-box; }
+    .nav-item { 
+        padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold;
+        background: var(--color-bg-tertiary); color: var(--color-text-secondary); border: 1px solid transparent;
+        transition: all 0.2s ease;
+    }
+    .nav-item:hover { background: var(--color-bg-secondary); border-color: var(--color-primary-500); }
+    .nav-item.active { background: var(--color-primary-500); color: white; border-color: var(--color-primary-500); }
+    .nav-arrow { opacity: 0.5; font-size: 1.2em; display: flex; align-items: center; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
@@ -557,6 +630,7 @@ export class CodebaseAnalysisWebview {
       text-align: center;
       color: var(--color-text-secondary);
       max-width: 400px;
+      margin-top: 80px;
     }
     h1 {
       font-size: 16px;
@@ -590,6 +664,14 @@ export class CodebaseAnalysisWebview {
   </style>
 </head>
 <body>
+  <div class="fleet-nav">
+      <div class="nav-item" onclick="nav('STRATEGY')">1. STRATEGY</div>
+      <div class="nav-arrow">→</div>
+      <div class="nav-item" onclick="nav('COMMAND')">2. COMMAND</div>
+      <div class="nav-arrow">→</div>
+      <div class="nav-item active" onclick="nav('AUDIT')">3. AUDIT</div>
+  </div>
+
   <div class="empty-state">
     <h1>No Codebase Analysis Data</h1>
     <p>Run the codebase analyzer to generate metrics:</p>
@@ -601,6 +683,10 @@ export class CodebaseAnalysisWebview {
 
   <script>
     const vscode = acquireVsCodeApi()
+
+    function nav(deck) {
+      vscode.postMessage({ command: 'navigate', deck: deck });
+    }
 
     function runAnalysis() {
       vscode.postMessage({ command: 'runAnalysis' })
@@ -615,6 +701,12 @@ export class CodebaseAnalysisWebview {
     extensionContext: vscode.ExtensionContext
   ): void {
     switch (message.command) {
+      case 'navigate':
+        if (this.agentNetwork && this.costTracker) {
+          const bridge = BridgeController.getInstance(extensionContext, this.agentNetwork, this.costTracker);
+          bridge.navigateToDeck((message as any).deck as FleetDeck);
+        }
+        break;
       case 'refresh':
         this.loadMetrics().then(() => this.updateWebview(extensionContext))
         break
@@ -623,6 +715,12 @@ export class CodebaseAnalysisWebview {
         break
       case 'runAnalysis':
         this.runAnalyzer()
+        break
+      case 'runMedicalDiagnostic':
+        this.runMedicalDiagnostic()
+        break
+      case 'runSecurityScan':
+        this.runSecurityScan()
         break
     }
   }
@@ -667,6 +765,67 @@ export class CodebaseAnalysisWebview {
       )
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to run analyzer: ${error}`)
+    }
+  }
+
+  private async runMedicalDiagnostic(): Promise<void> {
+    if (!this.agentNetwork || !this.metrics) return;
+    if (!this.agentNetwork || !this.metrics || !this.context) return;
+
+    try {
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Dr. Crusher: Performing systemic codebase diagnosis...',
+          cancellable: true,
+        },
+        async (progress) => {
+          const crusher = this.agentNetwork!.getDepartment('crusher');
+          
+          const diagnosticPrompt = `
+            Perform a "Medical Diagnostic" of the current codebase based on these metrics:
+            ${JSON.stringify(this.metrics, null, 2)}
+
+            Focus on:
+            1. Systemic health (complexity vs. size).
+            2. Identification of "Technical Debt Infections" (excessive dependencies or duplication).
+            3. Domain health (are domains clearly defined or bleeding into each other?).
+            
+            Provide a prioritized Treatment Plan.
+          `;
+
+          const result = await crusher.executeTask(diagnosticPrompt);
+          vscode.window.showInformationMessage('Diagnostic Complete. Check the Output Channel for the treatment plan.');
+          console.log('[Dr. Crusher] Diagnosis:', result.output);
+          
+          // Display the treatment plan in a rich UI
+          const treatmentView = new TreatmentPlanView(this.context!, this.agentNetwork!, this.costTracker!);
+          await treatmentView.show(result);
+          
+          vscode.window.showInformationMessage('Dr. Crusher has issued a Treatment Plan.');
+        }
+      );
+    } catch (error) {
+      vscode.window.showErrorMessage(`Diagnostic failed: ${error}`);
+    }
+  }
+
+  private async runSecurityScan(): Promise<void> {
+    try {
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Worf: Initiating real-time security sweep...',
+          cancellable: true,
+        },
+        async () => {
+          const terminal = vscode.window.createTerminal('Worf Security')
+          terminal.show()
+          terminal.sendText('pnpm crew memory compliance && pnpm ai:analyze --mode duplication,architecture')
+        }
+      )
+    } catch (error) {
+      vscode.window.showErrorMessage(`Security sweep failed: ${error}`)
     }
   }
 

@@ -368,7 +368,7 @@ export class OCRWithNLP {
       codeContext,
       combined: {
         intent: nlpAnalysis.intent,
-        detectedLanguage: codeContext.language || nlpAnalysis.language,
+        detectedLanguage: codeContext.language || (nlpAnalysis as any).language,
         confidence: Math.min(analysisResult.confidence, nlpAnalysis.confidence),
       },
     };

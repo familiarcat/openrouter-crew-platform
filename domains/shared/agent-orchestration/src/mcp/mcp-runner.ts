@@ -11,17 +11,29 @@ import { WorfAgentServer } from './worf-agent-server.js';
 import { GeordiAgentServer } from './geordi-agent-server.js';
 import { CrusherAgentServer } from './crusher-agent-server.js';
 import { TroiAgentServer } from './troi-agent-server.js';
-// Import other servers as implemented...
+import { QuarkAgentServer } from './quark-agent-server.js';
+import { RikerAgentServer } from './riker-agent-server.js';
+import { ObrienAgentServer } from './obrien-agent-server.js';
+import { UhuraAgentServer } from './uhura-agent-server.js';
 
 const AGENT_MAP: Record<string, any> = {
+  // Phase 1 & 2 agents
   'captain_picard': PicardAgentServer,
   'commander_data': DataAgentServer,
   'worf': WorfAgentServer,
   'geordi_la_forge': GeordiAgentServer,
   'crusher': CrusherAgentServer,
   'counselor_troi': TroiAgentServer,
+  // Phase 3 agents (full crew)
+  'quark': QuarkAgentServer,
+  'commander_riker': RikerAgentServer,
+  'chief_obrien': ObrienAgentServer,
+  'uhura': UhuraAgentServer,
   // Aliases
   'data': DataAgentServer,
+  'riker': RikerAgentServer,
+  'obrien': ObrienAgentServer,
+  'troi': TroiAgentServer,
 };
 
 async function main() {
