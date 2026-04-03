@@ -1,75 +1,54 @@
-name: Deploy
+name: Platform CI/CD
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    branches: ["main"]
-    types:
-      - completed
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
-      reason:
-        description: 'Deployment reason'
-        required: false
-        default: 'Manual trigger'
+  push:
+    branches: [ main, staging ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  deploy:
-    name: AWS Cloud Deployment
-    # Only run if CI succeeded or if manually triggered
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+  validate:
+    name: Dark Forest Validation
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
         with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          version: 9.12.3
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install
 
+      - name: Lint & Type Check
+        run: pnpm build # Turbo handles caching and dependent checks
+
+      - name: Run Core Tests
+        run: pnpm test
+
+  deploy-staging:
+    name: Deploy to AWS Staging
+    needs: validate
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION || 'us-east-2' }}
+          aws-region: us-east-2
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.7.0"
-
-      - name: Execute Deployment
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
-          N8N_ENCRYPTION_KEY: ${{ secrets.N8N_ENCRYPTION_KEY }}
-          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-          PROD_DOMAIN: ${{ vars.PROD_DOMAIN }}
+      - name: Terraform Staging
         run: |
-          # Use input environment if dispatch, otherwise default to staging for main branch auto-runs
-          TARGET_ENV="${{ github.event.inputs.environment || 'staging' }}"
-          pnpm deploy:aws $TARGET_ENV
+          cd infrastructure/terraform
+          terraform init
+          terraform workspace select staging || terraform workspace new staging
+          terraform apply -auto-approve -var="environment=staging"
+
+      - name: Deploy Gateways
+        run: ./scripts/deploy/deploy-full.sh staging

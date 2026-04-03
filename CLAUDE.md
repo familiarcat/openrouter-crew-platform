@@ -49,8 +49,8 @@ To review system functionality and provide feedback:
 - [x] **Autopilot Audit**: n8n workflow triggers Migration Audit on SQL file additions.
 
 ### Phase 2: The Command Bridge (Fleet Sync)
-- [x] **Environment Tags**: Added environment field to ProjectSchema.
-- [ ] **Universal Pass**: Deploy standard `PromptManager` to both Next.js and VSCode.
+- [x] **Environment Tags**: Environment field added to ProjectSchema and Terraform workspaces.
+- [x] **Universal Pass**: Deploy standard `PromptManager` to both Next.js and VSCode.
 - [ ] **Memory Scoping**: Namespacing Redis and Supabase by `PROJECT_ID`.
 
 ### Phase 3: The Latinum Shield (Agency Autonomy)
@@ -89,7 +89,7 @@ The platform separates **Deployable Experiences (Apps)** from **Logical Capabili
 - Supabase JS client 2.39.0
 
 **Build & Orchestration:**
-- Turbo 2.0 (monorepo orchestration)
+- Turbo 2.4+ (monorepo orchestration)
 - pnpm 9.12.3 (package manager)
 - Node.js 20.x (minimum)
 
@@ -113,7 +113,7 @@ The platform separates **Deployable Experiences (Apps)** from **Logical Capabili
 1. **DDD Architecture Migration** - All shared components properly placed in domains
 2. **TypeScript Unification** - Fixed `ignoreDeprecations: "5.0"` across 26 tsconfig files
 3. **Build System Optimization** - All 13 packages compiling successfully
-4. **Navigation System** - 21 routes in unified dashboard
+4. **Navigation System** - 21 routes in unified dashboard integrated with Supabase
 5. **Cost Tracking Integration** - Real-time budget monitoring in VSCode extension
 6. **Test Project Definition** - BarItalia STL business generator fully specified
 7. **Weekly Analysis Automation** - Scheduled codebase scanning and reporting
@@ -121,13 +121,13 @@ The platform separates **Deployable Experiences (Apps)** from **Logical Capabili
 
 ### In Progress
 - **Codebase Analyzer Enhancement** - Adding cyclomatic complexity, function metrics
-- **CI/CD Integration** - PR impact analysis and reporting
+- **CI/CD Integration** - Automated deployment via GitHub Actions (AWS + Vercel)
 - **VSCode Webview Panels** - Codebase dashboard in sidebar
 
 ### Next Sprint (This Week)
-- Enhanced analyzer metrics (complexity, duplication, test coverage)
-- VSCode codebase dashboard webview
-- Automated PR analysis commenting
+- **Production Launch**: Deploy Unified Dashboard to Vercel
+- **Fleet Deployment**: Deploy Agent Gateways to AWS Staging
+- **Live Reference**: Validate BarItalia STL end-to-end on Staging
 
 ---
 
