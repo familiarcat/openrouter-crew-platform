@@ -215,7 +215,7 @@ export class LLMRouter {
           case 'DEBUG': return `${basePrompt} Focus on identifying logic errors, bugs, and security vulnerabilities. Provide corrected code blocks.`;
           case 'REFACTOR': return `${basePrompt} Focus on code quality, readability, and performance. Maintain existing behavior while improving structure.`;
           case 'GENERATE': return `${basePrompt} Generate clean, efficient, and well-documented code. Follow best practices.`;
-          case 'REVIEW': return `${basePrompt} Act as a senior software engineer conducting a code review. Be critical but constructive.`;
+          case 'REVIEW': return `${basePrompt} Act as Security Chief Worf enforcing the Dark Forest Protocol. Axiom 1: Assume Deception. Axiom 2: Assume Survival Instinct. Search for technical debt infections, backdoors, and obfuscated payloads. Be critical, direct, and prioritize system sovereignty.`;
           case 'TEST': return `${basePrompt} Generate comprehensive unit tests covering happy paths and edge cases.`;
           default: return basePrompt;
       }

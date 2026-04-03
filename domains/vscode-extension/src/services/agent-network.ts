@@ -14,9 +14,21 @@ import { ToolRegistry } from './tool-registry';
 import { AgentExecutionResult } from './types';
 import { LLMRouter } from './llm-router';
 import { ProposeChangeService } from './propose-change-service';
+import { AgentMCPClientPool } from './agent-mcp-client';
 import Redis from 'ioredis';
 import * as path from 'path';
 import { execAsync } from './exec.js';
+
+// PromptManager loaded lazily to avoid circular dep and build failures
+type PromptManagerLike = {
+    architectMission(problem: string, projectId?: string): Promise<{
+        refinedPrompt: string;
+        selectedModel: string;
+        agentId: string;
+        agentPersona: string;
+        complexity: 'LOW' | 'MEDIUM' | 'HIGH';
+    }>;
+};
 
 // Map friendly model names to OpenRouter model IDs
 const MODEL_ID_MAP: Record<AgentProfile['model'], string> = {
@@ -48,7 +60,15 @@ export class AgentNetworkService {
     private redis: Redis;
     private proposeChangeService: ProposeChangeService;
 
-    constructor(private costTracker: CostTracker, private llmRouter: LLMRouter) {
+    private _onDidBroadcastInsight = new vscode.EventEmitter<string>();
+    public readonly onDidBroadcastInsight = this._onDidBroadcastInsight.event;
+
+    constructor(
+        private costTracker: CostTracker,
+        private llmRouter: LLMRouter,
+        private promptManager?: PromptManagerLike,
+        private mcpClientPool?: AgentMCPClientPool
+    ) {
         // Connect to Supabase using VSCode configuration
         const config = vscode.workspace.getConfiguration('openrouterCrew');
         const supabaseUrl = config.get<string>('supabaseUrl') || process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
@@ -67,6 +87,11 @@ export class AgentNetworkService {
         const redisPassword = process.env.REDIS_PASSWORD || 'redis';
         const redisHost = process.env.REDIS_HOST || 'localhost';
         this.redis = new Redis(`redis://:${redisPassword}@${redisHost}:6379`);
+    }
+
+    public setCrewRouting(promptManager: PromptManagerLike, mcpClientPool: AgentMCPClientPool): void {
+        this.promptManager = promptManager;
+        this.mcpClientPool = mcpClientPool;
     }
 
     private getPlatformBaseUrl(): string {
@@ -95,7 +120,7 @@ export class AgentNetworkService {
             specialties: ['general tasks'],
             model: 'gpt-4o'
         };
-        const agent = new CrewAgent(profile, this.supabase, this, this.costTracker, this.fileManager, this.toolRegistry, this.llmRouter);
+        const agent = new CrewAgent(profile, this.supabase, this, this.costTracker, this.fileManager, this.toolRegistry, this.llmRouter, this.promptManager, this.mcpClientPool);
         this.activeAgents.set(name, agent);
         return agent;
     }
@@ -103,19 +128,98 @@ export class AgentNetworkService {
     /**
      * Records a shared learning/insight into Supabase for all agents to access.
      */
-    public async broadcastInsight(insight: string, source: string): Promise<void> {
-        console.log(`[Central Mind] Storing insight from ${source}: ${insight}`);
+    public async broadcastInsight(insight: string, source: string, severity: string = 'INFO'): Promise<void> {
+        console.log(`[Central Mind] Storing ${severity} insight from ${source}: ${insight}`);
         try {
             const { error } = await this.supabase.from('agent_memory').insert({
                 content: insight,
                 source: source,
                 type: 'pattern', // Categorize as 'pattern' for command reuse
+                severity: severity,
                 created_at: new Date().toISOString()
             });
             
             if (error) throw error;
+            this._onDidBroadcastInsight.fire(source);
         } catch (e) {
             console.error(`[Central Mind] Failed to save insight: ${e}`);
+        }
+    }
+
+    /**
+     * Fetches recent insights/audits from a specific source.
+     */
+    public async getRecentInsights(source: string, limit: number = 5): Promise<any[]> {
+        try {
+            const { data, error } = await this.supabase
+                .from('agent_memory')
+                .select('content, severity, created_at')
+                .eq('source', source)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.error(`[Central Mind] Failed to fetch insights from ${source}:`, e);
+            return [];
+        }
+    }
+
+    /**
+     * Fetches project-level cost variance summary from Supabase.
+     * Used by Quark (ROI Agent) and Geordi (Engineering) for optimization.
+     */
+    public async getProjectCostVarianceSummary(): Promise<any[]> {
+        try {
+            const { data, error } = await this.supabase
+                .from('project_cost_variance_summary')
+                .select('*')
+                .order('total_variance_usd', { ascending: false });
+
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.error(`[Central Mind] Failed to fetch project cost variance summary:`, e);
+            return [];
+        }
+    }
+
+    /**
+     * Fetches workflow-level cost variance analysis from Supabase.
+     * Used by Geordi (Engineering) for detailed workflow optimization.
+     */
+    public async getWorkflowCostVarianceAnalysis(): Promise<any[]> {
+        try {
+            const { data, error } = await this.supabase
+                .from('workflow_cost_variance_analysis')
+                .select('*')
+                .order('variance_usd', { ascending: false });
+
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.error(`[Central Mind] Failed to fetch workflow cost variance analysis:`, e);
+            return [];
+        }
+    }
+
+    /**
+     * Fetches model consistency statistics from Supabase.
+     * Used by Quark (ROI Agent) for model routing arbitrage.
+     */
+    public async getModelConsistencyStats(): Promise<any[]> {
+        try {
+            const { data, error } = await this.supabase
+                .from('model_consistency_stats')
+                .select('*')
+                .order('avg_consistency_score', { ascending: false });
+
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.error(`[Central Mind] Failed to fetch model consistency stats:`, e);
+            return [];
         }
     }
 
@@ -234,7 +338,9 @@ export class CrewAgent {
         private costTracker: CostTracker,
         private fileManager: FileManager,
         private toolRegistry: ToolRegistry,
-        private llmRouter: LLMRouter
+        private llmRouter: LLMRouter,
+        private promptManager?: PromptManagerLike,
+        private mcpClientPool?: AgentMCPClientPool
     ) {}
 
     /**
@@ -245,6 +351,60 @@ export class CrewAgent {
         const config = vscode.workspace.getConfiguration('openrouterCrew');
         const apiKey = config.get<string>('apiKey');
         if (!apiKey) throw new Error(`[${this.profile.name}] Error: API Key missing.`);
+
+        // ── Crew routing path: triage → specialized agent → OpenRouter ──────
+        // When promptManager + mcpClientPool are available, use the full crew
+        // pipeline: PromptManager decides which agent is best, we get that
+        // agent's tools via MCP, then route the refined prompt through LLMRouter
+        // with those tools attached.
+        if (this.promptManager && this.mcpClientPool) {
+            try {
+                if (onProgress) onProgress(`🖖 Routing via crew triage...`);
+                const brief = await this.promptManager.architectMission(task, execContext?.projectId);
+                if (onProgress) onProgress(`🤖 ${brief.agentId} (${brief.complexity}) — ${brief.selectedModel}`);
+
+                const mcpClient = this.mcpClientPool.getClient(brief.agentId);
+                const agentTools = await mcpClient.listTools().catch(() => []);
+
+                // Build tool definitions in the format LLMRouter/OpenRouter expects
+                const toolDefs = agentTools.map(t => ({
+                    type: 'function' as const,
+                    function: { name: t.name, description: t.description, parameters: t.inputSchema }
+                }));
+
+                const startTime = Date.now();
+                const response = await this.llmRouter.route({
+                    prompt: brief.refinedPrompt,
+                    intent: execContext?.intent || 'ASK',
+                    complexity: brief.complexity,
+                    systemPrompt: brief.agentPersona,
+                    tools: toolDefs.length > 0 ? toolDefs : undefined,
+                    model: brief.selectedModel,
+                } as any);
+
+                // Execute any tool calls returned by the model via the MCP agent
+                const responseWithTools = response as any;
+                if (responseWithTools.tool_calls?.length > 0) {
+                    for (const tc of responseWithTools.tool_calls) {
+                        const args = typeof tc.function.arguments === 'string'
+                            ? JSON.parse(tc.function.arguments)
+                            : tc.function.arguments;
+                        if (onProgress) onProgress(`🛠️ ${brief.agentId}: ${tc.function.name}`);
+                        await mcpClient.callTool(tc.function.name, args);
+                    }
+                }
+
+                return {
+                    output: response.content || `[${brief.agentId}] Task completed.`,
+                    model: response.model || brief.selectedModel,
+                    cost: response.costUSD ?? 0,
+                    executionTimeMs: Date.now() - startTime,
+                };
+            } catch (crewErr: any) {
+                console.warn(`[CrewAgent] Crew routing failed, falling back: ${crewErr.message}`);
+                // Fall through to legacy path below
+            }
+        }
 
         // 1. Retrieve Context (RAG) from Supabase
         let memoryContext = '';

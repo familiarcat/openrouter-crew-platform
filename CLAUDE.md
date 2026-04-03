@@ -30,16 +30,23 @@ To review system functionality and provide feedback:
 - ✅ Test project (BarItalia STL) defined and ready
 - ✅ VSCode extension foundation complete
 - ✅ Codebase analyzer implemented
-- 🔄 Weekly analysis automation (in progress)
-- ✅ Local Prompt Architect (Ollama) active
+- ✅ Weekly analysis automation integrated
+- ✅ Consistency Checking (Hinton Framework) integrated
 
 ## 🗺️ Implementation Roadmap (Hybrid Path)
 
 ### Phase 1: The Tactical Toolbelt (Local Dev)
 - [x] **Secret Parity**: Resolved bridge script compatibility.
 - [x] **Character Sovereignty**: Personas integrated into BaseMCPServer.
-- [ ] **Diff-Ready Workflow**: Implement `propose-change` tool to replace destructive `write-file`.
-- [ ] **IDE Resilience**: Increase RPC timeouts to 60s for deep code examination.
+- [x] **Diff-Ready Workflow**: Implement `propose-change` tool with Dark Forest validation.
+- [x] **IDE Resilience**: RPC timeouts increased to 60s for stable code analysis.
+- [x] **Consistency Loop**: Integrated auto-retry logic in AsyncWebhookClient.
+- [x] **Intelligence Scaling**: Implemented dynamic model upgrades during retry loops.
+- [x] **Budget Buffer**: Prevent intelligence upgrades when >90% budget is used.
+- [x] **Variance Circuit Breaker**: n8n auto-downgrade for projects >30% over estimate.
+- [x] **Geordi's Warp Core Optimization**: Command to analyze cost variance and propose engineering solutions.
+- [x] **Quark's Arbitrage Scanner**: Command to analyze model consistency for routing optimization.
+- [x] **Autopilot Audit**: n8n workflow triggers Migration Audit on SQL file additions.
 
 ### Phase 2: The Command Bridge (Fleet Sync)
 - [x] **Environment Tags**: Added environment field to ProjectSchema.
@@ -109,16 +116,16 @@ The platform separates **Deployable Experiences (Apps)** from **Logical Capabili
 4. **Navigation System** - 21 routes in unified dashboard
 5. **Cost Tracking Integration** - Real-time budget monitoring in VSCode extension
 6. **Test Project Definition** - BarItalia STL business generator fully specified
+7. **Weekly Analysis Automation** - Scheduled codebase scanning and reporting
+8. **Consistency Checking (Hinton Framework)** - Adversarial validation loop integrated
 
 ### In Progress
 - **Codebase Analyzer Enhancement** - Adding cyclomatic complexity, function metrics
-- **Weekly Analysis Automation** - Scheduled codebase scanning
 - **CI/CD Integration** - PR impact analysis and reporting
 - **VSCode Webview Panels** - Codebase dashboard in sidebar
 
 ### Next Sprint (This Week)
 - Enhanced analyzer metrics (complexity, duplication, test coverage)
-- Weekly analysis GitHub Action workflow
 - VSCode codebase dashboard webview
 - Automated PR analysis commenting
 
@@ -149,6 +156,10 @@ Request → Complexity Analysis → Model Selection → OpenRouter → Cost Trac
 1. **Manual** - User controls each agent step (development mode)
 2. **Supervised** - Agents propose, humans approve (safe automation)
 3. **Autonomous** - Agents run with rollback capability (proven workflows)
+    - **Geordi's Warp Core Optimization**: Automatically analyzes cost variance and suggests engineering fixes.
+    - **Quark's Arbitrage Scanner**: Automatically identifies model routing inefficiencies for profit.
+    - **Worf's Security Sweep**: Automatically audits code for protocol violations.
+
 4. **Self-Improving** - Agents optimize their own prompts (learning)
 5. **Market** - Agents bid/compete for resources (future)
 
@@ -699,6 +710,9 @@ pnpm install
 - Defined team conventions and code standards
 - Documented VSCode extension status
 - Added codebase analyzer dashboard info
+- Integrated Hinton-inspired Consistency Checking framework
+- Implemented Cost Optimization Loop with auto-retries and model scaling
+- Automated weekly codebase analysis and dashboard generation
 
 ### Previous Phases
 See [CHANGELOG.md](./CHANGELOG.md) for complete history

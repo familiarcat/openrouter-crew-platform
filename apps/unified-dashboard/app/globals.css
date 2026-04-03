@@ -2,24 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Crew Design Tokens ──────────────────────────────────────────────────── */
+/* Import the canonical --cr-* token set. Dark theme is the default.         */
+@import "@openrouter-crew/design-tokens/css";
+
+/* ── Tailwind/Shadcn Bridge ──────────────────────────────────────────────── */
+/* Map --cr-* tokens to the HSL-separated vars Tailwind config expects.      */
 :root {
-  --background: 220 14% 6%;
-  --foreground: 0 0% 100%;
-  --card: 222 13% 10%;
-  --card-bg: 222 13% 10%;
-  --card-foreground: 0 0% 100%;
-  --border: 220 13% 91% / 0.1;
-  --radius: 0.75rem;
-  --accent: 213 94% 68%;
-  --muted-foreground: 220 9% 63%;
-  --text: 0 0% 100%;
-  --primary: 213 94% 68%;
+  /* Backgrounds */
+  --background:        13 10% 7%;    /* matches --cr-bg #0D1117 */
+  --card:              216 13% 11%;  /* matches --cr-surface #161B22 */
+  --card-bg:           216 13% 11%;
+  --card-foreground:   210 40% 92%;  /* matches --cr-text */
+
+  /* Text */
+  --foreground:        210 40% 92%;  /* matches --cr-text */
+  --text:              210 40% 92%;
+  --muted-foreground:  218 11% 55%;  /* matches --cr-text-secondary */
+
+  /* Brand */
+  --primary:           213 100% 65%; /* matches --cr-color-primary #4A9EFF */
   --primary-foreground: 0 0% 0%;
+  --accent:            213 100% 65%;
+  --secondary:         265 67% 57%;  /* matches --cr-color-accent #7C3AED */
+  --secondary-foreground: 0 0% 100%;
+
+  /* Border / UI */
+  --border:            217 13% 23% / 0.6;
+  --input:             217 13% 23%;
+  --ring:              213 100% 65%;
+  --radius:            var(--cr-radius-lg); /* 8px */
+  --destructive:       0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --muted:             216 13% 11%;
+  --popover:           216 13% 11%;
+  --popover-foreground: 210 40% 92%;
 }
 
 html,
 body {
   height: 100%;
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--cr-bg);
+  color: var(--cr-text);
+  font-family: var(--cr-font-sans);
+  font-size: var(--cr-text-base);
 }

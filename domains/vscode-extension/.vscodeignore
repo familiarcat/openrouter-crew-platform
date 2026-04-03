@@ -15,3 +15,5 @@ node_modules/**
 scripts/**
 *.log
 *.vsix
+agent-dist/**/*.ts
+agent-dist/**/*.map

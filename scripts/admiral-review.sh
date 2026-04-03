@@ -63,6 +63,20 @@ else
   echo "⏭️  Skipping analysis pass for rapid viewport launch."
 fi
 
+# 2.5. Bring Crew Agents Online
+echo "🖖 Bringing crew agents online..."
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+AGENT_RUNNER="$REPO_ROOT/domains/shared/agent-orchestration/dist/mcp/mcp-runner.js"
+AGENTS=(captain_picard commander_data worf geordi_la_forge crusher counselor_troi quark commander_riker chief_obrien uhura)
+declare -a AGENT_PIDS
+for agent in "${AGENTS[@]}"; do
+    node "$AGENT_RUNNER" "$agent" &
+    AGENT_PIDS+=($!)
+    echo "   📡 $agent (PID $!)"
+done
+sleep 2
+echo "✅ All 10 crew agents online."
+
 # 4. Launch Command Bridge
 echo "🚀 Launching Unified Dashboard and VS Code Extension..."
 
@@ -74,7 +88,7 @@ DASHBOARD_PID=$!
 pnpm --dir domains/vscode-extension watch &
 EXTENSION_PID=$!
 
-trap "kill $DASHBOARD_PID $EXTENSION_PID; pnpm local:infra:down" EXIT
+trap "kill $DASHBOARD_PID $EXTENSION_PID ${AGENT_PIDS[*]} 2>/dev/null; pnpm local:infra:down" EXIT
 
 # 5. Automated Browser Launch
 DASHBOARD_URL="http://localhost:3000"

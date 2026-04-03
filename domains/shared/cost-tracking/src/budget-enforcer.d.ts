@@ -43,6 +43,10 @@ export declare class BudgetEnforcer {
      * Get budget status for a project
      */
     getBudgetStatus(projectId: string): BudgetStatus;
+    /**
+     * Returns true if budget consumption is above threshold
+     */
+    isDailyBudgetConstrained(projectId: string, threshold?: number): boolean;
 }
 export declare const budgetEnforcer: BudgetEnforcer;
 //# sourceMappingURL=budget-enforcer.d.ts.map

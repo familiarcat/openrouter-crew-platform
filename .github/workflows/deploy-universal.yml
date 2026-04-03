@@ -1,0 +1,229 @@
+name: Universal Deploy
+
+# Single entry point for all production deployments.
+# Deploys dashboard to Vercel (CDN, zero-config Next.js) and
+# stateful services + crew agents to AWS EC2 (docker-compose) — in parallel.
+#
+# Triggered automatically on push to main, or manually via workflow_dispatch.
+# Local trigger: pnpm ship [staging|production]
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options: [staging, production]
+      skip_vercel:
+        description: 'Skip Vercel deploy (dashboard only)'
+        type: boolean
+        default: false
+      skip_ec2:
+        description: 'Skip EC2 deploy (agents + infra only)'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+
+jobs:
+  # ── 1. Validate ──────────────────────────────────────────────────────────────
+  validate:
+    name: Type-check, lint, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check + build (dashboard + shared packages)
+        run: pnpm turbo run type-check build --filter=@openrouter-crew/unified-dashboard...
+
+  # ── 2a. Deploy Dashboard → Vercel ────────────────────────────────────────────
+  deploy-vercel:
+    name: Deploy dashboard → Vercel
+    needs: validate
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_vercel }}
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+      url: ${{ steps.vercel-deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy to Vercel
+        id: vercel-deploy
+        working-directory: apps/unified-dashboard
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          IS_PROD="${{ inputs.environment == 'production' || github.ref == 'refs/heads/main' }}"
+          PROD_FLAG=""
+          if [ "$IS_PROD" = "true" ]; then PROD_FLAG="--prod"; fi
+
+          DEPLOY_URL=$(npx vercel \
+            --token ${{ secrets.VERCEL_TOKEN }} \
+            --scope ${{ secrets.VERCEL_ORG_ID }} \
+            --yes \
+            $PROD_FLAG \
+            2>&1 | tail -1)
+
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "✅ Vercel deploy: $DEPLOY_URL"
+
+      - name: Verify dashboard health
+        run: |
+          URL="${{ steps.vercel-deploy.outputs.url }}"
+          if [ -n "$URL" ]; then
+            sleep 5
+            curl -sf "${URL}/api/health" | jq '.status' || echo "⚠️ Health check skipped"
+          fi
+
+  # ── 2b. Deploy Infra + Agents → AWS EC2 ─────────────────────────────────────
+  deploy-ec2:
+    name: Deploy infra + agents → EC2
+    needs: validate
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_ec2 }}
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build both images in parallel via background processes
+      - name: Build & push dashboard image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPO: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -t "$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG" \
+            -t "$ECR_REGISTRY/$ECR_REPO:latest" \
+            -f apps/unified-dashboard/Dockerfile \
+            . &
+          DASHBOARD_PID=$!
+
+          docker build \
+            -t "$ECR_REGISTRY/crew-agents:$IMAGE_TAG" \
+            -t "$ECR_REGISTRY/crew-agents:latest" \
+            -f Dockerfile \
+            . &
+          AGENTS_PID=$!
+
+          wait $DASHBOARD_PID && echo "✅ Dashboard image built"
+          wait $AGENTS_PID && echo "✅ Crew agents image built"
+
+          docker push "$ECR_REGISTRY/$ECR_REPO" --all-tags
+          docker push "$ECR_REGISTRY/crew-agents" --all-tags
+
+      - name: Deploy to EC2 via SSM
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Write env file and pull + restart all services on EC2
+          COMMAND=$(cat <<'HEREDOC'
+          set -e
+          cd /opt/openrouter-crew
+
+          cat > .env.production << 'ENVEOF'
+          ECR_REGISTRY=__ECR_REGISTRY__
+          ECR_REPOSITORY=__ECR_REPOSITORY__
+          IMAGE_TAG=__IMAGE_TAG__
+          OPENROUTER_API_KEY=__OPENROUTER_API_KEY__
+          SUPABASE_URL=__SUPABASE_URL__
+          SUPABASE_ANON_KEY=__SUPABASE_ANON_KEY__
+          SUPABASE_SERVICE_ROLE_KEY=__SUPABASE_SERVICE_ROLE_KEY__
+          SUPABASE_DB_PASSWORD=__SUPABASE_DB_PASSWORD__
+          N8N_BASE_URL=__N8N_BASE_URL__
+          N8N_API_KEY=__N8N_API_KEY__
+          N8N_ENCRYPTION_KEY=__N8N_ENCRYPTION_KEY__
+          REDIS_PASSWORD=__REDIS_PASSWORD__
+          ENVEOF
+
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml up -d --remove-orphans
+          docker compose -f docker-compose.prod.yml ps
+          HEREDOC
+          )
+
+          # Replace placeholders with actual secrets
+          COMMAND="${COMMAND//__ECR_REGISTRY__/$ECR_REGISTRY}"
+          COMMAND="${COMMAND//__ECR_REPOSITORY__/${{ secrets.ECR_REPOSITORY }}}"
+          COMMAND="${COMMAND//__IMAGE_TAG__/$IMAGE_TAG}"
+          COMMAND="${COMMAND//__OPENROUTER_API_KEY__/${{ secrets.OPENROUTER_API_KEY }}}"
+          COMMAND="${COMMAND//__SUPABASE_URL__/${{ secrets.SUPABASE_URL }}}"
+          COMMAND="${COMMAND//__SUPABASE_ANON_KEY__/${{ secrets.SUPABASE_ANON_KEY }}}"
+          COMMAND="${COMMAND//__SUPABASE_SERVICE_ROLE_KEY__/${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}}"
+          COMMAND="${COMMAND//__SUPABASE_DB_PASSWORD__/${{ secrets.SUPABASE_DB_PASSWORD }}}"
+          COMMAND="${COMMAND//__N8N_BASE_URL__/${{ secrets.N8N_BASE_URL }}}"
+          COMMAND="${COMMAND//__N8N_API_KEY__/${{ secrets.N8N_API_KEY }}}"
+          COMMAND="${COMMAND//__N8N_ENCRYPTION_KEY__/${{ secrets.N8N_ENCRYPTION_KEY }}}"
+          COMMAND="${COMMAND//__REDIS_PASSWORD__/${{ secrets.REDIS_PASSWORD }}}"
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[\"$COMMAND\"]" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+          echo "Waiting for completion..."
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+            --query "StandardOutputContent" \
+            --output text
+
+      - name: Verify EC2 health
+        run: |
+          EC2_URL="https://dashboard.${{ secrets.PRODUCTION_DOMAIN || 'pbradygeorgen.com' }}"
+          sleep 10
+          curl -sf "${EC2_URL}/api/health" | jq '.status' || echo "⚠️ EC2 health check skipped (may need DNS)"

@@ -22,6 +22,7 @@ import { StabilizerService } from './services/stabilizer-service';
 import { TreatmentPlanView } from './ui/treatment-plan-view';
 import { ProposeChangeService } from './services/propose-change-service';
 import { PromptManager, OllamaMCPClient } from '@openrouter-crew/agent-orchestration';
+import { AgentMCPClientPool } from './services/agent-mcp-client';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -47,6 +48,9 @@ export function activate(context: vscode.ExtensionContext) {
     const apiKey = vscode.workspace.getConfiguration('openrouterCrew').get<string>('apiKey') || '';
     const openaiClient = new (require('openai').default)({ apiKey, baseURL: 'https://openrouter.ai/api/v1' });
     const promptManager = new PromptManager(openaiClient, new OllamaMCPClient());
+    const agentMCPClientPool = new AgentMCPClientPool(costTracker, context);
+    context.subscriptions.push(agentMCPClientPool);
+    agentNetwork.setCrewRouting(promptManager, agentMCPClientPool);
     costEstimator; // Keep instance for potential future use
 
     toolRegistry.initialize();

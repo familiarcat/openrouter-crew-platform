@@ -42,6 +42,14 @@
         {
           "id": "openrouter-crew.memory-view",
           "name": "Memories"
+        },
+        {
+          "id": "openrouter-crew.autopilot-audits",
+          "name": "Autopilot Audits"
+        },
+        {
+          "id": "openrouter-crew.analysis-results",
+          "name": "Crew Analysis"
         }
       ]
     },
@@ -57,8 +65,14 @@
         "category": "OpenRouter Crew"
       },
       {
+        "command": "openrouter-crew.dr-crusher.medicalDiagnostic",
+        "title": "Dr. Crusher: Systemic Diagnostic",
+        "category": "OpenRouter Crew"
+      },
+      {
         "command": "openrouter-crew.analyzeComplexity",
-        "title": "OpenRouter Crew: Analyze Text Complexity"
+        "title": "OpenRouter Crew: Analyze Text Complexity",
+        "category": "OpenRouter Crew"
       },
       {
         "command": "openrouter-crew.previewCost",
@@ -182,8 +196,52 @@
         "command": "openrouter-crew.project.feature",
         "title": "OpenRouter Crew: Create Feature",
         "category": "OpenRouter Crew"
+      },
+      {
+        "command": "openrouter-crew.analysis-results.refresh",
+        "title": "Refresh Crew Analysis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "openrouter-crew.autopilot-audits.refresh",
+        "title": "Refresh Autopilot Audits",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "openrouter-crew.analysis.showDetail",
+        "title": "Show Analysis Detail"
+      },
+      {
+        "command": "openrouter-crew.autopilot.showAudit",
+        "title": "Show Audit Detail"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "openrouter-crew.analysis-results.refresh",
+          "when": "view == openrouter-crew.analysis-results",
+          "group": "navigation"
+        },
+        {
+          "command": "openrouter-crew.autopilot-audits.refresh",
+          "when": "view == openrouter-crew.autopilot-audits",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "openrouter-crew.analysis.showDetail",
+          "when": "view == openrouter-crew.analysis-results",
+          "group": "inline"
+        },
+        {
+          "command": "openrouter-crew.autopilot.showAudit",
+          "when": "view == openrouter-crew.autopilot-audits",
+          "group": "inline"
+        }
+      ]
+    },
     "configuration": {
       "title": "OpenRouter Crew",
       "properties": {

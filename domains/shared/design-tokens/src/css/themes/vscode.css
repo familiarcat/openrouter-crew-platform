@@ -1,0 +1,57 @@
+/**
+ * VSCode Theme Adapter
+ * Maps VSCode's --vscode-* CSS variables to our --cr-* tokens.
+ * Import this after variables.css inside VSCode webview panels.
+ * Falls back to dark-theme values if VSCode vars are undefined.
+ */
+
+:root,
+.vscode-dark,
+.vscode-high-contrast {
+  --cr-bg:                       var(--vscode-editor-background, #0D1117);
+  --cr-bg-secondary:             var(--vscode-sideBar-background, #161B22);
+  --cr-bg-tertiary:              var(--vscode-panel-background, #1C2128);
+
+  --cr-surface:                  var(--vscode-editorWidget-background, #161B22);
+  --cr-surface-hover:            var(--vscode-list-hoverBackground, #1C2128);
+  --cr-surface-active:           var(--vscode-list-activeSelectionBackground, #21262D);
+
+  --cr-text:                     var(--vscode-editor-foreground, #E6EDF3);
+  --cr-text-secondary:           var(--vscode-descriptionForeground, #8B949E);
+  --cr-text-muted:               var(--vscode-disabledForeground, #6E7681);
+  --cr-text-disabled:            var(--vscode-disabledForeground, #484F58);
+
+  --cr-border:                   var(--vscode-panel-border, rgba(48, 54, 61, 1));
+  --cr-border-muted:             var(--vscode-widget-border, rgba(48, 54, 61, 0.6));
+  --cr-border-focus:             var(--vscode-focusBorder, #4A9EFF);
+
+  --cr-color-primary:            var(--vscode-button-background, #4A9EFF);
+  --cr-color-primary-hover:      var(--vscode-button-hoverBackground, #3B8FEF);
+  --cr-color-primary-foreground: var(--vscode-button-foreground, #000000);
+
+  --cr-color-error:              var(--vscode-errorForeground, #EF4444);
+  --cr-color-warning:            var(--vscode-editorWarning-foreground, #F59E0B);
+  --cr-color-success:            var(--vscode-testing-iconPassed, #10B981);
+  --cr-color-info:               var(--vscode-editorInfo-foreground, #3B82F6);
+
+  --cr-font-sans:                var(--vscode-font-family, "Inter", -apple-system, sans-serif);
+  --cr-font-mono:                var(--vscode-editor-font-family, "JetBrains Mono", Consolas, monospace);
+  --cr-text-base:                var(--vscode-font-size, 14px);
+}
+
+.vscode-light {
+  --cr-bg:                       var(--vscode-editor-background, #FFFFFF);
+  --cr-bg-secondary:             var(--vscode-sideBar-background, #F3F4F6);
+  --cr-bg-tertiary:              var(--vscode-panel-background, #E5E7EB);
+
+  --cr-surface:                  var(--vscode-editorWidget-background, #FFFFFF);
+  --cr-surface-hover:            var(--vscode-list-hoverBackground, #F3F4F6);
+  --cr-surface-active:           var(--vscode-list-activeSelectionBackground, #DBEAFE);
+
+  --cr-text:                     var(--vscode-editor-foreground, #0D1117);
+  --cr-text-secondary:           var(--vscode-descriptionForeground, #4B5563);
+  --cr-text-muted:               var(--vscode-disabledForeground, #6B7280);
+
+  --cr-border:                   var(--vscode-panel-border, rgba(209, 213, 219, 1));
+  --cr-border-muted:             var(--vscode-widget-border, rgba(209, 213, 219, 0.6));
+}

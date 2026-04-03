@@ -28,6 +28,18 @@ echo "📂 Copying assets..."
 mkdir -p out/ui
 cp src/ui/*.css out/ui/ 2>/dev/null || :
 
+# 4.5. Bundle crew agent dist for standalone VSIX use
+echo "📦 Bundling crew agent binaries..."
+AGENT_DIST_SRC="$REPO_ROOT/domains/shared/agent-orchestration/dist"
+AGENT_DIST_DST="$EXTENSION_ROOT/agent-dist"
+rm -rf "$AGENT_DIST_DST"
+if [ -d "$AGENT_DIST_SRC" ]; then
+    cp -r "$AGENT_DIST_SRC" "$AGENT_DIST_DST"
+    echo "   ✅ Agent dist bundled ($AGENT_DIST_DST)"
+else
+    echo "   ⚠️  Agent dist not found — run 'pnpm --filter @openrouter-crew/agent-orchestration build' first"
+fi
+
 # 5. Package
 echo "🎁 Creating VSIX package..."
 VSIX_NAME="openrouter-crew.vsix"

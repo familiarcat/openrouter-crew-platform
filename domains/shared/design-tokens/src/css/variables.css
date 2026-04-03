@@ -1,0 +1,138 @@
+/**
+ * OpenRouter Crew Platform - CSS Custom Properties
+ * All variables use --cr-* prefix (crew).
+ * Dark theme is the default.
+ * Import this file as the base; override with theme files.
+ */
+
+:root,
+[data-theme="dark"] {
+  /* ── Colors: Brand ─────────────────────────────── */
+  --cr-color-primary:            #4A9EFF;
+  --cr-color-primary-hover:      #3B8FEF;
+  --cr-color-primary-active:     #2C7FDF;
+  --cr-color-primary-foreground: #000000;
+
+  --cr-color-accent:             #7C3AED;
+  --cr-color-accent-hover:       #6D28D9;
+  --cr-color-accent-foreground:  #FFFFFF;
+
+  /* ── Colors: Status ─────────────────────────────── */
+  --cr-color-success:            #10B981;
+  --cr-color-success-foreground: #000000;
+  --cr-color-warning:            #F59E0B;
+  --cr-color-warning-foreground: #000000;
+  --cr-color-error:              #EF4444;
+  --cr-color-error-foreground:   #FFFFFF;
+  --cr-color-info:               #3B82F6;
+  --cr-color-info-foreground:    #FFFFFF;
+
+  /* ── Colors: Surfaces ───────────────────────────── */
+  --cr-bg:                       #0D1117;
+  --cr-bg-secondary:             #161B22;
+  --cr-bg-tertiary:              #1C2128;
+
+  --cr-surface:                  #161B22;
+  --cr-surface-hover:            #1C2128;
+  --cr-surface-active:           #21262D;
+
+  /* ── Colors: Text ───────────────────────────────── */
+  --cr-text:                     #E6EDF3;
+  --cr-text-secondary:           #8B949E;
+  --cr-text-muted:               #6E7681;
+  --cr-text-disabled:            #484F58;
+  --cr-text-inverse:             #0D1117;
+
+  /* ── Colors: Border ─────────────────────────────── */
+  --cr-border:                   rgba(48, 54, 61, 1);
+  --cr-border-muted:             rgba(48, 54, 61, 0.6);
+  --cr-border-focus:             #4A9EFF;
+
+  /* ── Colors: Overlay ────────────────────────────── */
+  --cr-overlay:                  rgba(1, 4, 9, 0.8);
+
+  /* ── Spacing ────────────────────────────────────── */
+  --cr-space-px:    1px;
+  --cr-space-0:     0;
+  --cr-space-0-5:   2px;
+  --cr-space-1:     4px;
+  --cr-space-1-5:   6px;
+  --cr-space-2:     8px;
+  --cr-space-2-5:   10px;
+  --cr-space-3:     12px;
+  --cr-space-3-5:   14px;
+  --cr-space-4:     16px;
+  --cr-space-5:     20px;
+  --cr-space-6:     24px;
+  --cr-space-7:     28px;
+  --cr-space-8:     32px;
+  --cr-space-9:     36px;
+  --cr-space-10:    40px;
+  --cr-space-12:    48px;
+  --cr-space-14:    56px;
+  --cr-space-16:    64px;
+  --cr-space-20:    80px;
+  --cr-space-24:    96px;
+
+  /* ── Border Radius ──────────────────────────────── */
+  --cr-radius-none: 0;
+  --cr-radius-sm:   4px;
+  --cr-radius-md:   6px;
+  --cr-radius-lg:   8px;
+  --cr-radius-xl:   12px;
+  --cr-radius-2xl:  16px;
+  --cr-radius-3xl:  24px;
+  --cr-radius-full: 9999px;
+
+  /* ── Typography: Font Family ────────────────────── */
+  --cr-font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --cr-font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+
+  /* ── Typography: Font Size ──────────────────────── */
+  --cr-text-xs:   11px;
+  --cr-text-sm:   12px;
+  --cr-text-base: 14px;
+  --cr-text-lg:   16px;
+  --cr-text-xl:   18px;
+  --cr-text-2xl:  20px;
+  --cr-text-3xl:  24px;
+  --cr-text-4xl:  30px;
+  --cr-text-5xl:  36px;
+
+  /* ── Typography: Font Weight ────────────────────── */
+  --cr-font-normal:   400;
+  --cr-font-medium:   500;
+  --cr-font-semibold: 600;
+  --cr-font-bold:     700;
+
+  /* ── Typography: Line Height ────────────────────── */
+  --cr-leading-none:    1;
+  --cr-leading-tight:   1.25;
+  --cr-leading-normal:  1.5;
+  --cr-leading-relaxed: 1.625;
+
+  /* ── Shadows ────────────────────────────────────── */
+  --cr-shadow-sm:   0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --cr-shadow-md:   0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --cr-shadow-lg:   0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --cr-shadow-xl:   0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  --cr-shadow-glow: 0 0 20px rgba(74, 158, 255, 0.3);
+
+  /* ── Transitions ────────────────────────────────── */
+  --cr-transition-fast:   all 100ms ease;
+  --cr-transition-base:   all 150ms ease;
+  --cr-transition-slow:   all 300ms ease;
+  --cr-transition-spring: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Z-Index ────────────────────────────────────── */
+  --cr-z-hide:     -1;
+  --cr-z-base:     0;
+  --cr-z-raised:   1;
+  --cr-z-dropdown: 1000;
+  --cr-z-sticky:   1100;
+  --cr-z-overlay:  1300;
+  --cr-z-modal:    1400;
+  --cr-z-popover:  1500;
+  --cr-z-toast:    1700;
+  --cr-z-tooltip:  1800;
+}

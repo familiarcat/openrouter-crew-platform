@@ -1,0 +1,23 @@
+{
+  "name": "@openrouter-crew/design-tokens",
+  "version": "1.0.0",
+  "description": "Unified design tokens for the OpenRouter Crew Platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js"
+    },
+    "./css": "./src/css/variables.css",
+    "./css/themes/vscode": "./src/css/themes/vscode.css",
+    "./css/themes/light": "./src/css/themes/light.css"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.2"
+  }
+}

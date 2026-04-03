@@ -1,0 +1,49 @@
+# docker-compose.agents.yml
+#
+# Crew Agent services — 10 MCP agent servers running inside a single container.
+# Compose-merged with docker-compose.prod.yml for EC2 deployment:
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.agents.yml up -d
+#
+# For local testing:
+#   docker compose -f docker-compose.local.yml -f docker-compose.agents.yml up crew
+
+services:
+  crew:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${ECR_REGISTRY:-local}/crew-agents:${IMAGE_TAG:-latest}
+    container_name: openrouter-crew-agents
+    restart: unless-stopped
+    command: ["/bin/sh", "/app/scripts/start-all-agents.sh"]
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis}
+      USE_LOCAL_TRIAGE: "false"
+      NODE_ENV: production
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - openrouter-network
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f mcp-runner > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  openrouter-network:
+    external: true

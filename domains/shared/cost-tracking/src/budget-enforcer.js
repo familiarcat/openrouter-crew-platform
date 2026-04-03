@@ -94,6 +94,17 @@ export class BudgetEnforcer {
     getBudgetStatus(projectId) {
         return this.checkBudget(projectId, 0);
     }
+
+    /**
+     * Returns true if more than the specified threshold (default 90%) 
+     * of the daily budget is consumed.
+     */
+    isDailyBudgetConstrained(projectId, threshold = 0.9) {
+        const config = this.budgets.get(projectId);
+        if (!config || !config.dailyLimit) return false;
+        const spent = this.dailySpending.get(projectId) || 0;
+        return (spent / config.dailyLimit) >= threshold;
+    }
 }
 // Export singleton
 export const budgetEnforcer = new BudgetEnforcer();

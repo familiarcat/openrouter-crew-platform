@@ -533,6 +533,7 @@ export class CodebaseAnalysisWebview {
       <button onclick="openDashboard()">Full Dashboard</button>
       <button onclick="runAdmiralAudit()" style="background: var(--color-primary-500);">Admiral Audit</button>
       <button onclick="runMedicalDiagnostic()" style="background: var(--color-success); color: white;">Crusher: Medical Diagnostic</button>
+      <button onclick="runFleetIntegrationAudit()" style="background: var(--color-primary-500); color: white;">Fleet: Migration Audit</button>
       <button onclick="runSecurityScan()" style="background: var(--color-error); color: white;">Worf: Security Sweep</button>
     </div>
 
@@ -566,6 +567,10 @@ export class CodebaseAnalysisWebview {
 
     function runSecurityScan() {
       vscode.postMessage({ command: 'runSecurityScan' })
+    }
+
+    function runFleetIntegrationAudit() {
+      vscode.postMessage({ command: 'runFleetIntegrationAudit' })
     }
 
     // Update timestamp
@@ -722,6 +727,9 @@ export class CodebaseAnalysisWebview {
       case 'runSecurityScan':
         this.runSecurityScan()
         break
+      case 'runFleetIntegrationAudit':
+        vscode.commands.executeCommand('openrouter-crew.crew.rallyAudit');
+        break;
     }
   }
 
@@ -799,8 +807,14 @@ export class CodebaseAnalysisWebview {
           console.log('[Dr. Crusher] Diagnosis:', result.output);
           
           // Display the treatment plan in a rich UI
-          const treatmentView = new TreatmentPlanView(this.context!, this.agentNetwork!, this.costTracker!);
-          await treatmentView.show(result);
+          const treatmentView = new TreatmentPlanView(this.context!);
+          
+          const dockerStatus = await this.agentNetwork!.getDockerStatus();
+          const dockerSummary = dockerStatus.map(d => `${d.name}: ${d.status}`).join(', ') || 'N/A';
+          const codebaseVitals = `Files: ${this.metrics!.totalFiles}, Lines: ${this.metrics!.totalLines}`;
+          const domainVitals = `Domains: ${this.metrics!.domains.length}`;
+
+          await treatmentView.show(result, { docker: dockerSummary, cost: codebaseVitals, model: domainVitals });
           
           vscode.window.showInformationMessage('Dr. Crusher has issued a Treatment Plan.');
         }

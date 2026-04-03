@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { CrewAPIService } from '../services/crew-api-service.js';
+import { AgentNetworkService } from '../services/agent-network.js';
 
 export class MemoryTreeItem extends vscode.TreeItem {
     constructor(
@@ -27,7 +28,11 @@ export class MemoryBrowser implements vscode.TreeDataProvider<MemoryTreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<MemoryTreeItem | undefined | null | void> = new vscode.EventEmitter<MemoryTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<MemoryTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
-    constructor(private crewService: CrewAPIService) {}
+    constructor(private crewService: CrewAPIService, private agentNetwork: AgentNetworkService) {
+        this.agentNetwork.onDidBroadcastInsight(() => {
+            this.refresh();
+        });
+    }
 
     refresh(): void {
         this._onDidChangeTreeData.fire();

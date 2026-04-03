@@ -1,118 +1,143 @@
 import * as vscode from 'vscode';
 import { AgentExecutionResult } from '../services/types';
-import { AgentNetworkService } from '../services/agent-network';
-import { CostTracker } from '../services/cost-tracker';
-import { BridgeController, FleetDeck } from './bridge-controller';
 
 /**
- * Treatment Plan View
- * Displays Dr. Crusher's diagnostic results in a specialized "Sickbay" interface.
+ * TreatmentPlanView
+ * Renders Dr. Crusher's diagnostic results in a Starfleet Medical Chart UI.
  */
 export class TreatmentPlanView {
-  private panel: vscode.WebviewPanel | undefined;
+    constructor(
+        private context: vscode.ExtensionContext
+    ) {}
 
-  constructor(
-    private context: vscode.ExtensionContext, 
-    private agentNetwork: AgentNetworkService, 
-    private costTracker: CostTracker
-  ) {}
+    public async show(result: AgentExecutionResult, vitals: { docker: string, cost: string, model: string }) {
+        const panel = vscode.window.createWebviewPanel(
+            'treatmentPlan',
+            'Dr. Crusher: Treatment Plan',
+            vscode.ViewColumn.Two,
+            { enableScripts: true, retainContextWhenHidden: true }
+        );
 
-  /**
-   * Show the diagnostic treatment plan
-   */
-  public async show(result: AgentExecutionResult) {
-    if (this.panel) {
-      this.panel.reveal(vscode.ViewColumn.Two);
-    } else {
-      this.panel = vscode.window.createWebviewPanel(
-        'openrouterCrewTreatmentPlan',
-        'Dr. Crusher: Treatment Plan',
-        vscode.ViewColumn.Two,
-        {
-          enableScripts: true,
-          localResourceRoots: [this.context.extensionUri],
-        }
-      );
-
-      this.panel.onDidDispose(() => {
-        this.panel = undefined;
-      });
-
-      this.panel.webview.onDidReceiveMessage(message => {
-        if (message.command === 'navigate') {
-          const bridge = BridgeController.getInstance(this.context, this.agentNetwork, this.costTracker);
-          bridge.navigateToDeck(message.deck as FleetDeck);
-        }
-      });
+        panel.webview.html = this.getHtml(result, vitals);
     }
 
-    const costMetrics = await this.costTracker.getCostMetrics('daily');
-    this.panel.webview.html = this.getHtmlContent(result, costMetrics);
-  }
+    private getHtml(result: AgentExecutionResult, vitals: { docker: string, cost: string, model: string }): string {
+        const date = new Date().toLocaleString();
+        const severityClass = result.output.includes('CRITICAL') ? 'crit' : (result.output.includes('HIGH') ? 'warn' : 'stable');
 
-  private getHtmlContent(result: AgentExecutionResult, costMetrics: any): string {
-    let budgetAlertClass = '';
-    if (costMetrics.percentUsed > 95) budgetAlertClass = 'alert-red';
-    else if (costMetrics.percentUsed > 70) budgetAlertClass = 'alert-yellow';
-
-    // Convert markdown-like content to simple HTML for display
-    const contentHtml = result.output
-      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\n/g, '<br>');
-
-    return `<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dr. Crusher's Treatment Plan</title>
     <style>
         :root {
-            --color-bg-primary: var(--vscode-editor-background, #1e1e1e);
-            --color-bg-secondary: var(--vscode-editor-inactiveSelectionBackground, #252526);
-            --color-bg-tertiary: var(--vscode-sideBar-background, #2d2d30);
-            --color-text-primary: var(--vscode-editor-foreground, #cccccc);
-            --color-text-secondary: var(--vscode-descriptionForeground, #858585);
-            --color-border: var(--vscode-widget-border, #3e3e42);
-            --color-primary-500: var(--vscode-textLink-foreground, #3b82f6);
-            --color-success: #10b981;
+            --chart-bg: #0a0b10;
+            --chart-border: #2a3b4d;
+            --accent-blue: #4cc9f0;
+            --status-crit: #ff4d4d;
+            --status-warn: #ffaa00;
+            --status-stable: #00ff88;
+            --text-main: #e0e6ed;
         }
+        body {
+            background-color: var(--chart-bg);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 25px;
+            border: 2px solid var(--chart-border);
+            margin: 10px;
+        }
+        .header {
+            border-bottom: 3px double var(--accent-blue);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .header h1 { margin: 0; color: var(--accent-blue); letter-spacing: 2px; font-size: 1.4em; }
+        .metadata { font-size: 0.8em; font-family: monospace; opacity: 0.8; }
+        
+        .section { margin-bottom: 25px; }
+        .section-title {
+            background: rgba(76, 201, 240, 0.1);
+            padding: 5px 15px;
+            border-left: 4px solid var(--accent-blue);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        .vital-card {
+            border: 1px solid var(--chart-border);
+            padding: 10px;
+            background: rgba(255,255,255,0.03);
+        }
+        .vital-label { font-size: 0.7em; opacity: 0.6; text-transform: uppercase; }
+        .vital-value { font-family: monospace; font-size: 0.9em; margin-top: 5px; white-space: pre-wrap; }
 
-        body { font-family: var(--vscode-font-family); padding: 20px; color: var(--color-text-primary); background-color: var(--color-bg-primary); }
-        .fleet-nav { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid var(--color-border); padding-bottom: 15px; }
-        .nav-item { padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold; background: var(--color-bg-tertiary); color: var(--color-text-secondary); border: 1px solid transparent; transition: all 0.2s ease; }
-        .nav-item.active { background: var(--color-primary-500); color: white; border-color: var(--color-primary-500); }
-        .nav-arrow { opacity: 0.5; font-size: 1.2em; display: flex; align-items: center; }
-        h1, h2, h3 { color: var(--color-success); }
-        .meta { margin-bottom: 20px; padding: 10px; background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: 5px; font-size: 0.9em; }
-        code { background-color: var(--vscode-textBlockQuote-background); padding: 2px 4px; border-radius: 3px; }
+        .diagnosis-box {
+            line-height: 1.6;
+            font-size: 0.95em;
+            padding: 0 10px;
+        }
+        .status-badge {
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status-crit { background: var(--status-crit); color: black; }
+        .status-warn { background: var(--status-warn); color: black; }
+        .status-stable { background: var(--status-stable); color: black; }
+
+        .telemetry { font-size: 0.75em; opacity: 0.5; text-align: right; margin-top: 40px; border-top: 1px solid var(--chart-border); padding-top: 10px; }
     </style>
 </head>
 <body>
-    <div class="fleet-nav ${budgetAlertClass}">
-        <div class="nav-item" onclick="nav('STRATEGY')">1. STRATEGY</div>
-        <div class="nav-arrow">→</div>
-        <div class="nav-item" onclick="nav('COMMAND')">2. COMMAND</div>
-        <div class="nav-arrow">→</div>
-        <div class="nav-item active" onclick="nav('AUDIT')">3. AUDIT</div>
+    <div class="header">
+        <div>
+            <h1>STARFLEET MEDICAL: SYSTEMIC DIAGNOSTIC</h1>
+            <div class="metadata">PATIENT: OPENROUTER-CREW-PLATFORM // REF: ${Math.random().toString(36).substring(7).toUpperCase()}</div>
+        </div>
+        <div class="status-badge status-${severityClass}">${severityClass.toUpperCase()}</div>
     </div>
 
-    <h1>🩺 Dr. Crusher's Treatment Plan</h1>
-    <div class="meta">
-        <strong>Diagnostic Model:</strong> ${result.model} | 
-        <strong>Cost:</strong> $${result.cost.toFixed(6)}
+    <div class="section">
+        <div class="section-title">Telemetry & Lab Results (Vital Signs)</div>
+        <div class="vitals-grid">
+            <div class="vital-card">
+                <div class="vital-label">Warp Field (Docker)</div>
+                <div class="vital-value">${vitals.docker}</div>
+            </div>
+            <div class="vital-card">
+                <div class="vital-label">Metabolism (Cost)</div>
+                <div class="vital-value">${vitals.cost}</div>
+            </div>
+            <div class="vital-card">
+                <div class="vital-label">Neural (Models)</div>
+                <div class="vital-value">${vitals.model}</div>
+            </div>
+        </div>
     </div>
-    <div class="content">${contentHtml}</div>
 
-    <script>
-        const vscode = acquireVsCodeApi();
-        function nav(deck) { vscode.postMessage({ command: 'navigate', deck: deck }); }
-    </script>
+    <div class="section">
+        <div class="section-title">Physician's Notes & Treatment Plan</div>
+        <div class="diagnosis-box">
+            ${result.output.replace(/\n/g, '<br>')}
+        </div>
+    </div>
+
+    <div class="telemetry">
+        CHIEF MEDICAL OFFICER: Beverly Crusher, MD<br>
+        TIMESTAMP: ${date} // GEN_COST: $${result.cost.toFixed(6)} // MODEL: ${result.model}
+    </div>
 </body>
 </html>`;
-  }
+    }
 }

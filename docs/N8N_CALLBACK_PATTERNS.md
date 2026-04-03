@@ -211,6 +211,10 @@ CREATE TABLE workflow_requests (
   poll_count INTEGER,                   -- Polling attempts
   max_poll_attempts INTEGER,            -- Safety limit (60)
   poll_interval_ms INTEGER,             -- 5000ms default
+  last_critique TEXT,                   -- Reasoning from consistency auditor
+  consistency_score NUMERIC,            -- Score (0.0 to 1.0)
+  retry_count INTEGER DEFAULT 0,        -- Number of validation retries
+  attempt_metadata JSONB DEFAULT '[]',  -- History of model usage and costs
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```

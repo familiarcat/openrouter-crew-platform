@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS workflow_requests (
   -- Retry Configuration
   retry_count INT DEFAULT 0,
   max_retries INT DEFAULT 3,
+  attempt_metadata JSONB DEFAULT '[]'::jsonb,
   last_retry_at TIMESTAMP WITH TIME ZONE,
 
   -- Request Context
@@ -101,6 +102,9 @@ failed (error), timeout (exceeded max polls), cancelled (user abort)';
 
 COMMENT ON COLUMN workflow_requests.poll_count IS
 'Number of times the client has polled for status. Used to prevent infinite loops.';
+
+COMMENT ON COLUMN workflow_requests.attempt_metadata IS
+'An array of objects tracking details for each execution attempt, including the model used, timestamp, and specific attempt cost.';
 
 COMMENT ON COLUMN workflow_requests.estimated_cost_usd IS
 'Pre-execution cost estimate. Calculated before API call based on model,

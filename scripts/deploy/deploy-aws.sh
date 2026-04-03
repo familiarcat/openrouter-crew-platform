@@ -1,4 +1,11 @@
 #!/bin/bash
+# LEGACY — AWS App Runner deployment. Superseded by deploy-universal.yml (Vercel + EC2).
+# Preserved for reference at: scripts/deploy/legacy/deploy-aws-apprunner.sh
+# Use instead: pnpm ship [environment]  →  .github/workflows/deploy-universal.yml
+echo "⚠️  This script is retired. Use 'pnpm ship' to trigger deploy-universal.yml."
+echo "   For the original App Runner script, see: scripts/deploy/legacy/deploy-aws-apprunner.sh"
+exit 0
+
 # scripts/deploy/deploy-aws.sh
 # Usage: ./scripts/deploy/deploy-aws.sh <target-app> <environment>
 

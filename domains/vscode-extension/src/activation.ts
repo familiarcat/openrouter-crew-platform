@@ -49,7 +49,9 @@ import { TelemetryService } from './services/telemetry.js';
 import { WelcomePanel } from './ui/welcome-panel.js';
 import { CrewCodeActionProvider } from './providers/code-action.js';
 import { CostReportPanel } from './ui/cost-report-panel.js';
+import { AnalysisResultsProvider } from './ui/analysis-results-provider.js';
 import { MemoryBrowser } from './ui/memory-browser.js';
+import { AutopilotAuditProvider } from './ui/autopilot-audit-provider.js';
 import { ProjectWorkbenchPanel } from './ui/project-workbench-panel.js';
 import { ProjectIntakePanel } from './ui/project-intake-panel.js';
 import { WorkItemIntakePanel } from './ui/work-item-intake-panel.js';
@@ -110,9 +112,41 @@ export async function activateExtension(context: vscode.ExtensionContext): Promi
     const { crewProvider } = registerTreeViews(context, agentNetwork, costTracker, crewAPIService);
 
     // Initialize Memory Browser
-    const memoryBrowser = new MemoryBrowser(crewAPIService);
+    const memoryBrowser = new MemoryBrowser(crewAPIService, agentNetwork);
     vscode.window.registerTreeDataProvider('openrouter-crew.memory-view', memoryBrowser);
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory-view.refresh', () => memoryBrowser.refresh());
+
+    // Initialize Analysis Results Provider (Geordi & Quark)
+    const analysisResultsProvider = new AnalysisResultsProvider(agentNetwork);
+    vscode.window.registerTreeDataProvider('openrouter-crew.analysis-results', analysisResultsProvider);
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.analysis-results.refresh', () => analysisResultsProvider.refresh());
+    
+    // Command to show the full analysis log in a dedicated channel
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.analysis.showDetail', (analysis: any) => {
+        const channel = vscode.window.createOutputChannel('Crew Analysis Detail');
+        channel.clear();
+        channel.appendLine(`=== ${analysis.source.toUpperCase()} [${analysis.severity}] ===`);
+        channel.appendLine(`Timestamp: ${new Date(analysis.created_at).toLocaleString()}`);
+        channel.appendLine('-------------------------------------------');
+        channel.appendLine(analysis.content);
+        channel.show();
+    });
+
+    // Initialize Autopilot Audit Provider
+    const autopilotAuditProvider = new AutopilotAuditProvider(agentNetwork);
+    vscode.window.registerTreeDataProvider('openrouter-crew.autopilot-audits', autopilotAuditProvider);
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.autopilot-audits.refresh', () => autopilotAuditProvider.refresh());
+    
+    // Command to show the full audit log in a dedicated channel
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.autopilot.showAudit', (audit: any) => {
+        const channel = vscode.window.createOutputChannel('Autopilot Audit Detail');
+        channel.clear();
+        channel.appendLine(`=== AUTOPILOT AUDIT [${audit.severity}] ===`);
+        channel.appendLine(`Timestamp: ${new Date(audit.created_at).toLocaleString()}`);
+        channel.appendLine('-------------------------------------------');
+        channel.appendLine(audit.content);
+        channel.show();
+    });
 
     // Register Disposables
     context.subscriptions.push(costTracker);
@@ -222,6 +256,12 @@ export async function activateExtension(context: vscode.ExtensionContext): Promi
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory.create', () => createMemoryCommand(crewAPIService));
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory.search', () => searchMemoryCommand(crewAPIService));
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.memory.compliance', () => complianceCheckCommand(crewAPIService));
+
+    // Register specialized Crew MCP commands
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.worf.securitySweep', () => vscode.commands.executeCommand('openrouter-crew.worf.securitySweep'));
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.geordi.warpCoreOptimize', () => vscode.commands.executeCommand('openrouter-crew.geordi.warpCoreOptimize'));
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.quark.arbitrageScanner', () => vscode.commands.executeCommand('openrouter-crew.quark.arbitrageScanner'));
+    registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.dr-crusher.medicalDiagnostic', () => vscode.commands.executeCommand('openrouter-crew.dr-crusher.medicalDiagnostic'));
 
     // Register Project Commands
     registerCommandWithTelemetry(context, telemetryService, 'openrouter-crew.project.workbench', () => {

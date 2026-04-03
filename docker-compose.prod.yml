@@ -198,6 +198,41 @@ services:
     networks:
       - openrouter-network
 
+  # ── Crew Agents (10 MCP servers in one container) ──────────────────────────
+  crew:
+    image: ${ECR_REGISTRY}/crew-agents:${IMAGE_TAG:-latest}
+    container_name: openrouter-crew-agents
+    restart: unless-stopped
+    command: ["/bin/sh", "/app/scripts/start-all-agents.sh"]
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-your-redis-password}
+      USE_LOCAL_TRIAGE: "false"
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+      n8n:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openrouter-network
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f mcp-runner > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   supabase-db-data:
     driver: local

@@ -82,11 +82,13 @@ export async function analyzeComplexity(
     isMultiStep: /then|subsequently|next|finally|step|sequence/.test(query.toLowerCase()),
     requiresContext: (context?.conversationHistory?.length ?? 0) > 3,
     isCreative: /generate|create|write|compose|invent|brainstorm/.test(query.toLowerCase()),
-    needsAccuracy: /legal|financial|medical|critical|exact|precise/.test(query.toLowerCase()),
+    needsAccuracy: /legal|financial|medical|critical|exact|precise|payment|transaction/.test(query.toLowerCase()),
     isLongForm: query.length > 500,
+    isInfraRelated: /provision|deploy|terraform|delete|infrastructure/.test(query.toLowerCase()),
   };
 
-  const complexityScore = Object.values(factors).filter(Boolean).length / 6;
+  const weight = Object.values(factors).filter(Boolean).length;
+  const complexityScore = factors.isInfraRelated ? 1.0 : weight / 7;
 
   // Determine model
   let model = ModelChoice.HAIKU;
@@ -144,6 +146,13 @@ export class CrewAPIClient {
       params.input,
       { projectId: params.project_id }
     );
+    
+    // Step 2.5: Check for Project-Level Circuit Breaker (set by n8n)
+    const projectConfig = await this.getProjectConfig(params.project_id);
+    if (projectConfig?.force_budget_model) {
+      console.info(`[Circuit Breaker] Project ${params.project_id} over variance limit. Forcing Haiku.`);
+      complexity.model = ModelChoice.HAIKU;
+    }
 
     // Step 3: Check cache first (0 cost)
     const cached = await this.cacheManager.get(

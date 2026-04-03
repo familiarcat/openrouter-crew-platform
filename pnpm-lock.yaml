@@ -959,6 +959,9 @@ importers:
       '@openrouter-crew/crew-api-client':
         specifier: workspace:*
         version: link:../../domains/shared/crew-api-client
+      '@openrouter-crew/design-tokens':
+        specifier: workspace:*
+        version: link:../../domains/shared/design-tokens
       '@openrouter-crew/shared-cost-tracking':
         specifier: workspace:*
         version: link:../../domains/shared/cost-tracking
@@ -1297,6 +1300,12 @@ importers:
     devDependencies:
       typescript:
         specifier: ^5.9.3
+        version: 5.9.3
+
+  domains/shared/design-tokens:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.2
         version: 5.9.3
 
   domains/shared/openrouter-client:

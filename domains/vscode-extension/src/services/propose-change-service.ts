@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CostTracker } from './cost-tracker';
 import Redis from 'ioredis';
+import { DarkForestValidator } from './dark-forest-validator';
 
 /**
  * ProposeChangeService
@@ -11,9 +12,11 @@ import Redis from 'ioredis';
  */
 export class ProposeChangeService {
     private redis: Redis;
+    private validator: DarkForestValidator;
 
     constructor(private costTracker?: CostTracker) {
         // Standard fleet connection
+        this.validator = new DarkForestValidator();
         this.redis = new Redis(`redis://:${process.env.REDIS_PASSWORD || 'redis'}@${process.env.REDIS_HOST || 'localhost'}:6379`);
     }
 
@@ -27,9 +30,33 @@ export class ProposeChangeService {
             throw new Error('No active workspace found.');
         }
 
-        const absolutePath = path.isAbsolute(filePath) 
-            ? filePath 
-            : path.join(workspaceRoot, filePath);
+        const absolutePath = await this.resolvePath(filePath, workspaceRoot);
+
+        // Validate the path against Dark Forest Protocol before proceeding
+        const validation = this.validator.validatePath(absolutePath, workspaceRoot);
+        if (!validation.isValid) {
+            vscode.window.showErrorMessage(`[Protocol Violation] ${validation.violatedAxiom}: ${validation.reason}`);
+            return false;
+        }
+
+        // Validate the content against Dark Forest Protocol malicious patterns
+        const contentValidation = this.validator.validateContent(newContent, absolutePath);
+        if (!contentValidation.isValid) {
+            vscode.window.showErrorMessage(`[Protocol Violation] ${contentValidation.violatedAxiom}: ${contentValidation.reason}`);
+            return false;
+        }
+
+        // Confirmation dialog showing the resolved absolute path
+        const confirmation = await vscode.window.showInformationMessage(
+            `Alex AI is proposing changes to the following location:\n\n${absolutePath}`,
+            { modal: true },
+            'Proceed to Review',
+            'Cancel'
+        );
+
+        if (confirmation !== 'Proceed to Review') {
+            return false;
+        }
 
         const fileName = path.basename(absolutePath);
         
@@ -87,7 +114,8 @@ export class ProposeChangeService {
 
     private async proposeNewFile(filePath: string, content: string): Promise<boolean> {
         const response = await vscode.window.showInformationMessage(
-            `Alex AI wants to create a new file: ${path.basename(filePath)}. Allow?`,
+            `Alex AI wants to create a new file at:\n\n${filePath}\n\nAllow?`,
+            { modal: true },
             'Create', 'Cancel'
         );
         
@@ -98,5 +126,33 @@ export class ProposeChangeService {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Resolves a file path, attempting to find the best match in the workspace if it's relative or partial.
+     */
+    private async resolvePath(filePath: string, workspaceRoot: string): Promise<string> {
+        if (path.isAbsolute(filePath)) {
+            return filePath;
+        }
+
+        // Try direct relative resolution first
+        const directPath = path.join(workspaceRoot, filePath);
+        if (fs.existsSync(directPath)) {
+            return directPath;
+        }
+
+        // Fuzzy search for the filename in the workspace (ignoring node_modules)
+        const fileName = path.basename(filePath);
+        const files = await vscode.workspace.findFiles(`**/${fileName}`, '**/node_modules/**');
+
+        if (files.length === 1) return files[0].fsPath;
+        if (files.length > 1) {
+            // Pick the match that shares the most common suffix with the requested path
+            const match = files.find(f => f.fsPath.replace(/\\\\/g, '/').endsWith(filePath.replace(/\\\\/g, '/')));
+            return match ? match.fsPath : files[0].fsPath;
+        }
+
+        return directPath; // Fallback to direct path even if it doesn't exist yet (creation case)
     }
 }

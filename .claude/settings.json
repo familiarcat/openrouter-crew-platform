@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const t = require\\('./node_modules/.pnpm/@modelcontextprotocol+sdk@1.27.1_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/cjs/types.js'\\); const keys = Object.keys\\(t\\).filter\\(k => k.includes\\('Schema'\\)\\); console.log\\(keys.slice\\(0,20\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"const t = require\\('./node_modules/.pnpm/@modelcontextprotocol+sdk@1.27.1_zod@3.25.76/node_modules/@modelcontextprotocol/sdk/dist/cjs/types.js'\\); const keys = Object.keys\\(t\\).filter\\(k => k.match\\(/^\\(List|Call|Tool\\)/\\)\\); console.log\\(keys.join\\('\\\\n'\\)\\)\")"
+    ]
+  }
+}

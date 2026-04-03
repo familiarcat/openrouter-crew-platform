@@ -17,6 +17,12 @@ import { ContextBuilder } from '../services/context-builder';
 import { ToolRegistry } from '../services/tool-registry';
 import { CommandExecutor } from './command-executor';
 import { PromptManager } from '@openrouter-crew/agent-orchestration';
+import { DarkForestValidator } from '../services/dark-forest-validator';
+import { worfSecuritySweepCommand } from './worf-security-sweep';
+import { geordiWarpCoreOptimizeCommand } from './geordi-warp-core-optimize';
+import { quarkArbitrageScannerCommand } from './quark-arbitrage-scanner';
+import { rallyCrewAuditCommand } from './rally-crew-audit';
+import { drCrusherMedicalDiagnosticCommand } from './dr-crusher-medical-diagnostic';
 
 export interface ExtensionServices {
     costTracker: CostTracker;
@@ -124,7 +130,12 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
             const query = await vscode.window.showInputBox({ prompt: 'Search memories', placeHolder: 'Enter search term' });
             if (query) await crewAPIService.searchMemories(query);
         }),
-        vscode.commands.registerCommand('openrouter-crew.memory.compliance', () => crewAPIService.getComplianceStatus())
+        vscode.commands.registerCommand('openrouter-crew.memory.compliance', () => crewAPIService.getComplianceStatus()),
+        vscode.commands.registerCommand('openrouter-crew.worf.securitySweep', () => worfSecuritySweepCommand(context, agentNetwork)), // Worf's Security Sweep
+        vscode.commands.registerCommand('openrouter-crew.geordi.warpCoreOptimize', () => geordiWarpCoreOptimizeCommand(context, agentNetwork)), // Geordi's Optimization
+        vscode.commands.registerCommand('openrouter-crew.quark.arbitrageScanner', () => quarkArbitrageScannerCommand(context, agentNetwork)), // Quark's Arbitrage Scanner
+        vscode.commands.registerCommand('openrouter-crew.dr-crusher.medicalDiagnostic', () => drCrusherMedicalDiagnosticCommand(context, agentNetwork)), // Crusher's Diagnostic
+        vscode.commands.registerCommand('openrouter-crew.crew.rallyAudit', () => rallyCrewAuditCommand(context, agentNetwork, costTracker))
     );
 
     // Project & UI
@@ -135,9 +146,72 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
         vscode.commands.registerCommand('openrouter-crew.settings', () => vscode.commands.executeCommand('workbench.action.openSettings', 'openrouterCrew')),
         vscode.commands.registerCommand('openrouter-crew.welcome', () => vscode.window.showInformationMessage('OpenRouter Crew: Cost-optimized AI coding assistant. Use Ctrl+Shift+C for chat.')),
         
-        // Placeholders for future AI features
-        vscode.commands.registerCommand('openrouter-crew.explain', () => vscode.window.showInformationMessage('Explaining code...')),
-        vscode.commands.registerCommand('openrouter-crew.review', () => vscode.window.showInformationMessage('Code review in progress...')),
-        vscode.commands.registerCommand('openrouter-crew.refactor', () => vscode.window.showInformationMessage('Refactoring code...'))
+        // AI commands — routed through PromptManager triage → specialized crew agent → OpenRouter
+        vscode.commands.registerCommand('openrouter-crew.explain', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return vscode.window.showWarningMessage('Open a file to explain.');
+            const selection = editor.selection.isEmpty
+                ? editor.document.getText()
+                : editor.document.getText(editor.selection);
+            ChatPanel.createOrShow(
+                context.extensionUri, agentNetwork, llmRouter, costTracker,
+                nlpProcessor, contextBuilder, toolRegistry, commandExecutor, promptManager, context
+            );
+            const agent = agentNetwork.getDepartment('data');
+            const result = await agent.executeTask(
+                `Explain the following code clearly:\n\n${selection}`,
+                { intent: 'EXPLAIN', complexity: 'MEDIUM' }
+            ).catch(e => ({ output: `Error: ${e.message}`, model: '', cost: 0, executionTimeMs: 0 }));
+            ChatPanel.currentPanel?.ask(result.output);
+        }),
+
+        vscode.commands.registerCommand('openrouter-crew.review', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return vscode.window.showWarningMessage('Open a file to review.');
+            const selection = editor.selection.isEmpty
+                ? editor.document.getText()
+                : editor.document.getText(editor.selection);
+            ChatPanel.createOrShow(
+                context.extensionUri, agentNetwork, llmRouter, costTracker,
+                nlpProcessor, contextBuilder, toolRegistry, commandExecutor, promptManager, context
+            );
+
+            // Deep Interaction: Worf pre-scans with DarkForestValidator
+            const validator = new DarkForestValidator();
+            const scanResult = validator.validateContent(selection, editor.document.fileName);
+            const securityContext = scanResult.isValid ? "" : `\n[TACTICAL ALERT] Dark Forest Violation Detected: ${scanResult.reason} (Axiom: ${scanResult.violatedAxiom})\n`;
+
+            const agent = agentNetwork.getDepartment('worf');
+            const result = await agent.executeTask(
+                `${securityContext}Review the following code for security vulnerabilities, deceptive patterns, and best practices:\n\n${selection}`,
+                { intent: 'REVIEW', complexity: 'HIGH' }
+            ).catch(e => ({ output: `Error: ${e.message}`, model: '', cost: 0, executionTimeMs: 0 }));
+            ChatPanel.currentPanel?.ask(result.output);
+        }),
+
+        vscode.commands.registerCommand('openrouter-crew.refactor', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return vscode.window.showWarningMessage('Open a file to refactor.');
+            const filePath = editor.document.uri.fsPath;
+            const content = editor.selection.isEmpty
+                ? editor.document.getText()
+                : editor.document.getText(editor.selection);
+            const agent = agentNetwork.getDepartment('geordi_la_forge');
+            vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: 'Crew: Refactoring...', cancellable: false },
+                async () => {
+                    const result = await agent.executeTask(
+                        `Refactor the following code for clarity, performance, and maintainability. Return only the improved code:\n\n${content}`,
+                        { intent: 'REFACTOR', complexity: 'HIGH' }
+                    ).catch(e => ({ output: '', model: '', cost: 0, executionTimeMs: 0, error: e.message }));
+                    if (result.output && result.output.trim()) {
+                        // Route through ProposeChangeService so changes go to diff review
+                        const { ProposeChangeService } = await import('../services/propose-change-service');
+                        const proposer = new ProposeChangeService(costTracker);
+                        await proposer.propose(filePath, result.output, result.cost);
+                    }
+                }
+            );
+        })
     );
 }

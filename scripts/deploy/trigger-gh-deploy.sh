@@ -45,21 +45,29 @@ fi
 
 echo -e "\n${BLUE}📨 Sending workflow dispatch event...${NC}"
 
-if gh workflow run deploy.yml --ref "$BRANCH" -f environment="$ENVIRONMENT" -f reason="CLI Trigger: $(whoami)"; then
+WORKFLOW="deploy-universal.yml"
+
+if gh workflow run "$WORKFLOW" --ref "$BRANCH" \
+    -f environment="$ENVIRONMENT" \
+    -f skip_vercel=false \
+    -f skip_ec2=false; then
     echo -e "${GREEN}✅ Workflow triggered successfully!${NC}"
-    
+
     echo -e "\n${BLUE}👀 Waiting for workflow to start...${NC}"
     sleep 5
-    
-    RUN_ID=$(gh run list --workflow=deploy.yml --branch "$BRANCH" --limit 1 --json databaseId -q '.[0].databaseId')
+
+    RUN_ID=$(gh run list --workflow="$WORKFLOW" --branch "$BRANCH" --limit 1 --json databaseId -q '.[0].databaseId')
+    REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
     echo -e "   Tracking Run ID: ${BLUE}${RUN_ID}${NC}"
-    echo -e "   View Logs:       ${BLUE}https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions/runs/${RUN_ID}${NC}"
+    echo -e "   View Logs:       ${BLUE}https://github.com/${REPO}/actions/runs/${RUN_ID}${NC}"
+    echo -e "   Jobs: validate → (deploy-vercel ∥ deploy-ec2)"
 
     if gh run watch "$RUN_ID"; then
-        echo -e "\n${GREEN}✅ Remote deployment completed successfully!${NC}"
+        echo -e "\n${GREEN}✅ Universal deployment completed!${NC}"
+        echo -e "   • Dashboard: Vercel CDN"
+        echo -e "   • Agents + Infra: AWS EC2"
     else
-        echo -e "\n${RED}❌ Remote deployment failed.${NC}"
-        echo -e "${YELLOW}Fetching failure logs...${NC}"
+        echo -e "\n${RED}❌ Deployment failed.${NC}"
         gh run view "$RUN_ID" --log
         exit 1
     fi

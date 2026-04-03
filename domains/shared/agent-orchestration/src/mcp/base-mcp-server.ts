@@ -15,6 +15,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   Tool,
   TextContent,
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
+  ListResourcesRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 import { createClient } from '@supabase/supabase-js'
 import Redis from 'ioredis'
@@ -64,10 +67,15 @@ export abstract class BaseMCPServer {
     const redisHost = process.env.REDIS_HOST || 'localhost'
     this.redis = new Redis(`redis://:${redisPassword}@${redisHost}:6379`)
 
-    // Initialize MCP server
+    // Initialize MCP server — declare capabilities required by SDK v1.x
     this.server = new Server({
       name: `${agentName}-agent`,
       version: '1.0.0'
+    }, {
+      capabilities: {
+        tools: {},
+        resources: {}
+      }
     })
 
     this.setupRequestHandlers()
@@ -86,7 +94,7 @@ export abstract class BaseMCPServer {
    */
   private setupRequestHandlers() {
     // Handle /tools/list request
-    this.server.setRequestHandler('tools/list' as any, async () => {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools: Tool[] = Array.from(this.tools.values()).map(tool => {
         return {
           name: tool.name,
@@ -99,7 +107,7 @@ export abstract class BaseMCPServer {
     })
 
     // Handle /tools/call request
-    this.server.setRequestHandler('tools/call' as any, async (request: any) => {
+    this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       try {
         const { name, arguments: args } = request.params
 
@@ -134,7 +142,7 @@ export abstract class BaseMCPServer {
     })
 
     // Handle /resources/list request (for context)
-    this.server.setRequestHandler('resources/list' as any, async () => ({
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       resources: [
         {
           uri: `mcp://agent/${this.agentName}`,

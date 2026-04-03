@@ -51,6 +51,20 @@ export class ChatPanel {
           case 'sendMessage':
             await this.handleUserMessage(message.text);
             return;
+          case 'applyCode':
+            let targetPath = message.path;
+            const activeEditor = vscode.window.activeTextEditor;
+
+            if (!targetPath && activeEditor) {
+                targetPath = activeEditor.document.uri.fsPath;
+            }
+
+            if (targetPath) {
+                await vscode.commands.executeCommand('openrouter-crew.propose-change', targetPath, message.code);
+            } else {
+                vscode.window.showErrorMessage('Please specify a file path or open a target file to apply these changes.');
+            }
+            return;
           case 'alert':
             vscode.window.showErrorMessage(message.text);
             return;
@@ -146,6 +160,10 @@ export class ChatPanel {
       // Send prompt to webview to display it immediately
       this._panel.webview.postMessage({ command: 'addMessage', role: 'user', text: prompt });
       await this.handleUserMessage(prompt);
+  }
+
+  public addMessage(message: { role: string; text: string; meta?: any }) {
+    this._panel.webview.postMessage({ command: 'addMessage', ...message });
   }
 
   private async handleUserMessage(text: string) {
@@ -393,7 +411,29 @@ export class ChatPanel {
                     .replace(/</g, "&lt;")
                     .replace(/>/g, "&gt;");
                 
-                formatted = formatted.replace(/\`\`\`([\\s\\S]*?)\`\`\`/g, '<pre><code>$1</code></pre>');
+                // Detect code blocks and inject "Propose Change" action button
+                const codeBlockRegex = /\`\`\`([\w]*)\n?([\s\S]*?)\`\`\`/g;
+                formatted = formatted.replace(codeBlockRegex, (match, lang, code, offset) => {
+                    // Extract a file path hint from the text immediately preceding the code block
+                    const precedingText = text.substring(Math.max(0, offset - 150), offset);
+                    const fileHintMatch = precedingText.match(/(?:file|in|update|modify|for)\s*[:\s]*\`?([\w\.\-\/]+\.\w+)\`?/i);
+                    const pathHint = fileHintMatch ? fileHintMatch[1] : '';
+                    const displayPath = pathHint ? ' (' + pathHint.split('/').pop() + ')' : '';
+
+                    // Unescape entities for the raw code payload, then fix encoding for UTF-8 support
+                    const rawCode = code.trim()
+                        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+                    const encodedCode = btoa(unescape(encodeURIComponent(rawCode)));
+                    
+                    return `<div class="code-container">
+                        <div class="code-header">
+                            <span>${lang || 'code'}</span>
+                            <button class="apply-btn" onclick="applyCode('${encodedCode}', '${pathHint}')">Propose Change${displayPath}</button>
+                        </div>
+                        <pre><code>${code}</code></pre>
+                    </div>`;
+                });
+
                 formatted = formatted.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
                 formatted = formatted.replace(/\\n/g, '<br>');
 
@@ -420,6 +460,11 @@ export class ChatPanel {
                     messageInput.value = '';
                     messageInput.style.height = 'auto';
                 }
+            }
+
+            function applyCode(encodedCode, pathHint) {
+                const code = decodeURIComponent(escape(atob(encodedCode)));
+                vscode.postMessage({ command: 'applyCode', code: code, path: pathHint });
             }
 
             function nav(deck) {
