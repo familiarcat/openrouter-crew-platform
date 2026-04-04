@@ -1,24 +1,4 @@
 #!/usr/bin/env bash
-
-# ── env bridge: safe cross-shell variable export ───────────────────────────
-# Loads .env file so all vars are available to bash subshells spawned from zsh
-_load_env() {
-  local env_file="${1:-.env}"
-  if [[ -f "$env_file" ]]; then
-    set -a
-    # shellcheck source=/dev/null
-    source "$env_file"
-    set +a
-    echo "[env-bridge] loaded $env_file" >&2
-  else
-    echo "[env-bridge] warning: $env_file not found" >&2
-  fi
-}
-
-# Load in priority order
-_load_env ".env"
-_load_env ".env.local"
-# ── end env bridge ──────────────────────────────────────────────────────────
 # ============================================================
 #  crew-env-bridge.sh
 #
