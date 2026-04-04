@@ -22,8 +22,6 @@ services:
     image: n8nio/n8n:latest
     container_name: openrouter-crew-n8n
     restart: unless-stopped
-    ports:
-      - "5678:5678"
     environment:
       - N8N_BASE_URL=${N8N_BASE_URL}
       - WEBHOOK_URL=${N8N_WEBHOOK_URL}
@@ -71,6 +69,48 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # 4. Crew Gateway (The Seam) - Exposes internal state to Vercel/VSCode
+  gateway:
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:gateway-${IMAGE_TAG}
+    container_name: openrouter-crew-gateway
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - API_AUTH_SECRET=${GATEWAY_SECRET}
+    networks:
+      - openrouter-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 5. Reverse Proxy (Nginx) - SSL Termination
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: openrouter-crew-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DASHBOARD_DOMAIN=${DASHBOARD_DOMAIN}
+      - N8N_DOMAIN=${N8N_DOMAIN}
+    volumes:
+      - ./infrastructure/nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - openrouter-network
+    depends_on:
+      - n8n
+      - gateway
 
 networks:
   openrouter-network:

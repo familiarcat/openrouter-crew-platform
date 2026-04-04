@@ -121,7 +121,7 @@ The platform separates **Deployable Experiences (Apps)** from **Logical Capabili
 
 ### In Progress
 - **Codebase Analyzer Enhancement** - Adding cyclomatic complexity, function metrics
-- **CI/CD Integration** - Automated deployment via GitHub Actions (AWS + Vercel)
+- **CI/CD Integration** - Automated deployment via GitHub Actions (AWS + Vercel) with Secure Gateway Proxying
 - **VSCode Webview Panels** - Codebase dashboard in sidebar
 
 ### Next Sprint (This Week)

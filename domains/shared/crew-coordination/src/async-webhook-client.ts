@@ -46,7 +46,7 @@ export class AsyncWebhookClient {
         // 2. Perform Adversarial Consistency Validation (Assume Deception)
         const validation: ConsistencyCheckResult = await this.consistencyChecker.validate(
           currentTaskInput,
-          response.output,
+          response.content,
           { projectId: params.project_id }
         );
 
@@ -58,7 +58,7 @@ export class AsyncWebhookClient {
           duration_ms: Date.now() - startTime,
           consistency_score: validation.score,
           is_consistent: validation.isConsistent,
-          cost_usd: response.cost || 0
+          cost_usd: response.estimatedCost || 0
         };
         attemptsHistory.push(attemptEntry);
 
@@ -97,5 +97,7 @@ export class AsyncWebhookClient {
         if (attempt === this.maxRetries) throw error;
       }
     }
+
+    throw new Error(`Mission failed: Consistency threshold not met after ${this.maxRetries} attempts.`);
   }
 }

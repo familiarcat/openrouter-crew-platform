@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
+import * as path from 'path';
 import { DarkForestValidator } from './dark-forest-validator';
 
 export class ProposeChangeTool {
@@ -61,5 +62,3 @@ export class ProposeChangeTool {
     }
   }
 }
-
-import * as path from 'path';

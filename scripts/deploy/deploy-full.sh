@@ -50,8 +50,8 @@ case "$ENVIRONMENT" in
   *) echo "❌ Unknown environment: $ENVIRONMENT"; exit 1 ;;
 esac
 
-DASHBOARD_URL="http://dashboard.${BASE_DOMAIN}:3000"
-N8N_URL="http://automation.${BASE_DOMAIN}:5678"
+DASHBOARD_URL="https://dashboard.${BASE_DOMAIN}"
+N8N_URL="https://automation.${BASE_DOMAIN}"
 SUPABASE_STUDIO_URL="http://supabase.${BASE_DOMAIN}:54323"
 
 echo -e "${BLUE}🚀 Starting Full Stack Deployment to ${YELLOW}${ENVIRONMENT}${BLUE}...${NC}"
@@ -75,6 +75,7 @@ log_step "Validating secrets..."
 MISSING_SECRETS=()
 [[ -z "${SUPABASE_URL:-}" ]] && MISSING_SECRETS+=("SUPABASE_URL")
 [[ -z "${OPENROUTER_API_KEY:-}" ]] && MISSING_SECRETS+=("OPENROUTER_API_KEY")
+[[ -z "${GATEWAY_SECRET:-}" ]] && MISSING_SECRETS+=("GATEWAY_SECRET")
 
 if [ ${#MISSING_SECRETS[@]} -ne 0 ]; then
     echo -e "${RED}❌ Missing required secrets: ${MISSING_SECRETS[*]}${NC}"
@@ -149,8 +150,10 @@ fi
 
 IMAGE_TAG=$(git rev-parse --short HEAD)-$(date +%s)
 IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+GATEWAY_IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:gateway-$IMAGE_TAG"
 
-log_step "Building Docker image: $IMAGE_URI"
+# Build the main crew (agent orchestration) image from the root Dockerfile
+log_step "Building Docker image for Crew Agents: $IMAGE_URI"
 export DOCKER_BUILDKIT=1
 docker buildx build \
     --progress=plain --load \
@@ -158,14 +161,28 @@ docker buildx build \
     --build-arg NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL" \
     --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
     --tag "$IMAGE_URI" \
-    -f apps/unified-dashboard/Dockerfile \
+    -f Dockerfile \
+    .
+
+# Build the Crew API Gateway image from the new Dockerfile
+log_step "Building Docker image for Crew API Gateway: $GATEWAY_IMAGE_URI"
+docker buildx build \
+    --progress=plain --load \
+    --platform linux/amd64 \
+    --tag "$GATEWAY_IMAGE_URI" \
+    -f scripts/deploy/Dockerfile.crew-api-gateway \
     .
 
 log_step "Pushing Docker image to ECR..."
 docker push "$IMAGE_URI"
+docker push "$GATEWAY_IMAGE_URI"
 log_success "Image pushed successfully."
 
-echo -e "\n${BLUE}🚀 Phase 3: Deploying to EC2 via SSM${NC}"
+echo -e "\n${BLUE}🌍 Phase 3: DNS Configuration & Propagation${NC}"
+export EC2_PUBLIC_IP=$PUBLIC_IP
+./scripts/ci-post-deploy.sh "$ENVIRONMENT"
+
+echo -e "\n${BLUE}🚀 Phase 4: Deploying to EC2 & SSL Generation${NC}"
 
 # This heredoc defines the script that will run on the remote EC2 instance.
 # Variables are expanded locally before being sent.
@@ -173,11 +190,16 @@ REMOTE_SCRIPT=$(cat <<EOF
 echo "Updating environment on EC2..."
 cd /home/ec2-user/openrouter-crew-platform
 
+DASHBOARD_DOMAIN="dashboard.${BASE_DOMAIN}"
+N8N_DOMAIN="automation.${BASE_DOMAIN}"
+
 # Create .env.prod file with secrets from the local environment
 cat > .env.production <<ENV_EOF
 ECR_REGISTRY=${ECR_REGISTRY}
 ECR_REPOSITORY=${ECR_REPOSITORY}
 IMAGE_TAG=${IMAGE_TAG}
+DASHBOARD_DOMAIN=dashboard.${BASE_DOMAIN}
+N8N_DOMAIN=automation.${BASE_DOMAIN}
 SUPABASE_URL=${SUPABASE_URL}
 SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
@@ -191,10 +213,31 @@ N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET}
 REDIS_PASSWORD=${REDIS_PASSWORD}
 REDIS_HOST=redis
 REDIS_PORT=6379
+GATEWAY_SECRET=${GATEWAY_SECRET}
 AWS_REGION=${AWS_REGION}
 ENVIRONMENT=${ENVIRONMENT}
 PROJECT_NAME=openrouter-crew-platform
 ENV_EOF
+
+echo "Installing/Updating Certbot and Cron..."
+sudo dnf install -y certbot cronie
+sudo systemctl enable --now crond
+
+echo "Generating SSL certificates for \$DASHBOARD_DOMAIN and \$N8N_DOMAIN..."
+# Ensure port 80 is clear for standalone validation
+docker-compose -f docker-compose.prod.yml down || true
+
+echo "Verifying DNS resolution for \$DASHBOARD_DOMAIN..."
+until ping -c 1 "\$DASHBOARD_DOMAIN" > /dev/null 2>&1; do echo "Waiting for DNS..."; sleep 5; done
+
+sudo certbot certonly --standalone \
+    --non-interactive --agree-tos --email "admin@${BASE_DOMAIN}" \
+    -d "\$DASHBOARD_DOMAIN" -d "\$N8N_DOMAIN" \
+    --keep-until-expiring
+
+echo "Setting up auto-renewal cron job..."
+# Add crontab entry to renew twice a month (1st and 15th) using standalone mode hooks to toggle Nginx
+(sudo crontab -l 2>/dev/null | grep -v "certbot renew"; echo "0 0 1,15 * * certbot renew --pre-hook 'docker-compose -f /home/ec2-user/openrouter-crew-platform/docker-compose.prod.yml stop nginx' --post-hook 'docker-compose -f /home/ec2-user/openrouter-crew-platform/docker-compose.prod.yml up -d nginx' >> /home/ec2-user/certbot-renew.log 2>&1") | sudo crontab -
 
 echo "Pulling new image and restarting services..."
 # Pull all images and restart the full stack to ensure all services pick up env changes
@@ -232,11 +275,6 @@ else
     aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --region "$AWS_REGION" --query "StandardErrorContent" --output text
     exit 1
 fi
-
-# 4. DNS Configuration & Post-Deploy Setup
-echo -e "\n${BLUE}🌍 Phase 4: DNS Configuration${NC}"
-export EC2_PUBLIC_IP=$PUBLIC_IP
-./scripts/ci-post-deploy.sh "$ENVIRONMENT"
 
 # 5. n8n Workflow Synchronization
 echo -e "\n${BLUE}🔄 Phase 5: Synchronizing n8n Workflows${NC}"

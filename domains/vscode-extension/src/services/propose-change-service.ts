@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { CostTracker } from './cost-tracker';
-import Redis from 'ioredis';
+import { RedisClient } from '@openrouter-crew/shared-redis-client';
 import { DarkForestValidator } from './dark-forest-validator';
 
 /**
@@ -11,13 +11,13 @@ import { DarkForestValidator } from './dark-forest-validator';
  * with a human-in-the-loop approval workflow.
  */
 export class ProposeChangeService {
-    private redis: Redis;
+    private redis: any;
     private validator: DarkForestValidator;
 
     constructor(private costTracker?: CostTracker) {
         // Standard fleet connection
         this.validator = new DarkForestValidator();
-        this.redis = new Redis(`redis://:${process.env.REDIS_PASSWORD || 'redis'}@${process.env.REDIS_HOST || 'localhost'}:6379`);
+        this.redis = RedisClient.getInstance();
     }
 
     /**

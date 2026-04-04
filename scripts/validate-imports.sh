@@ -1,44 +1,71 @@
-#!/usr/bin/env bash
-# validate-imports.sh — Scan for broken relative imports and deep path escapes
-set -euo pipefail
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ERRORS=0
+#!/bin/bash
+# =============================================================================
+# validate-imports.sh — OpenRouter Crew Platform
+# Verifies that all relative imports (./ and ../) resolve to existing files.
+# =============================================================================
 
-log() { echo "  $*"; }
+set -e
 
-echo "Scanning for broken import patterns..."
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-# Pattern 1: Excessively deep relative imports (4+ levels)
-while IFS= read -r -d '' file; do
-  if grep -nP '(from|require)\s*["'"'"'](\.\.\/){4,}' "$file" 2>/dev/null; then
-    echo "DEEP_IMPORT: $file"
-    ((ERRORS++)) || true
-  fi
-done < <(find "$REPO" -type f \( -name "*.ts" -o -name "*.tsx" \) \
-  -not -path '*/node_modules/*' \
-  -not -path '*/dist/*' \
-  -not -path '*/.next/*' \
-  -print0 2>/dev/null)
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
 
-# Pattern 2: @openrouter-crew/* imports to check workspace resolution
-echo ""
-echo "Checking workspace package resolution..."
-while IFS= read -r pkg; do
-  name=$(echo "$pkg" | jq -r '.name // empty' 2>/dev/null || echo "")
-  [[ -z "$name" ]] && continue
-  count=$(grep -r "from '@openrouter-crew/" "$REPO" \
-    --include="*.ts" --include="*.tsx" \
-    -not -path '*/node_modules/*' \
-    -l 2>/dev/null | wc -l | tr -d ' ')
-  log "$name: referenced in $count files"
-done < <(find "$REPO/domains/shared" -name "package.json" -not -path '*/node_modules/*' \
-  -exec cat {} \;)
+echo -e "${YELLOW}🔍 Starting relative import validation...${NC}"
 
-if [[ $ERRORS -gt 0 ]]; then
-  echo ""
-  echo "✗ Found $ERRORS import issues"
-  exit 1
+errors=0
+checked_files=0
+
+# Find all TypeScript/React source files, excluding build artifacts and node_modules
+find . -type f \( -name "*.ts" -o -name "*.tsx" \) \
+    -not -path "*/node_modules/*" \
+    -not -path "*/dist/*" \
+    -not -path "*/_archive/*" \
+    -not -path "*/.next/*" -print0 | while IFS= read -r -d '' file; do
+    dir=$(dirname "$file")
+    ((checked_files++))
+
+    # Extract relative imports starting with . or .. using grep
+    # This captures: import ... from './path' or import './path'
+    imports=$(grep -E "from ['\"](\.\.?/.*)['\"]|import ['\"](\.\.?/.*)['\"]" "$file" | \
+              sed -E "s/.*['\"](\.\.?\/[^'\"]+)['\"].*/\1/" | sort | uniq)
+
+    for imp in $imports; do
+        # Construct the target path relative to the current file's directory
+        target="$dir/$imp"
+        
+        # Data's Heuristic: Strip .js/.jsx extensions to find TS source
+        # ESM in Node often requires .js extensions even for TS files
+        clean_target="${target%.js}"
+        clean_target="${clean_target%.jsx}"
+
+        # Check for various valid TypeScript resolutions
+        found=false
+        for ext in "" ".ts" ".tsx" ".d.ts" "/index.ts" "/index.tsx" ".js" ".jsx"; do
+            if [[ -f "${target}${ext}" ]] || [[ -f "${clean_target}${ext}" ]]; then
+                found=true
+                break
+            fi
+        done
+
+        if [[ "$found" == false ]]; then
+            echo -e "${RED}❌ Broken import in ${file}:${NC}"
+            echo -e "   Target: '${imp}' (Resolved to: ${target})"
+            errors=$((errors + 1))
+        fi
+    done
+done
+
+echo -e "\n${YELLOW}------------------------------------------${NC}"
+echo -e "Summary: Checked ${checked_files} files."
+if [ $errors -eq 0 ]; then
+    echo -e "${GREEN}✅ All relative imports are valid.${NC}"
+    exit 0
 else
-  echo ""
-  echo "✓ No import issues found"
+    echo -e "${RED}🚨 Found ${errors} invalid relative imports.${NC}"
+    exit 1
 fi

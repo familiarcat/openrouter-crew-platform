@@ -12,12 +12,14 @@ import { CostTracker } from './cost-tracker';
 import { FileManager } from './file-manager';
 import { ToolRegistry } from './tool-registry';
 import { AgentExecutionResult } from './types';
-import { LLMRouter } from './llm-router';
+import { LLMRouter, ModelChoice } from './llm-router';
 import { ProposeChangeService } from './propose-change-service';
 import { AgentMCPClientPool } from './agent-mcp-client';
-import Redis from 'ioredis';
+import { RedisClient } from '@openrouter-crew/shared-redis-client';
+import type { Redis } from 'ioredis';
 import * as path from 'path';
-import { execAsync } from './exec.js';
+import { execAsync } from './exec';
+import { MissionStateSchema } from '@openrouter-crew/shared-schemas';
 
 // PromptManager loaded lazily to avoid circular dep and build failures
 type PromptManagerLike = {
@@ -31,7 +33,7 @@ type PromptManagerLike = {
 };
 
 // Map friendly model names to OpenRouter model IDs
-const MODEL_ID_MAP: Record<AgentProfile['model'], string> = {
+const MODEL_ID_MAP: Record<string, string> = {
     'claude-3-5-sonnet': 'anthropic/claude-3.5-sonnet',
     'gpt-4o': 'openai/gpt-4o',
     'gemini-1.5-pro': 'google/gemini-1.5-pro-latest'
@@ -83,10 +85,7 @@ export class AgentNetworkService {
         this.proposeChangeService = new ProposeChangeService(this.costTracker);
         this.toolRegistry = new ToolRegistry(this.fileManager, this.costTracker, this, this.proposeChangeService);
 
-        // Initialize Redis for Mission Control sync
-        const redisPassword = process.env.REDIS_PASSWORD || 'redis';
-        const redisHost = process.env.REDIS_HOST || 'localhost';
-        this.redis = new Redis(`redis://:${redisPassword}@${redisHost}:6379`);
+        this.redis = RedisClient.getInstance();
     }
 
     public setCrewRouting(promptManager: PromptManagerLike, mcpClientPool: AgentMCPClientPool): void {
@@ -253,15 +252,42 @@ export class AgentNetworkService {
     }
 
     /**
-     * Fetches the current mission brief for a project from Redis.
+     * Fetches the current mission brief for a project.
+     * Fallback sequence: Redis (Hot Cache) -> Supabase (Persistent Storage)
      */
-    public async getActiveMissionBrief(projectId: string): Promise<any | null> {
+    public async getActiveMissionBrief(projectId: string): Promise<unknown | null> {
         try {
             const syncKey = `project:${projectId}:mission_state`;
             const data = await this.redis.get(syncKey);
+
             if (data) {
-                return JSON.parse(data);
+                try {
+                    const parsed = JSON.parse(data);
+                    const result = MissionStateSchema.safeParse(parsed);
+                    if (result.success) return result.data;
+                    console.warn(`[Central Mind] Corrupt Redis state for ${projectId}`);
+                } catch (parseErr) {
+                    console.warn(`[Central Mind] Failed to parse Redis state for ${projectId}`);
+                }
             }
+
+            // Fallback to Supabase (The Vault)
+            console.log(`[Central Mind] Redis miss or corruption for ${projectId}, checking Supabase...`);
+            const { data: dbState, error: dbError } = await this.supabase
+                .from('mission_states')
+                .select('*')
+                .eq('projectId', projectId)
+                .order('timestamp', { ascending: false })
+                .maybeSingle();
+
+            if (dbError) throw dbError;
+
+            if (dbState) {
+                const result = MissionStateSchema.safeParse(dbState);
+                if (result.success) return result.data;
+                console.error(`[Central Mind] Corrupt persistent state for ${projectId}`);
+            }
+
             return null;
         } catch (e) {
             console.error(`[Central Mind] Failed to fetch mission brief for ${projectId}:`, e);

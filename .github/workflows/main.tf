@@ -37,6 +37,22 @@ resource "aws_security_group" "platform_sg" {
   description = "Allow traffic for n8n, dashboard, and agent gateways"
 
   ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    description = "HTTP for Let's Encrypt validation"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    description = "HTTPS traffic"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"

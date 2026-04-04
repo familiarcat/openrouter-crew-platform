@@ -1,8 +1,8 @@
-import { CrewAgent, AgentNetworkService } from '../services/agent-network.js';
-import { CostTracker } from '../services/cost-tracker.js';
-import { FileManager } from '../services/file-manager.js';
-import { ProposeChangeService } from './propose-change-service.js';
-import { Intent, Complexity, FileContext, ImageContext, Provider } from './llm-router.js';
+import type { CrewAgent, AgentNetworkService } from './agent-network';
+import { CostTracker } from './cost-tracker';
+import { FileManager } from './file-manager';
+import { ProposeChangeService } from './propose-change-service';
+import { Intent, Complexity, FileContext, ImageContext, Provider } from './llm-router';
 
 export interface ToolDependencies {
     fileManager: FileManager;

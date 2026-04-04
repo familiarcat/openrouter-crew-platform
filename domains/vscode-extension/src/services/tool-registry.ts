@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { AgentNetworkService, CrewAgent } from './agent-network';
+import type { AgentNetworkService, CrewAgent } from './agent-network';
 import { CostTracker } from './cost-tracker';
 import { FileManager } from './file-manager';
 import { ProposeChangeService } from './propose-change-service';

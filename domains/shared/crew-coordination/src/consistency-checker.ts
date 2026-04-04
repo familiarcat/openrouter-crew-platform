@@ -52,7 +52,7 @@ export class ConsistencyChecker {
         project_id: metadata.projectId || 'system'
       });
 
-      const result = JSON.parse(response.output) as ConsistencyCheckResult;
+      const result = JSON.parse(response.content) as ConsistencyCheckResult;
       return result;
     } catch (error) {
       console.error('Consistency check failed, falling back to neutral score', error);
@@ -83,7 +83,7 @@ Your previous response was flagged by the Consistency Auditor for the following 
 ${result.contradictions.map(c => `- ${c}`).join('\n')}
 
 Reasoning: ${result.reasoning}
-Correction Hint: ${result.suggestedCorrection}
+${result.suggestedCorrection ? `Correction Hint: ${result.suggestedCorrection}` : ''}
 
 Please provide a corrected version of the task: ${originalTask}`;
   }
