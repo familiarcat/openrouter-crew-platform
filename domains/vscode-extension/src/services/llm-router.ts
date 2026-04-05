@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
 import { CostTracker } from './cost-tracker';
 import { ResponseCache } from './cache';
-import { CostCalculator, ModelRouter } from '@openrouter-crew/shared-cost-tracking';
-import { CostTier } from '@openrouter-crew/shared-schemas';
+import { CostCalculator, ModelRouter, ModelTier } from '@openrouter-crew/shared-cost-tracking';
+import { CostTier, Provider as SchemaProvider } from '@openrouter-crew/shared-schemas';
 
 export type Intent = 'ASK' | 'REVIEW' | 'EXPLAIN' | 'REFACTOR' | 'GENERATE' | 'DEBUG' | 'TEST' | 'DOCUMENT' | 'COMPLETE' | 'OPTIMIZE';
 export type Complexity = 'LOW' | 'MEDIUM' | 'HIGH';
-export type Provider = 'claude' | 'openrouter';
 
 export interface FileContext {
     path: string;
@@ -33,7 +32,7 @@ export interface LLMRequest {
 export interface LLMResponse {
   content: string;
   model: string;
-  provider: Provider;
+  provider: SchemaProvider;
   costUSD: number;
   executionTimeMs: number;
   cached: boolean;
@@ -45,12 +44,12 @@ export interface LLMResponse {
 export interface CostEstimate {
     estimatedCost: number;
     model: string;
-    provider: Provider;
+    provider: SchemaProvider;
 }
 
-export interface ModelChoice {
+export interface SelectedModelInfo { // Data: Renamed to avoid conflict with ModelTier enum
     model: string;
-    provider: Provider;
+    provider: SchemaProvider;
     reason: string;
 }
 
@@ -65,45 +64,52 @@ export class LLMRouter {
   }
 
   async route(request: LLMRequest): Promise<LLMResponse> {
+      // 1. Semantic Cache Check (Axiom 1: Efficient Retrieval)
+      const cacheKey = this.cache.generateKey(request.prompt, 'router-selection', request.files, request.canonicalForm);
+      const cachedResponse = this.cache.get<LLMResponse>(cacheKey);
+      if (cachedResponse) return { ...cachedResponse, cached: true };
+
       const startTime = Date.now();
       
-      // 1. Analyze complexity if not provided
       const complexity = request.complexity || this.analyzeComplexity(request.prompt);
       const contextSize = (request.prompt.length) + (request.files?.reduce((acc, f) => acc + f.content.length, 0) || 0);
       
-      // 2. Delegate to Shared Router for Model Selection
-      // Adapts local context to shared CostTier logic
-      let preferredTier: string = 'budget';
+      // 2. Map to Shared ModelRouter logic
+      let preferredTier: ModelTier = 'budget';
       if (complexity === 'HIGH' || contextSize > 4000 || request.intent === 'DEBUG') {
           preferredTier = 'premium';
       }
 
-      const selectedModel = this.sharedRouter.selectBestModel({
-          costTier: preferredTier,
-          contextWindow: contextSize,
+      const selectedModel = this.sharedRouter.route({
+          taskComplexity: complexity.toLowerCase() as any,
+          estimatedInputTokens: Math.ceil(contextSize / 4),
+          estimatedOutputTokens: 1000,
+          preferredTier: preferredTier,
           requiresTools: !!request.tools
       });
       
-      // 3. Execute request via OpenRouter using selected model
       const response = await this.callOpenRouter(request, selectedModel.id);
-
       const executionTime = Date.now() - startTime;
+      const latencyScore = executionTime / (response.usage?.completion_tokens || 1);
 
-      // 7. Track Cost & Cache
-      await this.costTracker.recordUsage(response.costUSD, {
+      const finalResponse: LLMResponse = {
+          ...response,
+          executionTimeMs: executionTime,
+          latencyScore
+      };
+
+      // 3. Track Cost & Update Cache
+      await this.costTracker.recordUsage(finalResponse.costUSD, {
           model: response.model,
           tokens: (response.usage?.prompt_tokens || 0) + (response.usage?.completion_tokens || 0),
           intent: request.intent,
           complexity: request.complexity || complexity,
-          latencyScore: response.latencyScore,
+          latencyScore: latencyScore,
           executionTimeMs: executionTime
       });
 
-      return {
-          ...response,
-          executionTimeMs: executionTime,
-          latencyScore: executionTime / (response.usage?.completion_tokens || 1)
-      };
+      await this.cache.set(cacheKey, finalResponse);
+      return finalResponse;
   }
 
   private async callOpenRouter(request: LLMRequest, model: string): Promise<LLMResponse> {

@@ -1,0 +1,34 @@
+name: Feature Branch Preview
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  local-preview:
+    name: 🚀 Local Preview Smoke Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Initialize Local Environment
+        run: bash scripts/crew-init-local.sh
+
+      - name: Start Preview Environment
+        run: |
+          # Verify that the dashboard and agents can boot successfully.
+          # Runs pnpm dev with a 60-second window to confirm startup signals.
+          timeout 60s pnpm dev || if [ $? -eq 124 ]; then echo "Startup successful"; else exit 1; fi

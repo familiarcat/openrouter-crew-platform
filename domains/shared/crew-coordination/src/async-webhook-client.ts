@@ -29,8 +29,8 @@ export class AsyncWebhookClient {
    */
   public async executeWithRetry(params: ExecuteParams, workflowRequestId: string) {
     let currentTaskInput = params.input;
-    let currentModel = params.model || ModelChoice.HAIKU;
-    const attemptsHistory: any[] = [];
+    let currentModel: ModelTier = params.model || ModelTier.HAIKU;
+    const attemptsHistory: { attempt: number; model: ModelTier; timestamp: string; duration_ms: number; consistency_score: number; is_consistent: boolean; cost_usd: number; }[] = []; // Geordi: Explicitly type history
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       const startTime = Date.now();
@@ -41,7 +41,7 @@ export class AsyncWebhookClient {
           ...params,
           input: currentTaskInput,
           model: currentModel,
-        });
+        }) as CrewResponse; // Geordi: Explicitly cast to CrewResponse
 
         // 2. Perform Adversarial Consistency Validation (Assume Deception)
         const validation: ConsistencyCheckResult = await this.consistencyChecker.validate(
@@ -58,7 +58,7 @@ export class AsyncWebhookClient {
           duration_ms: Date.now() - startTime,
           consistency_score: validation.score,
           is_consistent: validation.isConsistent,
-          cost_usd: response.estimatedCost || 0
+          cost_usd: response.costUSD || 0
         };
         attemptsHistory.push(attemptEntry);
 

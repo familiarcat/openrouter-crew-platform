@@ -10,9 +10,9 @@ import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
 import { CostTracker } from './cost-tracker';
 import { FileManager } from './file-manager';
-import { ToolRegistry } from './tool-registry';
+import type { ToolRegistry } from './tool-registry'; // Break circular dependency
 import { AgentExecutionResult } from './types';
-import { LLMRouter, ModelChoice } from './llm-router';
+import { LLMRouter, SelectedModelInfo } from './llm-router';
 import { ProposeChangeService } from './propose-change-service';
 import { AgentMCPClientPool } from './agent-mcp-client';
 import { RedisClient } from '@openrouter-crew/shared-redis-client';
@@ -33,10 +33,10 @@ type PromptManagerLike = {
 };
 
 // Map friendly model names to OpenRouter model IDs
-const MODEL_ID_MAP: Record<string, string> = {
-    'claude-3-5-sonnet': 'anthropic/claude-3.5-sonnet',
-    'gpt-4o': 'openai/gpt-4o',
-    'gemini-1.5-pro': 'google/gemini-1.5-pro-latest'
+const MODEL_ID_MAP: Record<ModelTier, string> = {
+    [ModelTier.SONNET]: 'anthropic/claude-3.5-sonnet',
+    [ModelTier.GPT_4O]: 'openai/gpt-4o',
+    [ModelTier.GEMINI_1_5_PRO]: 'google/gemini-1.5-pro-latest'
 };
 
 let agentProfiles: any = {};
@@ -51,7 +51,7 @@ export interface AgentProfile {
     name: string;
     role: string;
     specialties: string[];
-    model: 'claude-3-5-sonnet' | 'gpt-4o' | 'gemini-1.5-pro';
+    model: ModelTier;
 }
 
 export class AgentNetworkService {
@@ -422,8 +422,8 @@ export class CrewAgent {
 
                 return {
                     output: response.content || `[${brief.agentId}] Task completed.`,
-                    model: response.model || brief.selectedModel,
-                    cost: response.costUSD ?? 0,
+                    model: response.model,
+                    costUSD: response.costUSD ?? 0,
                     executionTimeMs: Date.now() - startTime,
                 };
             } catch (crewErr: any) {
@@ -647,7 +647,7 @@ Answer with only "yes" or "no".
                     const finalContent = response.content || `[${this.profile.name}] Task completed.`;
                     // LLMResponse has costUSD directly
                     const totalCost = response.costUSD;
-
+                    
                     if (canonicalForm) {
                         await this.network.broadcastInsight(canonicalForm, this.profile.name);
                     }
@@ -655,7 +655,7 @@ Answer with only "yes" or "no".
                     return {
                         output: finalContent,
                         model: response.model,
-                        cost: totalCost,
+                        costUSD: totalCost,
                         executionTimeMs: Date.now() - startTime
                     };
                 }

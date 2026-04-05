@@ -43,7 +43,7 @@ export const MissionStateSchema = z.object({
   status: MissionStatusSchema,
   brief: MissionBriefSchema,
   steps: z.array(MissionStepSchema).default([]),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }), // Data: Ensure Zod handles ISO 8601 with timezone
   error: z.string().optional(),
 });
 

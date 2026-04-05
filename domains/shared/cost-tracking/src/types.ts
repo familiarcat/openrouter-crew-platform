@@ -44,6 +44,8 @@ export interface UsageEvent {
   totalTokens: number;
   estimatedCost: number;
   actualCost?: number;
+  estimatedCostUSD: number; // Picard: Standardized to costUSD
+  actualCostUSD?: number;   // Picard: Standardized to costUSD
   routingMode: ModelTier;
   requestType?: string;
   timestamp: Date;

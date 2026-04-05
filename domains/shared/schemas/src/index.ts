@@ -7,4 +7,5 @@
 
 export * from './database';
 export * from './helpers';
+export * from './mission';
 export * as ClientTypes from './client-types';

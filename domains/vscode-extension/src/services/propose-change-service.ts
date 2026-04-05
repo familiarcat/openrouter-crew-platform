@@ -11,7 +11,7 @@ import { DarkForestValidator } from './dark-forest-validator';
  * with a human-in-the-loop approval workflow.
  */
 export class ProposeChangeService {
-    private redis: any;
+    private redis: Redis; // Geordi: Explicitly type Redis client
     private validator: DarkForestValidator;
 
     constructor(private costTracker?: CostTracker) {

@@ -59,7 +59,7 @@ export interface CrewResponse {
   content: string;
   model: string;
   tokensUsed: number;
-  estimatedCost: number;
+  costUSD: number; // Standardized to costUSD
   executionTime: number;
   metadata?: Record<string, any>;
 }

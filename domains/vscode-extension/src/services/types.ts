@@ -1,8 +1,9 @@
 import type { CrewAgent, AgentNetworkService } from './agent-network';
 import { CostTracker } from './cost-tracker';
 import { FileManager } from './file-manager';
-import { ProposeChangeService } from './propose-change-service';
-import { Intent, Complexity, FileContext, ImageContext, Provider } from './llm-router';
+import type { ProposeChangeService } from './propose-change-service'; // Break circular dependency
+import { Intent, Complexity, FileContext, ImageContext } from './llm-router';
+import { Provider as SchemaProvider } from '@openrouter-crew/shared-schemas';
 
 export interface ToolDependencies {
     fileManager: FileManager;
@@ -19,7 +20,7 @@ export interface ToolDefinition {
 export interface AgentExecutionResult {
     output: string;
     model: string;
-    cost: number;
+    costUSD: number;
     executionTimeMs: number;
 }
 
@@ -40,7 +41,7 @@ export interface LLMRequest {
 export interface LLMResponse {
     content: string;
     model: string;
-    provider?: Provider;
+    provider?: SchemaProvider;
     costUSD: number;
     executionTimeMs: number;
     cached: boolean;

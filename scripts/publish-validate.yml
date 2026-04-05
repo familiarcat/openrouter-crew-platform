@@ -1,0 +1,52 @@
+name: Publish Validation (Dark Forest Protocol)
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Ensure this matches your project's Node.js version
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 9 # Ensure this matches your project's pnpm version
+        run_install: false # We will run pnpm install explicitly later
+
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "PNPM_CACHE_DIR=$(pnpm store path)" >> $GITHUB_ENV
+
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.PNPM_CACHE_DIR }}
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.x # Use a compatible Terraform version
+
+    - name: Run Publish Validation Script
+      run: bash scripts/crew-publish-validate.sh
+      # The script itself checks for hardcoded keys and budget caps,
+      # and `terraform workspace list` does not require AWS credentials.
+      # Therefore, no specific environment variables are needed for this validation step.

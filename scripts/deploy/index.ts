@@ -3,8 +3,8 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import { MissionStateSchema } from '../../domains/shared/schemas/src/mission';
-import { RedisClient } from '../../domains/shared/redis-client/src/index';
+import { MissionStateSchema } from '@openrouter-crew/shared-schemas'; // Picard: Use alias for shared schemas
+import { RedisClient } from '@openrouter-crew/shared-redis-client'; // Picard: Use alias for shared Redis client
 
 dotenv.config();
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useWarpCoreTelemetry } from './useWarpCoreTelemetry';
+import { useWarpCoreTelemetry } from '../../apps/unified-dashboard/src/hooks/useWarpCoreTelemetry'; // Geordi: Corrected import path
 
 /**
  * A Starfleet-themed component to display the real-time status of the Redis Warp Core.

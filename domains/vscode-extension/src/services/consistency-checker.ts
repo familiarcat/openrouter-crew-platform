@@ -1,7 +1,7 @@
 import { CrewAPIClient } from '@openrouter-crew/crew-api-client';
 import { ModelTier } from '@openrouter-crew/shared-cost-tracking';
-import { CrewResponse } from './types'; // Assuming CrewResponse is defined here or in shared-schemas
-// Data: Ensure CrewResponse is imported for explicit casting
+import { CrewResponse } from './types';
+
 export interface ConsistencyCheckResult {
   isConsistent: boolean;
   score: number; // 0.0 to 1.0

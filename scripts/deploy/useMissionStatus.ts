@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MissionState, MissionStateSchema } from '../../domains/shared/schemas/src/mission';
+import { MissionState, MissionStateSchema } from '@openrouter-crew/shared-schemas'; // Picard: Use alias for shared schemas
 
 interface UseMissionStatusOptions {
   projectId: string;

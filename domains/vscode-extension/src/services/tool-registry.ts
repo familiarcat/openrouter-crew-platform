@@ -1,7 +1,7 @@
 /**
  * domains/vscode-extension/src/services/tool-registry.ts
  * 
- * Manages the registration and execution of tools available to agents.
+ * Manages the registration and execution of tools available to agents. (Geordi: ToolRegistry now initializes itself)
  * This class centralizes all tool definitions and their implementation logic.
  */
 
@@ -17,7 +17,7 @@ import * as path from 'path';
 /**
  * A tool the agent can use (e.g., "readFile", "runTest")
  */
-export interface AgentTool {
+interface AgentTool { // Internal interface
     name: string;
     description: string;
     execute: (args: any, agent: CrewAgent) => Promise<any>;
@@ -28,7 +28,7 @@ export interface AgentTool {
  */
 export class ToolRegistry {
     private tools: Map<string, AgentTool> = new Map();
-    private toolDefinitions: any[] = [];
+    private toolDefinitions: ToolDefinition['schema'][] = []; // Geordi: Explicitly type tool definitions
     private isInitialized = false;
 
     constructor(
@@ -37,7 +37,7 @@ export class ToolRegistry {
         private network: AgentNetworkService,
         private proposeChangeService: ProposeChangeService
     ) {
-        // Initialization is now async and must be called separately.
+        // Initialization is now async and must be called separately (Geordi: Moved to initialize method).
     }
 
     public async initialize(): Promise<void> {
@@ -57,7 +57,7 @@ export class ToolRegistry {
      * Executes a tool by name with the given arguments.
      */
     public async executeTool(name: string, args: any, agent: CrewAgent): Promise<any> {
-        const tool = this.tools.get(name);
+        const tool = this.tools.get(name); // Geordi: Ensure tool exists
         if (!tool) {
             return `Error: Tool "${name}" not found.`;
         }
@@ -68,7 +68,7 @@ export class ToolRegistry {
         }
     }
 
-    private register(schema: any, execute: (args: any, agent: CrewAgent) => Promise<any>) {
+    private register(schema: ToolDefinition['schema'], execute: (args: any, agent: CrewAgent) => Promise<any>) { // Geordi: Explicitly type schema
         this.toolDefinitions.push(schema);
         this.tools.set(schema.function.name, {
             name: schema.function.name,
@@ -90,7 +90,7 @@ export class ToolRegistry {
 
     private async registerAllTools() {
         // Assumes tools are moved to a `tools` directory adjacent to `services`
-        const toolsDir = path.resolve(__dirname, '../tools');
+        const toolsDir = path.resolve(__dirname, '../tools'); // Geordi: Tools are in a sibling directory
         
         const allTools: ToolDefinition[] = [];
         let toolFiles: string[] = [];
@@ -103,7 +103,7 @@ export class ToolRegistry {
                 const module = await import(`file://${filePath}`);
 
                 // Find exported tool arrays (e.g., gitTools, fsTools)
-                for (const exportName in module) {
+                for (const exportName in module) { // Geordi: Iterate through module exports
                     if (Array.isArray(module[exportName])) {
                         const toolDefs = module[exportName] as ToolDefinition[];
                         if (toolDefs.length > 0 && toolDefs.every(def => def.schema && def.execute)) {
