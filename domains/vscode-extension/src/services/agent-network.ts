@@ -16,7 +16,7 @@ import { LLMRouter, SelectedModelInfo } from './llm-router';
 import { ProposeChangeService } from './propose-change-service';
 import { AgentMCPClientPool } from './agent-mcp-client';
 import { RedisClient } from '@openrouter-crew/shared-redis-client';
-import { ModelTier } from '@openrouter-crew/shared-schemas';
+import type { ModelTier } from '@openrouter-crew/shared-schemas';
 import type { Redis } from 'ioredis';
 import * as path from 'path';
 import { execAsync } from './exec';

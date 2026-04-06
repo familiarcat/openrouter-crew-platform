@@ -208,7 +208,7 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
                         // Route through ProposeChangeService so changes go to diff review
                         const { ProposeChangeService } = await import('../services/propose-change-service');
                         const proposer = new ProposeChangeService(costTracker);
-                        await proposer.propose(filePath, result.output, result.costUSD);
+                        await proposer.propose(filePath, result.output, (result as any).costUSD ?? (result as any).cost ?? 0);
                     }
                 }
             );

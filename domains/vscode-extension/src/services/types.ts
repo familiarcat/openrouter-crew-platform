@@ -48,3 +48,12 @@ export interface LLMResponse {
     tool_calls?: any[];
     usage?: { prompt_tokens: number; completion_tokens: number };
 }
+// Added: consistency-checker.ts imports this type
+export interface CrewResponse {
+  output: string;
+  model: string;
+  costUSD: number;
+  executionTimeMs: number;
+  success: boolean;
+  error?: string;
+}

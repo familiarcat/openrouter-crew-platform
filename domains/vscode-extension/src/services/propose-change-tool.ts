@@ -34,7 +34,7 @@ export class ProposeChangeTool {
         return false;
     }
 
-    const contentValidation = this.validator.validateContent(newContent, filePath, workspaceRoot); // Worf: Pass workspaceRoot for full path validation
+    const contentValidation = this.validator.validateContent(newContent, filePath); // workspaceRoot arg removed — not in signature
     if (!contentValidation.isValid) {
       vscode.window.showErrorMessage(`[Protocol Violation] ${contentValidation.violatedAxiom}: ${contentValidation.reason}`);
       return false;

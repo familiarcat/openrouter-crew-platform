@@ -63,7 +63,7 @@ suite('CommandExecutor Test Suite', () => {
 
         assert.strictEqual(result.output, 'Test content');
         assert.strictEqual(result.model, 'test-model');
-        assert.strictEqual(result.cost, 0.001);
+        assert.strictEqual(result.costUSD, 0.001);
     });
 
     test('execute handles agent failure', async () => {

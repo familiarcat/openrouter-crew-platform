@@ -142,7 +142,7 @@ export class ChatPanel {
                     context 
                 });
                 responseContent = result.output;
-                cost = result.cost;
+                cost = result.costUSD;
                 model = result.model;
             }
 

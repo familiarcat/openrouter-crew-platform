@@ -1,16 +1,22 @@
 {
-  "extends": "../../../tsconfig.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "rootDir": "src",
     "outDir": "dist",
-    "ignoreDeprecations": "5.0",
-    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "target": "ES2017",
+    "lib": ["ES2017", "DOM"],
+    "jsx": "react",
+    "downlevelIteration": true,
     "skipLibCheck": true
   },
-  "include": [
-    "src/**/*"
+  "references": [
+    { "path": "../schemas" }
   ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
