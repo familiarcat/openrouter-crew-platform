@@ -59,7 +59,7 @@ export class CommandExecutor {
     async estimateImageCost(base64Image: string): Promise<{ costUSD: number; model: string; inputTokens: number; outputTokens: number; complexity: string }> {
         // Rough estimate: ~0.004 USD per image for high-res analysis
         return {
-            cost: 0.004,
+            costUSD: 0.004,
             model: 'gpt-4o',
             inputTokens: 1000,
             outputTokens: 500,

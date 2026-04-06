@@ -3,7 +3,6 @@
   "compilerOptions": {
     "outDir": "dist",
     "declaration": true,
-    "declarationMap": true,
     "composite": true,
     "ignoreDeprecations": "5.0",
     "jsx": "react-jsx",

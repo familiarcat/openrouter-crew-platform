@@ -30,6 +30,14 @@ export class MaintenanceService {
     if (fs.existsSync(fullPath)) {
       console.log(chalk.blue(`  -> Patching ${filePath}...`));
       let content = fs.readFileSync(fullPath, 'utf8');
+
+      // EMERGENCY PURGE: If file is bloated (> 1MB), collapse infinite-loop patterns first
+      if (content.length > 1024 * 1024) {
+        console.warn(chalk.red(`  ⚠️  BLOATED FILE DETECTED (${(content.length/1024/1024).toFixed(2)}MB). Purging corruption: ${filePath}`));
+        content = content.replace(/(?:\(data\.estimated_cost as any\) \|\| \(data as any\)\.cost \|\| 0,)+/g, '(data.estimated_cost as any) || (data as any).cost || 0,');
+        content = content.replace(/(?:\\+\${(lang|encodedCode|pathHint|displayPath|code)})+/g, '\\$${$1}');
+      }
+
       const newContent = content.replace(find, replace);
       if (content !== newContent) {
         fs.writeFileSync(fullPath, newContent);
@@ -111,7 +119,6 @@ export class MaintenanceService {
         compilerOptions: { 
           outDir: 'dist',
           declaration: true,
-          declarationMap: true, // Generate source maps for declarations
           composite: true,
           ignoreDeprecations: '5.0',
           skipLibCheck: true
@@ -155,7 +162,6 @@ export type MissionState = z.infer<typeof MissionStateSchema>;`
         compilerOptions: { 
           outDir: 'dist', 
           declaration: true, 
-          declarationMap: true, 
           composite: true, 
           ignoreDeprecations: '5.0', 
           jsx: 'react-jsx',
@@ -197,7 +203,7 @@ export class MemoryService {
           outDir: 'dist', 
           declaration: true, 
           composite: true,
-          ignoreDeprecations: '5.0', 
+          ignoreDeprecations: '5.0',
           skipLibCheck: true
         },
         include: ['src/**/*'],
@@ -339,7 +345,7 @@ process.exit(0);
     );
     this.patchFile(
       'domains/shared/crew-coordination/src/consistency-checker.ts',
-      /\): (?!any\b)ModelTier/g,
+      /\): (?!any|ModelTier\s+as\s+any)ModelTier/g,
       '): any'
     );
     this.patchFile(
@@ -348,7 +354,19 @@ process.exit(0);
       '(ModelTier as any).'
     );
 
-    // Standardize cost property naming in extension
+    // Standardize cost property naming in extension (cost -> costUSD)
+    this.patchFile(
+      'domains/vscode-extension/src/commands/command-executor.ts',
+      /async executeTask\(task: string, context\?: any\): Promise<{ output: string; model: string; cost: number; executionTimeMs: number; success: boolean }>/g,
+      'async executeTask(task: string, context?: any): Promise<{ output: string; model: string; costUSD: number; executionTimeMs: number; success: boolean }>'
+    );
+
+    this.patchFile(
+      'domains/vscode-extension/src/commands/command-executor.ts',
+      /cost: 0.004/g,
+      'costUSD: 0.004'
+    );
+
     this.patchFile(
       'domains/vscode-extension/src/commands/command-executor.ts',
       /cost:\s*number/g,
@@ -363,16 +381,15 @@ process.exit(0);
 
     this.patchFile(
       'domains/vscode-extension/src/ui/chat-panel.ts',
-      /cost = result\.cost;/g, 
+      /cost = result\.cost;/g,
       'cost = (result as any).costUSD || (result as any).cost;'
     );
 
     // Escape template literal variables in chat-panel webview (Idempotent Fix)
-    // Geordi: Prevent backslash explosion by using negative lookbehind
     this.patchFile(
       'domains/vscode-extension/src/ui/chat-panel.ts',
-      /(?<!\\\\)\${(lang|encodedCode|pathHint|displayPath|code)/g,
-      '\\\\${$1'
+      /(?<!\\)\${(lang|encodedCode|pathHint|displayPath|code)/g,
+      '\\${$1'
     );
 
     this.patchFile(
