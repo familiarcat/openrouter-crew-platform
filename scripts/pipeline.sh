@@ -27,6 +27,7 @@ function show_help {
   echo "Commands:"
   echo "  ci       - Run install, lint, test, build"
   echo "  release  - Run ci + deploy to AWS"
+  echo "  staging  - Run ci + deploy to Staging"
   echo "  phase    - Complete a specific phase (e.g., phase-8)"
   echo "Scopes:"
   echo "  all, unified-dashboard, vscode-extension, product-factory"
@@ -60,6 +61,15 @@ case $COMMAND in
     
     # 2. Deploy
     ./scripts/deploy/deploy-full.sh "$SCOPE" "$ENV"
+    ;;
+
+  staging)
+    echo "🛰️  Running Staging Deployment..."
+    # 1. Run CI first
+    $0 ci "$SCOPE" "staging"
+    
+    # 2. Deploy to Staging
+    ./scripts/deploy-staging.sh
     ;;
 
   phase)

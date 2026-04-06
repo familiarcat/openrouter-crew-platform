@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "label": "Home",
+      "href": "index.html"
+    },
+    {
+      "label": "Project Overview",
+      "href": "01_Project_Overview/overview.html"
+    },
+    {
+      "label": "Chronological Narrative",
+      "href": "02_Chronological_Narrative/timeline.html"
+    },
+    {
+      "label": "Feature Categories",
+      "href": "03_Feature_Categories/index.html"
+    },
+    {
+      "label": "Portfolio Pack",
+      "href": "04_Portfolio_Pack/index.html"
+    },
+    {
+      "label": "Roadmap & Monetization",
+      "href": "05_Roadmap_and_Monetization/index.html"
+    },
+    {
+      "label": "Next.js Product Factory",
+      "href": "07_NextJS_Product_Factory_Best_Practices/index.html"
+    },
+    {
+      "label": "Appendix (Assumptions)",
+      "href": "06_Appendix/assumptions.html"
+    }
+  ]
+}

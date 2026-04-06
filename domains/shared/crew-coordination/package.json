@@ -7,7 +7,16 @@
     "build": "tsc",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "date-fns": "^3.6.0",
+    "zod": "^3.23.8",
+    "@openrouter-crew/shared-cost-tracking": "workspace:*",
+    "@openrouter-crew/crew-api-client": "workspace:*"
+  },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@types/react": "^18.3.1"
   }
 }

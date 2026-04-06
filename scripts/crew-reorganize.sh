@@ -11,6 +11,8 @@
 #   5. Add missing scripts: local-test.sh, validate-imports.sh
 #   6. Verify all pnpm workspace links still resolve
 #   7. Run a build check
+#   8. Migrate misplaced project dashboards to apps/generated/
+#   9. Extract base-dashboard template
 #
 #  SAFE: every destructive op is guarded by --apply flag.
 #        Default is --dry-run (prints what WOULD change).
@@ -731,6 +733,63 @@ task_verify_workspace() {
 }
 
 # ════════════════════════════════════════════════════════════
+#  TASK 9: Migrate Project Dashboards to /apps/generated
+# ════════════════════════════════════════════════════════════
+task_migrate_project_dashboards() {
+  echo ""
+  echo -e "${BOLD}── TASK 9: Migrate Project Dashboards ──${RESET}"
+
+  local SRC_BASE="$REPO_ROOT/domains/product-factory"
+  local DEST_BASE="$REPO_ROOT/apps/generated"
+
+  safe_mkdir "$DEST_BASE"
+
+  # Find all Next.js apps misidentified as agents
+  while IFS= read -r -d '' config_file; do
+    local agent_dir=$(dirname "$config_file")
+    # e.g. domains/product-factory/projects/test-event-venue/agents/rag-refresh-product-factory
+    
+    if [[ "$agent_dir" == *"project-templates"* ]]; then
+        continue # Skip templates, handled by Task 10
+    fi
+
+    local project_dir=$(dirname "$(dirname "$agent_dir")")
+    local project_name=$(basename "$project_dir")
+    local target_dir="$DEST_BASE/$project_name/dashboard"
+
+    log "Found misplaced dashboard for project '$project_name'"
+    safe_mkdir "$DEST_BASE/$project_name"
+    safe_move "$agent_dir" "$target_dir"
+    
+  done < <(find "$SRC_BASE/projects" -name "next.config.js" -not -path "*/node_modules/*" -print0 2>/dev/null)
+}
+
+# ════════════════════════════════════════════════════════════
+#  TASK 10: Extract Base Dashboard Template
+# ════════════════════════════════════════════════════════════
+task_extract_base_dashboard() {
+  echo ""
+  echo -e "${BOLD}── TASK 10: Extract Base Dashboard Template ──${RESET}"
+
+  local TEMPLATE_SRC="$REPO_ROOT/domains/product-factory/project-templates/dj-booking/agents/rag-refresh-product-factory"
+  local TEMPLATES_BASE="$REPO_ROOT/domains/product-factory/templates"
+  local BASE_DASHBOARD="$TEMPLATES_BASE/base-dashboard"
+
+  [[ ! -d "$TEMPLATE_SRC" ]] && { warn "dj-booking dashboard template not found, skipping"; return; }
+
+  safe_mkdir "$TEMPLATES_BASE"
+  
+  if [[ "$APPLY" == "true" ]]; then
+    cp -r "$TEMPLATE_SRC" "$BASE_DASHBOARD"
+    # Cleanup the template from its agent-like naming
+    mv "$BASE_DASHBOARD/next.config.js" "$BASE_DASHBOARD/next.config.js" # Ensure it exists
+    ok "Extracted base-dashboard template to $BASE_DASHBOARD"
+  else
+    echo "  [DRY] Would extract dashboard template from dj-booking to $BASE_DASHBOARD"
+  fi
+}
+
+# ════════════════════════════════════════════════════════════
 #  SUMMARY
 # ════════════════════════════════════════════════════════════
 print_summary() {
@@ -789,10 +848,10 @@ usage() {
   echo "  --help               This message"
   echo ""
   echo "Tasks: git-snapshot, extract-base, move-docs, local-test,"
-  echo "       validate-imports, update-pkg, prompt-library, verify-workspace"
+  echo "       validate-imports, update-pkg, prompt-library, verify-workspace, migrate-dashboards, extract-dash-template"
 }
 
-TASKS_TO_RUN=("git-snapshot" "extract-base" "move-docs" "local-test" "validate-imports" "update-pkg" "prompt-library" "verify-workspace")
+TASKS_TO_RUN=("git-snapshot" "extract-base" "move-docs" "local-test" "validate-imports" "update-pkg" "prompt-library" "verify-workspace" "migrate-dashboards" "extract-dash-template")
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -821,6 +880,8 @@ for task in "${TASKS_TO_RUN[@]}"; do
     update-pkg)       task_update_root_package_json ;;
     prompt-library)   task_create_prompt_library ;;
     verify-workspace) task_verify_workspace ;;
+    migrate-dashboards) task_migrate_project_dashboards ;;
+    extract-dash-template) task_extract_base_dashboard ;;
     *) warn "Unknown task: $task" ;;
   esac
 done

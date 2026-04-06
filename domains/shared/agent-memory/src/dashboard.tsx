@@ -97,7 +97,7 @@ export function MemoryDashboard({
       });
       const response = await fetch(`${apiUrl}/api/memories/project/${projectId}?${params}`);
       const data = await response.json();
-      setMemories(data.byLayer ? Object.values(data.byLayer).flat() : []);
+      setMemories(data.byLayer ? (Object.values(data.byLayer).flat() as any[]) : []);
       setError(null);
     } catch (err) {
       setError(String(err));

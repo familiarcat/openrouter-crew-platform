@@ -67,7 +67,7 @@ ${modelSummary || 'No data available.'}
 
             await vscode.commands.executeCommand('openrouter-crew.chat');
             if (ChatPanel.currentPanel) {
-                ChatPanel.currentPanel.addMessage({ role: 'assistant', text: result.output, meta: { cost: result.cost, model: result.model } });
+                ChatPanel.currentPanel.addMessage({ role: 'assistant', text: result.output, meta: { cost: result.costUSD, model: result.model } });
             }
 
             // Show the rich Medical Chart UI

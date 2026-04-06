@@ -10,12 +10,13 @@ import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
 import { CostTracker } from './cost-tracker';
 import { FileManager } from './file-manager';
-import type { ToolRegistry } from './tool-registry'; // Break circular dependency
+import { ToolRegistry } from './tool-registry'; // Break circular dependency
 import { AgentExecutionResult } from './types';
 import { LLMRouter, SelectedModelInfo } from './llm-router';
 import { ProposeChangeService } from './propose-change-service';
 import { AgentMCPClientPool } from './agent-mcp-client';
 import { RedisClient } from '@openrouter-crew/shared-redis-client';
+import { ModelTier } from '@openrouter-crew/shared-schemas';
 import type { Redis } from 'ioredis';
 import * as path from 'path';
 import { execAsync } from './exec';

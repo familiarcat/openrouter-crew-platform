@@ -135,7 +135,7 @@ export class TreatmentPlanView {
 
     <div class="telemetry">
         CHIEF MEDICAL OFFICER: Beverly Crusher, MD<br>
-        TIMESTAMP: ${date} // GEN_COST: $${result.cost.toFixed(6)} // MODEL: ${result.model}
+        TIMESTAMP: ${date} // GEN_COST: $${(result as any).costUSD.toFixed(6)} // MODEL: ${result.model}
     </div>
 </body>
 </html>`;

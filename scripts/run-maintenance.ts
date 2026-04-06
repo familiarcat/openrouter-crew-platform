@@ -1,4 +1,4 @@
-import { MaintenanceService } from './maintenance-service.js';
+import { MaintenanceService } from './maintenance-service';
 
 const service = new MaintenanceService();
 

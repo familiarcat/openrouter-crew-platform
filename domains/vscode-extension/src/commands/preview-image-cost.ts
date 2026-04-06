@@ -19,7 +19,7 @@ export async function previewImageCostCommand(
             const estimate = await commandExecutor.estimateImageCost(base64Image);
 
             vscode.window.showInformationMessage(
-                `Estimated Cost: $${estimate.cost.toFixed(6)} (${estimate.model})`,
+                `Estimated Cost: $${estimate.costUSD.toFixed(6)} (${estimate.model})`,
                 { 
                     modal: true, 
                     detail: `Input Tokens: ${estimate.inputTokens}\nOutput Tokens: ${estimate.outputTokens}\nComplexity: ${estimate.complexity}` 

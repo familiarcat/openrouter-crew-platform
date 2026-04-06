@@ -203,7 +203,7 @@ export class ChatPanel {
                 systemPrompt: brief.agentPersona // Ensure agent has context
             });
             responseContent = result.output;
-            cost = result.cost;
+            cost = (result as any).costUSD || (result as any).cost;
             responseModel = result.model || responseModel;
         }
 
@@ -423,15 +423,15 @@ export class ChatPanel {
                     // Unescape entities for the raw code payload, then fix encoding for UTF-8 support
                     const rawCode = code.trim()
                         .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-                    const encodedCode = btoa(unescape(encodeURIComponent(rawCode)));
+                    const encodedCode = Buffer.from(rawCode).toString('base64');
                     
-                    return `<div class="code-container">
+                    return \`<div class="code-container">
                         <div class="code-header">
-                            <span>${lang || 'code'}</span>
-                            <button class="apply-btn" onclick="applyCode('${encodedCode}', '${pathHint}')">Propose Change${displayPath}</button>
+                            <span>\\\${lang || 'code'}</span>
+                            <button class="apply-btn" onclick="applyCode('\\\${encodedCode}', '\\\${pathHint}')">Propose Change\\\${displayPath}</button>
                         </div>
-                        <pre><code>${code}</code></pre>
-                    </div>`;
+                        <pre><code>\\\${code}</code></pre>
+                    </div>\`;
                 });
 
                 formatted = formatted.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
@@ -463,7 +463,7 @@ export class ChatPanel {
             }
 
             function applyCode(encodedCode, pathHint) {
-                const code = decodeURIComponent(escape(atob(encodedCode)));
+                const code = Buffer.from(encodedCode, 'base64').toString('utf-8');
                 vscode.postMessage({ command: 'applyCode', code: code, path: pathHint });
             }
 

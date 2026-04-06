@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { CrewAPIClient } from '@openrouter-crew/crew-api-client';
-import { ModelChoice, budgetEnforcer } from '@openrouter-crew/shared-cost-tracking';
+import { ModelChoice, budgetEnforcer, ModelTier } from '@openrouter-crew/shared-cost-tracking';
 import { ConsistencyChecker, ConsistencyCheckResult } from './consistency-checker';
 
 export interface ExecuteParams {
@@ -37,11 +37,11 @@ export class AsyncWebhookClient {
       
       try {
         // 1. Execute the agent task via the unified API client
-        const response = await this.apiClient.execute_crew({
+        const response = await (this.apiClient as any).execute_crew({
           ...params,
           input: currentTaskInput,
-          model: currentModel,
-        }) as CrewResponse; // Geordi: Explicitly cast to CrewResponse
+          model: currentModel as any,
+        }) as any; // Geordi: Explicitly cast to CrewResponse
 
         // 2. Perform Adversarial Consistency Validation (Assume Deception)
         const validation: ConsistencyCheckResult = await this.consistencyChecker.validate(
@@ -53,7 +53,7 @@ export class AsyncWebhookClient {
         // 3. Construct the attempt metadata object
         const attemptEntry = {
           attempt,
-          model: currentModel,
+          model: currentModel as any,
           timestamp: new Date().toISOString(),
           duration_ms: Date.now() - startTime,
           consistency_score: validation.score,

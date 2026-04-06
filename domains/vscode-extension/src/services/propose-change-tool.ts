@@ -25,7 +25,7 @@ export class ProposeChangeTool {
     const validation = this.validator.validatePath(filePath);
     if (!validation.isValid) {
       vscode.window.showErrorMessage(`[Protocol Violation] ${validation.violatedAxiom}: ${validation.reason}`);
-      return;
+      return false;
     }
 
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -87,7 +87,8 @@ export class ProposeChangeTool {
         return filePath;
     }
     const directPath = path.join(workspaceRoot, filePath);
-    if (fs.existsSync(directPath)) {
+    const fsSync = require("fs");
+    if (fsSync.existsSync(directPath)) {
         return directPath;
     }
     // Fallback to direct path even if it doesn't exist yet (creation case)

@@ -71,7 +71,7 @@ ${highVarianceProjects || 'No projects with high cost variance.'}
 
             await vscode.commands.executeCommand('openrouter-crew.chat');
             if (ChatPanel.currentPanel) {
-                ChatPanel.currentPanel.addMessage({ role: 'assistant', text: result.output, meta: { cost: result.cost, model: result.model } });
+                ChatPanel.currentPanel.addMessage({ role: 'assistant', text: result.output, meta: { cost: result.costUSD, model: result.model } });
             }
 
         } catch (error: any) {

@@ -253,14 +253,14 @@ done
 
 DASHBOARD_SRC=""
 [[ -n "$AAU_DOMAIN" ]] && DASHBOARD_SRC="$AAU_DOMAIN/dashboard"
-DASHBOARD_DEST="apps/alex-ai-universal-dashboard"
+DASHBOARD_DEST="apps/alex-dashboard"
 
 if [[ -z "$AAU_DOMAIN" ]]; then
   # Dashboard may already have been moved
   if [[ -d "$DASHBOARD_DEST" ]]; then
     log_ok "Dashboard already at $DASHBOARD_DEST — migration already done"
   else
-    log_warn "Could not find dashboard in domains/ — scanning..."
+    log_warn "Could not find dashboard in domains/ or $DASHBOARD_DEST — scanning..."
     # Broad scan for next.config inside domains
     FOUND=$(find domains -maxdepth 3 -name "next.config*" -not -path "*/node_modules/*" 2>/dev/null | head -5)
     if [[ -n "$FOUND" ]]; then
@@ -323,7 +323,13 @@ except Exception:
     print(f"  [warn] Could not parse {tsconfig_path} as JSON — skipping tsconfig patch")
     sys.exit(0)
 
+cfg["extends"] = "../../tsconfig.json"
 co = cfg.setdefault("compilerOptions", {})
+
+# Remove redundant keys and problematic baseUrl
+for k in ["target", "module", "moduleResolution", "lib", "jsx", "strict", "baseUrl", "allowJs", "skipLibCheck", "noEmit", "esModuleInterop", "isolatedModules", "incremental", "resolveJsonModule"]:
+    co.pop(k, None)
+
 paths = co.setdefault("paths", {})
 
 # Next.js @/ alias → project root
@@ -335,9 +341,6 @@ paths.setdefault("@/*", ["./*"])
 # After migration the root IS apps/alex-ai-universal-dashboard so we map to:
 paths.setdefault("../../../../types/constructor", [f"{rel_domain}/types/constructor"])
 paths.setdefault("../../../types/constructor",    [f"{rel_domain}/types/constructor"])
-
-# Ensure baseUrl is set for path resolution to work
-co.setdefault("baseUrl", ".")
 
 with open(tsconfig_path, 'w') as f:
     json.dump(cfg, f, indent=2)
@@ -505,12 +508,12 @@ if phase_active "2" && [[ -d "domains/vscode-extension" ]]; then
 fi
 
 # Dashboard build check
-if [[ -d "apps/alex-ai-universal-dashboard" ]]; then
-  if confirm "Attempt build of migrated dashboard (apps/alex-ai-universal-dashboard)?"; then
-    run "pnpm --dir apps/alex-ai-universal-dashboard build 2>&1 | tail -40" || {
+if [[ -d "apps/alex-dashboard" ]]; then
+  if confirm "Attempt build of migrated dashboard (apps/alex-dashboard)?"; then
+    run "pnpm --dir apps/alex-dashboard build 2>&1 | tail -40" || {
       log_warn "Dashboard build produced errors — see output above."
       log_info "Common fixes after migration:"
-      log_info "  1. pnpm add @openrouter-crew/shared --filter @openrouter-crew/alex-ai-universal-dashboard"
+      log_info "  1. pnpm add @openrouter-crew/shared --filter @openrouter-crew/alex-dashboard"
       log_info "  2. Replace any remaining ../../../../ imports with workspace aliases"
       log_info "  3. Check that NEXT_PUBLIC_* env vars are set in .env.local"
     }

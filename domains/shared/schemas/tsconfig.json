@@ -2,9 +2,11 @@
   "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
     "declaration": true,
-    "composite": true
+    "declarationMap": true,
+    "composite": true,
+    "ignoreDeprecations": "5.0",
+    "skipLibCheck": true
   },
   "include": [
     "src/**/*"

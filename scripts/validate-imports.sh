@@ -21,11 +21,7 @@ errors=0
 checked_files=0
 
 # Find all TypeScript/React source files, excluding build artifacts and node_modules
-find . -type f \( -name "*.ts" -o -name "*.tsx" \) \
-    -not -path "*/node_modules/*" \
-    -not -path "*/dist/*" \
-    -not -path "*/_archive/*" \
-    -not -path "*/.next/*" -print0 | while IFS= read -r -d '' file; do
+while IFS= read -r -d '' file; do
     dir=$(dirname "$file")
     ((checked_files++))
 
@@ -58,7 +54,11 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" \) \
             errors=$((errors + 1))
         fi
     done
-done
+done < <(find . -type f \( -name "*.ts" -o -name "*.tsx" \) \
+    -not -path "*/node_modules/*" \
+    -not -path "*/dist/*" \
+    -not -path "*/_archive/*" \
+    -not -path "*/.next/*" -print0)
 
 echo -e "\n${YELLOW}------------------------------------------${NC}"
 echo -e "Summary: Checked ${checked_files} files."

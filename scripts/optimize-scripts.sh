@@ -201,6 +201,7 @@ echo -e "\n${BOLD}${CYAN}══ Step 5 — Consolidate deploy scripts into scrip
 # These are all distinct deploy strategies — keep them, just group them
 DEPLOY_SCRIPTS=(
   "scripts/deploy-full.sh"
+  "scripts/deploy-staging.sh"
   "scripts/deploy-project.sh"
   "scripts/deploy-domain.sh"
   "scripts/trigger-gh-deploy.sh"
@@ -444,6 +445,7 @@ pkg['scripts'] = {
 
     # ── Deployment ────────────────────────────────────────────────
     "deploy:aws":           "bash scripts/deploy/deploy-full.sh",
+    "deploy:staging":       "bash scripts/deploy/deploy-staging.sh",
     "deploy:project":       "bash scripts/deploy/deploy-project.sh",
     "deploy:domain":        "bash scripts/deploy/deploy-domain.sh",
     "ship":                 "bash scripts/ship.sh",

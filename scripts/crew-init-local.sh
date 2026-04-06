@@ -15,8 +15,17 @@ pnpm install
 
 # 3. Start Infrastructure
 echo "🐳 Starting Supabase and n8n..."
-pnpm supabase:start
-docker-compose -f docker-compose.local.yml up -d
+if docker ps --filter "name=supabase" --quiet | grep -q .; then
+    echo "✅ Supabase containers are already running."
+else
+    pnpm supabase:start
+fi
+
+if docker ps --filter "name=n8n" --quiet | grep -q .; then
+    echo "✅ n8n container is already running."
+else
+    docker-compose -f docker-compose.local.yml up -d
+fi
 
 # 4. Seed and Sync
 echo "🗄️ Seeding database and syncing n8n workflows..."
@@ -31,6 +40,12 @@ pnpm generate:types
 if [ ! -f .env.local ]; then
     echo "⚠️ .env.local missing. Copying from example..."
     cp .env.example .env.local
+fi
+
+# 7. Initialize Local Terraform Workspace
+if [ -d "terraform" ]; then
+    echo "🌍 Initializing local terraform workspace..."
+    (cd terraform && terraform init > /dev/null && terraform workspace select default || terraform workspace new default)
 fi
 
 echo "✅ Bridge is active. Run 'pnpm dev' to start dashboards."

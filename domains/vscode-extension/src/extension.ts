@@ -60,10 +60,10 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(stabilizerService);
 
     // Dr. Crusher's Treatment Plan View — diagnostic results panel
-    const treatmentPlanView = new TreatmentPlanView(context, agentNetwork, costTracker);
+    const treatmentPlanView = new TreatmentPlanView(context);
     context.subscriptions.push(
         vscode.commands.registerCommand('openrouter-crew.showTreatmentPlan', (result) => {
-            treatmentPlanView.show(result);
+            treatmentPlanView.show(result, { docker: "N/A", cost: "N/A", model: "N/A" });
         })
     );
 

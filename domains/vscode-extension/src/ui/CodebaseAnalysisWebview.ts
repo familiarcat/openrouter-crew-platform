@@ -862,7 +862,7 @@ export class CodebaseAnalysisWebview {
 
   private stopAutoRefresh(): void {
     if (this.refreshInterval) {
-      clearInterval(this.refreshInterval)
+      clearInterval(this.refreshInterval as any)
       this.refreshInterval = undefined
     }
   }

@@ -20,9 +20,12 @@ echo -e "${BLUE}🔍 Scanning for deep relative imports in /apps...${NC}"
 # Define target directories moved by the migration script
 TARGET_APPS=(
     "apps/platform-admin"
-    "apps/alex-ai-dashboard"
+    "apps/alex-dashboard"
+    "apps/dj-booking-dashboard"
     "apps/product-factory-dashboard"
+    "apps/test-event-venue-dashboard"
     "apps/generated"
+    "agents"
 )
 
 # Mapping of relative paths to workspace aliases
@@ -33,7 +36,15 @@ declare -A MAPPINGS=(
     ["../../../../shared/crew-api-client"]="@openrouter-crew/crew-api-client"
     ["../../../../shared/ui-components"]="@openrouter-crew/shared-ui-components"
     ["../../../../shared/crew-coordination"]="@openrouter-crew/shared-crew-coordination"
+    ["../../../../shared/agent-orchestration"]="@openrouter-crew/agent-orchestration"
     ["../../../../types/constructor"]="@openrouter-crew/shared-schemas"
+    ["../../../shared/schemas"]="@openrouter-crew/shared-schemas"
+    ["../../../lib/deploy"]="@openrouter-crew/shared-crew-coordination"
+    ["../../../lib/rag/docs"]="@openrouter-crew/agent-memory"
+    ["../../../lib/store"]="@openrouter-crew/agent-memory"
+    ["../components/Sidebar"]="@openrouter-crew/shared-ui-components"
+    ["../components/Charts"]="@openrouter-crew/shared-ui-components"
+    ["../../../types/constructor"]="@openrouter-crew/shared-schemas"
     ["@/scripts/utils/unified-service-accessor"]="@openrouter-crew/crew-api-client"
 )
 

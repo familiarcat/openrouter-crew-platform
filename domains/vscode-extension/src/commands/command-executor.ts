@@ -56,7 +56,7 @@ export class CommandExecutor {
     /**
      * Estimates the cost of processing an image.
      */
-    async estimateImageCost(base64Image: string): Promise<{ cost: number; model: string; inputTokens: number; outputTokens: number; complexity: string }> {
+    async estimateImageCost(base64Image: string): Promise<{ costUSD: number; model: string; inputTokens: number; outputTokens: number; complexity: string }> {
         // Rough estimate: ~0.004 USD per image for high-res analysis
         return {
             cost: 0.004,
@@ -104,7 +104,7 @@ export class CommandExecutor {
     /**
      * Executes a generic task using the agent network.
      */
-    async executeTask(task: string, context?: any): Promise<{ output: string; model: string; cost: number; executionTimeMs: number; success: boolean }> {
+    async executeTask(task: string, context?: any): Promise<{ output: string; model: string; costUSD: number; executionTimeMs: number; success: boolean }> {
         const agent = this.agentNetwork.getDepartment('engineering');
         
         if (!context?.intent) {

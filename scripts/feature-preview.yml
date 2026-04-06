@@ -27,8 +27,30 @@ jobs:
       - name: Initialize Local Environment
         run: bash scripts/crew-init-local.sh
 
-      - name: Start Preview Environment
+      - name: Start Dashboard and Agents
         run: |
-          # Verify that the dashboard and agents can boot successfully.
-          # Runs pnpm dev with a 60-second window to confirm startup signals.
-          timeout 60s pnpm dev || if [ $? -eq 124 ]; then echo "Startup successful"; else exit 1; fi
+          echo "Starting pnpm dev in background..."
+          # Run pnpm dev (which executes scripts/start-local-dev.sh) in the background.
+          # This script starts the unified dashboard, API server, and other domain dashboards.
+          pnpm dev > start-dev-log.txt 2>&1 &
+          # Store the PID of the background process
+          DEV_PID=$!
+          echo "pnpm dev started with PID: $DEV_PID"
+          # Ensure the background process and its children are killed when the job finishes.
+          # Use 'kill -- -$DEV_PID' to kill the process group, ensuring all children are terminated.
+          trap "kill -- -$DEV_PID || true" EXIT
+          # Give the server a few seconds to initialize before starting health checks.
+          sleep 10 # Give more time for all services within pnpm dev to start
+
+      - name: Verify Dashboard is Reachable
+        run: |
+          echo "Waiting for dashboard to be reachable on http://localhost:3000/api/health..."
+          for i in $(seq 1 60); do # Retry for up to 60 seconds
+            if curl -s http://localhost:3000/api/health > /dev/null; then
+              echo "Dashboard is reachable!"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Dashboard did not become reachable within 60 seconds."
+          exit 1

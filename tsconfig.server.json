@@ -3,7 +3,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
-    "downlevelIteration": true
-  },
-  "ignoreDeprecations": "6.0"
+    "downlevelIteration": true,
+    "ignoreDeprecations": "5.0"
+  }
 }
