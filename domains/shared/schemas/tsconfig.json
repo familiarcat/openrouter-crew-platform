@@ -1,17 +1,17 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src",
     "outDir": "dist",
     "declaration": true,
-    "declarationMap": true,
-    "composite": true,
-    "esModuleInterop": true,
-    "module": "commonjs",
-    "target": "ES2017",
-    "lib": ["ES2017"],
-    "skipLibCheck": true
+    "ignoreDeprecations": "5.0",
+    "skipLibCheck": true,
+    "paths": {}
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

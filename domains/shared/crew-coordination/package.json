@@ -13,7 +13,8 @@
     "date-fns": "^3.6.0",
     "zod": "^3.23.8",
     "@openrouter-crew/shared-cost-tracking": "workspace:*",
-    "@openrouter-crew/crew-api-client": "workspace:*"
+    "@openrouter-crew/crew-api-client": "workspace:*",
+    "@openrouter-crew/shared-schemas": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

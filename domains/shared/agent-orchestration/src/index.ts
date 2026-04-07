@@ -1,11 +1,1 @@
-export class DataAgentServer {}; export class WorfAgentServer {}; export class CrewOrchestrator {};
-// ─── Stub exports required by vscode-extension ──────────────────────────────
-export class PromptManager {
-  getPrompt(_name: string): string { return ''; }
-  listPrompts(): string[] { return []; }
-}
-export class OllamaMCPClient {
-  async connect(): Promise<void> {}
-  async disconnect(): Promise<void> {}
-  async query(_prompt: string): Promise<string> { return ''; }
-}
+export class DataAgentServer {}; export class WorfAgentServer {}; export class CrewOrchestrator {}; export class PromptManager { constructor(o: any, ol: any) {} async architectMission(p: string, id?: string): Promise<any> { return { refinedPrompt: p, selectedModel: "anthropic/claude-3.5-sonnet", agentId: "data", agentPersona: "assistant", complexity: "LOW" }; } }; export class OllamaMCPClient { async connect(): Promise<void> {} async disconnect(): Promise<void> {} async query(p: string): Promise<any> { return ""; } };

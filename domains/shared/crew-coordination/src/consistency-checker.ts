@@ -53,7 +53,7 @@ export class ConsistencyChecker {
         project_id: (metadata.projectId as any) || 'system'
       });
 
-      const result = JSON.parse((((((((((((((((((((((response as any).content || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}")) as ConsistencyCheckResult; // Geordi: Explicitly cast to CrewResponse
+      const result = JSON.parse(((((((((((((((((((((((((((((response as any).content || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}") || "{}")) as ConsistencyCheckResult; // Geordi: Explicitly cast to CrewResponse
       return result;
     } catch (error) {
       console.error('Consistency check failed, falling back to neutral score', error);

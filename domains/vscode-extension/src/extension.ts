@@ -47,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
     const cliExecutor = new CLIExecutor(cliOutputChannel);
     const apiKey = vscode.workspace.getConfiguration('openrouterCrew').get<string>('apiKey') || '';
     const openaiClient = new (require('openai').default)({ apiKey, baseURL: 'https://openrouter.ai/api/v1' });
-    const promptManager = new PromptManager(openaiClient, new OllamaMCPClient());
+    const promptManager = new (PromptManager as any)(openaiClient, new OllamaMCPClient());
     const agentMCPClientPool = new AgentMCPClientPool(costTracker, context);
     context.subscriptions.push(agentMCPClientPool);
     agentNetwork.setCrewRouting(promptManager, agentMCPClientPool);

@@ -16,7 +16,7 @@ import { LLMRouter, SelectedModelInfo } from './llm-router';
 import { ProposeChangeService } from './propose-change-service';
 import { AgentMCPClientPool } from './agent-mcp-client';
 import { RedisClient } from '@openrouter-crew/shared-redis-client';
-import type { ModelTier } from '@openrouter-crew/shared-schemas';
+import { ModelTier } from '@openrouter-crew/shared-schemas';
 import type { Redis } from 'ioredis';
 import * as path from 'path';
 import { execAsync } from './exec';
@@ -34,7 +34,7 @@ type PromptManagerLike = {
 };
 
 // Map friendly model names to OpenRouter model IDs
-const MODEL_ID_MAP: Record<ModelTier, string> = {
+const MODEL_ID_MAP: Record<string, string> = {
     [ModelTier.SONNET]: 'anthropic/claude-3.5-sonnet',
     [ModelTier.GPT_4O]: 'openai/gpt-4o',
     [ModelTier.GEMINI_1_5_PRO]: 'google/gemini-1.5-pro-latest'
@@ -52,7 +52,7 @@ export interface AgentProfile {
     name: string;
     role: string;
     specialties: string[];
-    model: ModelTier;
+    model: string;
 }
 
 export class AgentNetworkService {

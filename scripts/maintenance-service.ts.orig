@@ -31,13 +31,6 @@ export class MaintenanceService {
       console.log(chalk.blue(`  -> Patching ${filePath}...`));
       let content = fs.readFileSync(fullPath, 'utf8');
 
-      // EMERGENCY PURGE: If file is bloated (> 1MB), collapse infinite-loop patterns first
-      if (content.length > 1024 * 1024) {
-        console.warn(chalk.red(`  ⚠️  BLOATED FILE DETECTED (${(content.length/1024/1024).toFixed(2)}MB). Purging corruption: ${filePath}`));
-        content = content.replace(/(?:\(data\.estimated_cost as any\) \|\| \(data as any\)\.cost \|\| 0,)+/g, '(data.estimated_cost as any) || (data as any).cost || 0,');
-        content = content.replace(/(?:\\+\${(lang|encodedCode|pathHint|displayPath|code)})+/g, '\\$${$1}');
-      }
-
       const newContent = content.replace(find, replace);
       if (content !== newContent) {
         fs.writeFileSync(fullPath, newContent);
@@ -80,8 +73,7 @@ export class MaintenanceService {
           'date-fns': '^3.6.0',
           'zod': '^3.23.8',
           '@openrouter-crew/shared-cost-tracking': 'workspace:*',
-          '@openrouter-crew/crew-api-client': 'workspace:*',
-          '@openrouter-crew/shared-schemas': 'workspace:*'
+          '@openrouter-crew/crew-api-client': 'workspace:*'
         },
         devDependencies: { typescript: '^5.9.3', '@types/react': '^18.3.1' }
       },
@@ -90,8 +82,8 @@ export class MaintenanceService {
         compilerOptions: { 
           outDir: 'dist',
           ignoreDeprecations: '5.0',
-          skipLibCheck: true,
-          paths: {} // Force node_modules resolution to fix TS6059 source-outside-root errors
+          jsx: 'react-jsx', // Keep jsx for React components
+          skipLibCheck: true // Keep skipLibCheck for now to avoid transitive errors
         },
         include: ['src/**/*'],
         exclude: ['node_modules', 'dist']
@@ -120,9 +112,9 @@ export class MaintenanceService {
         compilerOptions: { 
           outDir: 'dist',
           declaration: true,
-          ignoreDeprecations: '5.0',
-          skipLibCheck: true,
-          paths: {}
+          composite: true, // Keep composite for project references
+          ignoreDeprecations: '5.0', // Keep ignoreDeprecations
+          skipLibCheck: true // Keep skipLibCheck for now
         },
         include: ['src/**/*'],
         exclude: ['node_modules', 'dist']
@@ -163,6 +155,7 @@ export type MissionState = z.infer<typeof MissionStateSchema>;`
         compilerOptions: { 
           outDir: 'dist', 
           declaration: true, 
+          composite: true, // Keep composite
           ignoreDeprecations: '5.0', // Keep ignoreDeprecations
           jsx: 'react-jsx', // Keep jsx for React components
           skipLibCheck: true // Keep skipLibCheck
@@ -171,31 +164,14 @@ export type MissionState = z.infer<typeof MissionStateSchema>;`
         exclude: ['node_modules', 'dist']
       },
       `import { LLMUsageEvent, Project } from '@openrouter-crew/shared-schemas';
-import { SupabaseClient } from '@supabase/supabase-js';
-
-export interface MemoryStoreData {
-  projectId?: string; agentId?: string; taskId?: string; content?: string;
-  metadata?: Record<string, unknown>; [key: string]: unknown;
-}
-export interface MemoryOutcomeData {
-  sessionId?: string;
-  activatedNodeIds?: string[];
-  outcome: 'success' | 'failure';
-  crewMember: string;
-  outcomeDelta?: number;
-  [key: string]: unknown;
-}
-
 export class MemoryService {
-  constructor(client?: any) {}
   getMemoriesByProjectId(projectId: string): any[] { return []; }
   getMemoryById(memoryId: string): any { return {}; }
   getMemoryStats(projectId: string): any { return {}; }
   retrieveMemories(projectId: string, context: string): any { return {}; }
+  // Data: Add a stub for the dashboard's selectedNode.tags property
+  // This is a temporary fix until the dashboard is properly typed
   getMemoryNodeTags(memoryId: string): string[] { return []; }
-
-  async store(_data: any): Promise<void> {}
-  async reportOutcome(_data: any): Promise<void> {}
 };`
     );
   }
@@ -219,9 +195,9 @@ export class MemoryService {
         compilerOptions: { 
           outDir: 'dist', 
           declaration: true, 
-          ignoreDeprecations: '5.0',
-          skipLibCheck: true,
-          paths: {}
+          composite: true,
+          ignoreDeprecations: '5.0', // Keep ignoreDeprecations
+          skipLibCheck: true // Keep skipLibCheck
         },
         include: ['src/**/*'],
         exclude: ['node_modules', 'dist']
@@ -243,7 +219,6 @@ export const budgetEnforcer = { isDailyBudgetConstrained: (id: string) => false,
         scripts: { build: 'tsc', clean: 'rm -rf dist' },
         dependencies: {
           '@openrouter-crew/shared-crew-coordination': 'workspace:*',
-          '@openrouter-crew/shared-schemas': 'workspace:*',
           '@anthropic-ai/sdk': '^0.33.1',
           '@modelcontextprotocol/sdk': '^1.27.1',
           'zod': '^3.23.8',
@@ -260,15 +235,15 @@ export const budgetEnforcer = { isDailyBudgetConstrained: (id: string) => false,
         compilerOptions: { 
           outDir: 'dist', 
           declaration: true, 
-          ignoreDeprecations: '5.0',
+          composite: true,
+          ignoreDeprecations: '5.0', // Keep ignoreDeprecations
           jsx: 'react-jsx', // Keep jsx for React components
-          skipLibCheck: true,
-          paths: {}
+          skipLibCheck: true // Keep skipLibCheck
         },
         include: ['src/**/*'],
         exclude: ['node_modules', 'dist']
       },
-      'export class DataAgentServer {}; export class WorfAgentServer {}; export class CrewOrchestrator {}; export class PromptManager { constructor(o: any, ol: any) {} async architectMission(p: string, id?: string): Promise<any> { return { refinedPrompt: p, selectedModel: "anthropic/claude-3.5-sonnet", agentId: "data", agentPersona: "assistant", complexity: "LOW" }; } }; export class OllamaMCPClient { async connect(): Promise<void> {} async disconnect(): Promise<void> {} async query(p: string): Promise<any> { return ""; } };'
+      'export class DataAgentServer {}; export class WorfAgentServer {}; export class CrewOrchestrator {};'
     );
   }
 
@@ -287,7 +262,6 @@ export const budgetEnforcer = { isDailyBudgetConstrained: (id: string) => false,
       {
         extends: '../../../tsconfig.json',
         compilerOptions: { 
-          rootDir: 'src',
           outDir: 'dist', 
           declaration: true, // Keep declaration
           skipLibCheck: true // Keep skipLibCheck
@@ -313,31 +287,6 @@ process.exit(0);
   private applySourcePatches() {
     console.log(chalk.yellow('\nSTEP: Applying source code patches for type safety and logic errors...'));
 
-    // VSCode Extension: Fix import type errors (TS1361) where enums are used as values
-    this.patchFile(
-      'domains/vscode-extension/src/services/agent-network.ts',
-      /import type { ModelTier } from '@openrouter-crew\/shared-schemas'/g,
-      "import { ModelTier } from '@openrouter-crew/shared-schemas'"
-    );
-
-    this.patchFile(
-      'domains/vscode-extension/src/services/llm-router.ts',
-      /import type { SchemaProvider } from '\.\/types'/g,
-      "import { SchemaProvider } from './types'"
-    );
-
-    this.patchFile(
-      'domains/vscode-extension/src/services/consistency-checker.ts',
-      /import type { ModelTier } from '@openrouter-crew\/shared-cost-tracking'/g,
-      "import { ModelTier } from '@openrouter-crew/shared-cost-tracking'"
-    );
-
-    this.patchFile(
-      'domains/vscode-extension/src/services/consistency-checker.ts',
-      /import type { CrewAPIClient }/g,
-      "import { CrewAPIClient }"
-    );
-
     // VSCode Extension: Fix skipLibCheck and remove empty paths (Idempotent Fix)
     this.patchFile(
       'domains/vscode-extension/tsconfig.json',
@@ -348,32 +297,6 @@ process.exit(0);
       'domains/vscode-extension/tsconfig.json',
       /"paths":\s*{},?\s*/g,
       ''
-    );
-
-    // VSCode Extension: Fix missing redis-client dependency in services
-    this.patchFile(
-      'domains/vscode-extension/src/services/propose-change-service.ts',
-      /private redis: Redis;/g,
-      'private redis: any;'
-    );
-
-    // FIX: ModelTier and SchemaProvider are namespaces, not types in some positions
-    this.patchFile(
-      'domains/vscode-extension/src/services/agent-network.ts',
-      /model: ModelTier;/g,
-      'model: string;'
-    );
-    this.patchFile(
-      'domains/vscode-extension/src/services/agent-network.ts',
-      /Record<ModelTier, string>/g,
-      'Record<string, string>'
-    );
-
-    // FIX: CrewResponse missing content field needed by consistency-checker
-    this.patchFile(
-      'domains/shared/crew-api-client/src/types.ts',
-      /export interface ExecuteCrewResponse {/g,
-      'export interface ExecuteCrewResponse {\n  content: string;'
     );
 
     // Robust clean up for duplicate patches in async-webhook-client.ts
@@ -474,12 +397,12 @@ process.exit(0);
       '((response as any).content || "{}")'
     );
 
-    // Fix/Reset the corrupted estimatedCost line in webhook-client.ts (Robust Reset)
+    // Fix/Reset the corrupted estimatedCost line in webhook-client.ts (Force Purge)
     // Worf: Match any line containing 'estimatedCost' or 'costUSD' that looks corrupted and reset it.
     this.patchFile(
       'domains/shared/crew-coordination/src/webhook-client.ts',
-      /(?:^\s*(?:estimatedCost|costUSD):.*?\n)+/gm,
-      '        costUSD: (data.estimated_cost as any) || (data as any).cost || 0,\n'
+      /^\s*(?:estimatedCost|costUSD):[\s\S]+?0,\s*$/gm,
+      '        costUSD: (data.estimated_cost as any) || (data as any).cost || 0,'
     );
 
     // Fix fs.existsSync issue in propose-change-tool.ts

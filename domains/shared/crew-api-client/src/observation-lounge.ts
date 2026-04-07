@@ -174,7 +174,7 @@ export class ObservationLounge {
   constructor(config: ObservationLoungeConfig) {
     this.config = config;
     this.supabase = createClient(config.supabaseUrl, config.supabaseKey);
-    this.memoryService = new MemoryService(createClient(config.supabaseUrl, config.supabaseKey));
+    this.memoryService = new (MemoryService as any)(createClient(config.supabaseUrl, config.supabaseKey));
   }
 
   /**

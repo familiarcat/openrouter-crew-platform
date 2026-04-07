@@ -1,0 +1,9 @@
+@@ -337,7 +344,7 @@
+     );
+     this.patchFile(
+       'domains/shared/crew-coordination/src/consistency-checker.ts',
+-      /\): ModelTier/g,
++      /\): (?!any)ModelTier/g,
+       '): any'
+     );
+ 

@@ -1,5 +1,5 @@
-import type { CrewAPIClient } from '@openrouter-crew/crew-api-client';
-import type { ModelTier } from '@openrouter-crew/shared-cost-tracking';
+import { CrewAPIClient } from '@openrouter-crew/crew-api-client';
+import { ModelTier } from '@openrouter-crew/shared-cost-tracking';
 import { CrewResponse } from './types';
 
 export interface ConsistencyCheckResult {

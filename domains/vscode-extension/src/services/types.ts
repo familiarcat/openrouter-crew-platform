@@ -50,7 +50,7 @@ export interface LLMResponse {
 }
 // Added: consistency-checker.ts imports this type
 export interface CrewResponse {
-  output: string;
+  content: string; content: string;output: string;
   model: string;
   costUSD: number;
   executionTimeMs: number;

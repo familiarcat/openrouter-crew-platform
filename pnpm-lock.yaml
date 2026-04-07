@@ -641,6 +641,9 @@ importers:
       '@openrouter-crew/shared-crew-coordination':
         specifier: workspace:*
         version: link:../crew-coordination
+      '@openrouter-crew/shared-schemas':
+        specifier: workspace:*
+        version: link:../schemas
       '@supabase/auth-helpers-nextjs':
         specifier: ^0.10.0
         version: 0.10.0(@supabase/supabase-js@2.101.1)
@@ -750,6 +753,9 @@ importers:
       '@openrouter-crew/shared-cost-tracking':
         specifier: workspace:*
         version: link:../cost-tracking
+      '@openrouter-crew/shared-schemas':
+        specifier: workspace:*
+        version: link:../schemas
       date-fns:
         specifier: ^3.6.0
         version: 3.6.0

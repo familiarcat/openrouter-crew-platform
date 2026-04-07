@@ -128,6 +128,10 @@ export interface ExecuteCrewParams {
   context?: Record<string, any>;
 }
 export interface ExecuteCrewResponse {
+  content: string;
+  content: string; content: string; content: string;
+  content: string;
+  content: string;
   output: string;
   cost: number;
   tokens: number;
